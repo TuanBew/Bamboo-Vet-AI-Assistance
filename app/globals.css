@@ -1,0 +1,71 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* Teal palette */
+  --color-teal-50:  #F0FAF6;
+  --color-teal-100: #E8F5F0;
+  --color-teal-200: #D4EDE5;
+  --color-teal-300: #A8D9C6;
+  --color-teal-400: #6BBFA3;
+  --color-teal-500: #3D9A7A;
+  --color-teal-600: #2D7A5E;
+  --color-teal-700: #1A2E25;
+
+  /* Brand aliases */
+  --color-brand-primary:  #3D9A7A;
+  --color-brand-light:    #E8F5F0;
+  --color-brand-subtle:   #F0FAF6;
+  --color-brand-border:   #D4EDE5;
+  --color-brand-darkText: #1A2E25;
+
+  /* Font */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  /* Radius */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* shadcn/ui CSS variables — keep these for shadcn compatibility */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.203 0.032 158);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.203 0.032 158);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.203 0.032 158);
+  --primary: oklch(0.596 0.11 161);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.965 0.014 158);
+  --secondary-foreground: oklch(0.203 0.032 158);
+  --muted: oklch(0.97 0.003 210);
+  --muted-foreground: oklch(0.566 0.016 215);
+  --accent: oklch(0.965 0.014 158);
+  --accent-foreground: oklch(0.203 0.032 158);
+  --destructive: oklch(0.577 0.245 27.3);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.882 0.033 158);
+  --input: oklch(0.882 0.033 158);
+  --ring: oklch(0.596 0.11 161);
+  --radius: 0.5rem;
+  --sidebar-background: oklch(0.965 0.014 158);
+  --sidebar-foreground: oklch(0.203 0.032 158);
+  --sidebar-primary: oklch(0.596 0.11 161);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.930 0.022 158);
+  --sidebar-accent-foreground: oklch(0.203 0.032 158);
+  --sidebar-border: oklch(0.882 0.033 158);
+  --sidebar-ring: oklch(0.596 0.11 161);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
