@@ -35,7 +35,11 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      setError(t('auth.error.invalidCredentials'))
+      if (error.message.toLowerCase().includes('email not confirmed')) {
+        setError('Email chưa được xác nhận. Vui lòng kiểm tra hộp thư và xác nhận email trước khi đăng nhập.')
+      } else {
+        setError(t('auth.error.invalidCredentials'))
+      }
       setLoading(false)
       return
     }

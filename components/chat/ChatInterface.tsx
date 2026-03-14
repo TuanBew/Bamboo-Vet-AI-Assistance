@@ -79,8 +79,8 @@ export default function ChatInterface({ conversationId, initialMessages = [] }: 
           buffer = lines.pop() ?? ''
 
           for (const line of lines) {
-            if (!line.startsWith('data: ')) continue
-            const data = line.slice(6).trim()
+            if (!line.startsWith('data:')) continue
+            const data = line.slice(5).trim()
             if (data === '[DONE]') { doneReceived = true; continue }
             try {
               const json = JSON.parse(data)

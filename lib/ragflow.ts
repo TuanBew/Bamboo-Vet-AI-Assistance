@@ -40,8 +40,8 @@ export async function callRagflow(messages: Message[]): Promise<ReadableStream<U
 // Parse delta content from an SSE data line.
 // Returns the text token or null if not a content chunk.
 export function parseSseLine(line: string): string | null {
-  if (!line.startsWith('data: ')) return null
-  const data = line.slice(6).trim()
+  if (!line.startsWith('data:')) return null
+  const data = line.slice(5).trim()
   if (data === '[DONE]') return null
   try {
     const json = JSON.parse(data)
