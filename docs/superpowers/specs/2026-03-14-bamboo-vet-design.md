@@ -358,6 +358,13 @@ CREATE POLICY "own_messages_insert" ON messages
       SELECT id FROM conversations WHERE user_id = auth.uid()
     )
   );
+-- Defense-in-depth: prevent anon client from deleting messages it doesn't own
+CREATE POLICY "own_messages_delete" ON messages
+  FOR DELETE USING (
+    conversation_id IN (
+      SELECT id FROM conversations WHERE user_id = auth.uid()
+    )
+  );
 
 -- Auto-update conversations.updated_at on new message (not on rename)
 CREATE OR REPLACE FUNCTION update_conversation_timestamp()
@@ -460,7 +467,18 @@ Supabase SSR auth cookies are set with `HttpOnly; SameSite=Lax`. Cross-origin PO
 
 **Language cookie:** `lang` cookie (`vi` | `en`), set client-side via `document.cookie`, read on server via `cookies()` in Server Components or `request.cookies` in middleware. Default: `'vi'`.
 
-**SSR hydration:** `LanguageContext` is a client component (`'use client'`). On first render it reads the `lang` cookie via `document.cookie` (or a prop passed from the server layout). SSR renders with `'vi'` default. No hydration mismatch because the provider reads the cookie synchronously.
+**SSR hydration (correct approach):** `LanguageContext` is a client component (`'use client'`). The root `app/layout.tsx` (Server Component) reads the `lang` cookie via `cookies()` from `next/headers` and passes it as an `initialLang` prop to `<LanguageProvider initialLang={lang}>`. This means the server renders the correct language from the start — no flash, no hydration mismatch.
+
+```ts
+// app/layout.tsx (Server Component)
+import { cookies } from 'next/headers'
+export default function RootLayout({ children }) {
+  const lang = (cookies().get('lang')?.value ?? 'vi') as 'vi' | 'en'
+  return <LanguageProvider initialLang={lang}>{children}</LanguageProvider>
+}
+```
+
+The `LanguageProvider` client component receives `initialLang` as initial state and updates `document.cookie` whenever the user toggles the language.
 
 ### Complete Translation Key Namespaces
 
