@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-03-18T11:03:37.774Z"
-last_activity: 2026-03-18 — Completed 01-01 migrations + views plan
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-03-18T11:12:44Z"
+last_activity: 2026-03-18 — Completed 01-02 seed data files
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
-  percent: 33
+  completed_plans: 2
+  percent: 67
 ---
 
 # Project State
@@ -26,27 +26,27 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 1 of 6 (Database Migrations & Seed Data)
-Plan: 1 of 3 in current phase (completed)
+Plan: 2 of 3 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-18 — Completed 01-01 migrations + views plan
+Last activity: 2026-03-18 — Completed 01-02 seed data files
 
-Progress: [███░░░░░░░] 33%
+Progress: [██████░░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 2 min
-- Total execution time: 0.03 hours
+- Total plans completed: 2
+- Average duration: 5 min
+- Total execution time: 0.17 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-database-migrations-seed-data | 1 | 2 min | 2 min |
+| 01-database-migrations-seed-data | 2 | 10 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2 min)
+- Last 5 plans: 01-01 (2 min), 01-02 (8 min)
 - Trend: starting
 
 *Updated after each plan completion*
@@ -65,6 +65,9 @@ Recent decisions affecting current work:
 - [Pre-build]: `globals.css` dark mode selector bug (`(&:is(.dark *))`) must be fixed to `(&:where(.dark, .dark *))` before any admin dark theme is testable (AUTH-05 in Phase 2).
 - [Phase 01]: All migrations use IF NOT EXISTS guards for idempotent re-runs
 - [Phase 01]: RLS policies checked via pg_policies before creation to avoid duplicates
+- [Phase 01]: Added 2 extra clinics (Thai Nguyen, Khanh Hoa) to satisfy both province and type distribution constraints for seed profiles
+- [Phase 01]: UUID prefix convention: c0a1 for clinics, p0a2 for profiles, cv for conversations, qe for query_events
+- [Phase 01]: "Others" province mapped to Thua Thien Hue + Thai Nguyen + Khanh Hoa
 
 ### Pending Todos
 
@@ -78,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T11:02:49Z
-Stopped at: Completed 01-01-PLAN.md
-Resume file: .planning/phases/01-database-migrations-seed-data/01-02-PLAN.md
+Last session: 2026-03-18T11:12:44Z
+Stopped at: Completed 01-02-PLAN.md
+Resume file: .planning/phases/01-database-migrations-seed-data/01-03-PLAN.md
