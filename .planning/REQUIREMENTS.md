@@ -162,21 +162,75 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ## Traceability
 
-*Populated during roadmap creation.*
+*Updated: 2026-03-18 — roadmap created, all 61 requirements mapped.*
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-01 through DB-12 | Phase 1 | Pending |
-| AUTH-01 through AUTH-05 | Phase 2 | Pending |
-| SHELL-01 through SHELL-05 | Phase 2 | Pending |
-| COMP-01 through COMP-07 | Phase 2 | Pending |
-| DASH-01 through DASH-06 | Phase 3 | Pending |
-| ACT-01 through ACT-06 | Phase 3 | Pending |
-| KB-01 through KB-03 | Phase 4 | Pending |
-| USERS-01 through USERS-05 | Phase 4 | Pending |
-| CHKU-01 through CHKU-07 | Phase 5 | Pending |
-| CHKC-01 through CHKC-04 | Phase 5 | Pending |
-| POL-01 through POL-05 | Phase 6 | Pending |
+| DB-01 | Phase 1 | Pending |
+| DB-02 | Phase 1 | Pending |
+| DB-03 | Phase 1 | Pending |
+| DB-04 | Phase 1 | Pending |
+| DB-05 | Phase 1 | Pending |
+| DB-06 | Phase 1 | Pending |
+| DB-07 | Phase 1 | Pending |
+| DB-08 | Phase 1 | Pending |
+| DB-09 | Phase 1 | Pending |
+| DB-10 | Phase 1 | Pending |
+| DB-11 | Phase 1 | Pending |
+| DB-12 | Phase 1 | Pending |
+| AUTH-01 | Phase 2 | Pending |
+| AUTH-02 | Phase 2 | Pending |
+| AUTH-03 | Phase 2 | Pending |
+| AUTH-04 | Phase 2 | Pending |
+| AUTH-05 | Phase 2 | Pending |
+| SHELL-01 | Phase 2 | Pending |
+| SHELL-02 | Phase 2 | Pending |
+| SHELL-03 | Phase 2 | Pending |
+| SHELL-04 | Phase 2 | Pending |
+| SHELL-05 | Phase 2 | Pending |
+| COMP-01 | Phase 2 | Pending |
+| COMP-02 | Phase 2 | Pending |
+| COMP-03 | Phase 2 | Pending |
+| COMP-04 | Phase 2 | Pending |
+| COMP-05 | Phase 2 | Pending |
+| COMP-06 | Phase 2 | Pending |
+| COMP-07 | Phase 2 | Pending |
+| DASH-01 | Phase 3 | Pending |
+| DASH-02 | Phase 3 | Pending |
+| DASH-03 | Phase 3 | Pending |
+| DASH-04 | Phase 3 | Pending |
+| DASH-05 | Phase 3 | Pending |
+| DASH-06 | Phase 3 | Pending |
+| ACT-01 | Phase 3 | Pending |
+| ACT-02 | Phase 3 | Pending |
+| ACT-03 | Phase 3 | Pending |
+| ACT-04 | Phase 3 | Pending |
+| ACT-05 | Phase 3 | Pending |
+| ACT-06 | Phase 3 | Pending |
+| KB-01 | Phase 4 | Pending |
+| KB-02 | Phase 4 | Pending |
+| KB-03 | Phase 4 | Pending |
+| USERS-01 | Phase 4 | Pending |
+| USERS-02 | Phase 4 | Pending |
+| USERS-03 | Phase 4 | Pending |
+| USERS-04 | Phase 4 | Pending |
+| USERS-05 | Phase 4 | Pending |
+| CHKU-01 | Phase 5 | Pending |
+| CHKU-02 | Phase 5 | Pending |
+| CHKU-03 | Phase 5 | Pending |
+| CHKU-04 | Phase 5 | Pending |
+| CHKU-05 | Phase 5 | Pending |
+| CHKU-06 | Phase 5 | Pending |
+| CHKU-07 | Phase 5 | Pending |
+| CHKC-01 | Phase 5 | Pending |
+| CHKC-02 | Phase 5 | Pending |
+| CHKC-03 | Phase 5 | Pending |
+| CHKC-04 | Phase 5 | Pending |
+| POL-01 | Phase 6 | Pending |
+| POL-02 | Phase 6 | Pending |
+| POL-03 | Phase 6 | Pending |
+| POL-04 | Phase 6 | Pending |
+| POL-05 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 61 total
@@ -185,4 +239,4 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after initial definition*
+*Last updated: 2026-03-18 — traceability expanded to per-requirement rows after roadmap creation*
