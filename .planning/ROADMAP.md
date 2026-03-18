@@ -31,7 +31,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `mv_monthly_queries`, `mv_daily_queries`, and `mv_category_stats` each have a `UNIQUE INDEX` and support `REFRESH CONCURRENTLY`; `mv_dashboard_kpis` refreshes with plain `REFRESH` and contains exactly one row.
   4. Querying `profiles` returns 82 rows (80 non-admin + 2 admin); `conversations` has ~4,000 rows; `messages` has ~20,000 rows; `kb_documents` has 120 rows.
   5. Running the seed script a second time (idempotency check) produces no duplicate rows and no errors.
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Migration SQL files (6 migrations) + refresh-views.ts
+- [ ] 01-02-PLAN.md — Seed data markdown files (clinics, profiles, conversations, query_events, kb_documents)
+- [ ] 01-03-PLAN.md — Seed script (scripts/seed.ts) + manual verification
 
 ### Phase 2: Admin Shell & Role-Based Routing
 **Goal**: Every `/admin/*` route is protected — unauthenticated and non-admin users are redirected to `/login`; admins logging in via `/app` are automatically forwarded to `/admin/dashboard`; the dark sidebar shell renders on all admin pages; all seven shared admin components exist and render without errors.
@@ -82,7 +87,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD
 
 ### Phase 6: Security & Polish
-**Goal**: All new npm packages are installed at correct versions (including jsPDF ≥4.2.0 for CVE-2025-68428); the service role client is provably absent from the client bundle; CSP allows Leaflet tiles; print CSS hides the sidebar; Vietnamese diacritics in PDF export are handled with a documented and tested strategy.
+**Goal**: All new npm packages are installed at correct versions (including jsPDF >=4.2.0 for CVE-2025-68428); the service role client is provably absent from the client bundle; CSP allows Leaflet tiles; print CSS hides the sidebar; Vietnamese diacritics in PDF export are handled with a documented and tested strategy.
 **Depends on**: Phase 5
 **Requirements**: POL-01, POL-02, POL-03, POL-04, POL-05
 **Success Criteria** (what must be TRUE):
@@ -90,17 +95,17 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Running `window.print()` from any admin data table page produces a printed view with only the table visible — the dark sidebar is hidden by `@media print` CSS rules.
   3. Running `next build` and inspecting the client bundle (via `ANALYZE=true` or build output) confirms `createServiceClient` and the Supabase service role key do not appear in any client chunk.
   4. The Content Security Policy in `next.config.js` includes `https://*.tile.openstreetmap.org` in `img-src` and `connect-src`; the Leaflet map loads tiles without CSP violations in the browser console.
-  5. Exporting a PDF from the Check Users page produces a file where Vietnamese diacritics (e.g., "Nguyễn Thị Hoa", "Hà Nội") are legible — either via embedded Unicode font or a documented fallback strategy with a known limitation noted in code comments.
+  5. Exporting a PDF from the Check Users page produces a file where Vietnamese diacritics (e.g., "Nguyen Thi Hoa", "Ha Noi") are legible — either via embedded Unicode font or a documented fallback strategy with a known limitation noted in code comments.
 **Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Database Migrations & Seed Data | 0/TBD | Not started | - |
+| 1. Database Migrations & Seed Data | 0/3 | Planning complete | - |
 | 2. Admin Shell & Role-Based Routing | 0/TBD | Not started | - |
 | 3. Admin Dashboard + New Activity | 0/TBD | Not started | - |
 | 4. Knowledge Base + Users Analytics | 0/TBD | Not started | - |
