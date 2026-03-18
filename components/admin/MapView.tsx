@@ -1,5 +1,7 @@
 'use client'
 
+import dynamic from 'next/dynamic'
+
 export interface MapPin {
   id: string
   latitude: number
@@ -36,4 +38,4 @@ function MapViewPlaceholder({ pins, className }: MapViewProps) {
 }
 
 // Export with dynamic wrapper pattern ready — swap placeholder for real component later
-export const MapView = MapViewPlaceholder
+export const MapView = dynamic(() => Promise.resolve(MapViewPlaceholder), { ssr: false })
