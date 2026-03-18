@@ -2,72 +2,168 @@
 
 **Gathered:** 2026-03-18
 **Status:** Ready for planning
+**Updated:** 2026-03-18 (schema decisions overridden by /gsd:plan-phase args)
 
 <domain>
 ## Phase Boundary
 
-Deploy the full Postgres schema for the admin dashboard: 3 new tables (`profiles`, `chat_analytics`, `kb_documents`), 4 materialized views with unique indexes, RLS policies, a `SECURITY DEFINER` trigger for auto-profile creation, and idempotent seed scripts that fill 27 months of realistic analytics data. No UI. No API routes. No auth guards. Just schema + data.
+Deploy the full Postgres schema for the admin dashboard via numbered migration files, then populate with 27-month realistic analytics seed data. No UI. No API routes. No auth guards. Just schema + data.
+
+**Deliverables:**
+1. Migration files in `supabase/migrations/`
+2. Seed data files in `data/seeds/` as Markdown tables
+3. `scripts/seed.ts` — idempotent seed runner (parse .md files → upsert in dependency order)
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-### Migration Order & Existing Table Risks
+### Schema — Tables & Migrations (LOCKED by plan-phase args)
 
-- **File order** (strict dependency chain):
-  1. `YYYYMMDD_add_profiles.sql` — profiles table + RLS + UNIQUE constraint on `facility_code`
-  2. `YYYYMMDD_add_chat_analytics.sql` — chat_analytics table + RLS (references `profiles.id` and `conversations.id`)
-  3. `YYYYMMDD_add_kb_documents.sql` — kb_documents table + RLS (standalone, no FK deps on new tables)
-  4. `YYYYMMDD_add_materialized_views.sql` — all 4 views + unique indexes (depends on ALL tables above + existing `conversations` + `messages`)
-  5. `YYYYMMDD_add_profile_trigger.sql` — `handle_new_user()` SECURITY DEFINER trigger (must come after `profiles` exists; placed last to avoid partial-state issues)
+**Migration execution order** (strict FK dependency chain):
 
-- **Existing table risk: ZERO** — Phase 1 adds only new tables. `conversations` and `messages` are read by materialized views (JOIN only) — no ALTER TABLE, no schema change, no RLS modification on existing tables.
-- **Risk area: `auth.users` foreign key** — `profiles.id REFERENCES auth.users(id) ON DELETE CASCADE`. Migration must not run if `auth.users` is unavailable (it isn't in managed Supabase, but worth noting).
-- **Risk area: `chat_analytics` references `profiles`** — migration 2 must run after migration 1 completes. Numbered filenames + sequential execution in the seed script enforces this.
-- **Migration file naming**: Use real date prefix (e.g., `20260318_add_profiles.sql`). Supabase CLI reads migrations in alphanumeric order; timestamps guarantee order.
-- **Migration location**: `supabase/migrations/` (new directory — does not exist yet; planner must create it).
+1. **`20260318_001_create_clinics.sql`** — new `clinics` table:
+   ```sql
+   CREATE TABLE clinics (
+     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     name        text NOT NULL,
+     code        text NOT NULL UNIQUE,
+     type        text,   -- 'phong_kham' | 'nha_thuoc' | 'thu_y' | 'my_pham' | 'khac'
+     province    text,
+     district    text,
+     address     text,
+     lat         numeric(9,6),
+     lng         numeric(9,6),
+     created_at  timestamptz NOT NULL DEFAULT now()
+   );
+   ```
+   RLS: `clinics` readable by admins only (service role SELECT all; authenticated SELECT only own clinic).
 
-### Seed Data Approach
+2. **`20260318_002_alter_profiles.sql`** — ALTER existing `profiles` (if exists) or create it:
+   ```sql
+   -- If profiles doesn't exist, CREATE TABLE. If it does, ALTER TABLE:
+   ALTER TABLE profiles
+     ADD COLUMN IF NOT EXISTS is_admin    boolean NOT NULL DEFAULT false,
+     ADD COLUMN IF NOT EXISTS clinic_id   uuid REFERENCES clinics(id),
+     ADD COLUMN IF NOT EXISTS province    text,
+     ADD COLUMN IF NOT EXISTS district    text,
+     ADD COLUMN IF NOT EXISTS lat         numeric(9,6),
+     ADD COLUMN IF NOT EXISTS lng         numeric(9,6),
+     ADD COLUMN IF NOT EXISTS user_type   text;
+   ```
+   **IMPORTANT**: `profiles` may already exist (from Supabase Auth setup). Migration must use `IF NOT EXISTS` / `IF EXISTS` guards throughout. Check `supabase/schema.sql` first.
 
-- **Claude's full discretion** — the agent decides all specific content (names, emails, clinic names, facility codes, message text, document names, etc.). The agent follows the spec's volume and distribution tables exactly but generates all actual data values autonomously.
-- **Spec volumes to follow precisely** (these are locked, not discretionary):
-  - 80 non-admin profiles + 2 admin profiles = 82 total
-  - ~4,000 conversations (one `chat_analytics` row per conversation)
-  - ~20,000 messages (avg 5 per conversation, mix of `user` + `assistant` roles)
-  - 120 `kb_documents`
-- **Spec distributions to follow precisely**:
-  - Geographic: Hà Nội 15, TP.HCM 18, Đà Nẵng 8, Bình Dương 7, Đồng Nai 6, Cần Thơ 5, Hải Phòng 5, Nghệ An 4, Lâm Đồng 4, Khác 8
-  - Clinic type: `phong_kham` 28, `nha_thuoc` 22, `thu_y` 18, `my_pham` 8, `khac` 4
-  - Monthly query volume: 2024 ~80/month, 2025 H1 ~180/month, 2025 H2 ~320/month, 2026 Q1 ~280/month
-  - Drug groups: kháng sinh 35%, vitamin 20%, vắc-xin 18%, hormone 12%, kháng ký sinh trùng 10%, khác 5%
-  - Animal types: trâu bò 30%, lợn 25%, gà 20%, chó mèo 15%, thủy sản 7%, khác 3%
-  - Query types: điều trị 35%, chẩn đoán 28%, liều lượng 20%, phòng bệnh 12%, khác 5%
-- **Seed data files**: `data/seeds/` directory (new). One TypeScript module per entity: `profiles.ts`, `conversations.ts`, `messages.ts`, `chat_analytics.ts`, `kb_documents.ts`. Each exports a typed array — no inline generation logic in the entry script.
-- **Auth user creation**: Use `supabase.auth.admin.createUser({ email, password, email_confirm: true })` for each seeded user. This creates the `auth.users` row; the trigger then auto-creates the `profiles` row. After trigger fires, a second `UPDATE profiles SET ...` adds geographic/clinic fields.
-- **Admin users**: 2 admin profiles promoted via `UPDATE profiles SET is_admin = true WHERE email IN (...)` at the end of the seed script.
-- **Time range**: January 2024 → March 2026 (27 months). Conversations are distributed across this range per the volume schedule above.
+3. **`20260318_003_create_query_events.sql`** — new `query_events` table:
+   ```sql
+   CREATE TABLE query_events (
+     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id          uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+     conversation_id  uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+     clinic_id        uuid REFERENCES clinics(id),
+     drug_category    text,   -- 'kháng sinh' | 'vitamin' | 'hormone' | 'vắc-xin' | 'kháng ký sinh trùng' | 'khác'
+     animal_type      text,   -- 'trâu bò' | 'lợn' | 'gà' | 'chó mèo' | 'thủy sản' | 'khác'
+     query_type       text,   -- 'chẩn đoán' | 'điều trị' | 'phòng bệnh' | 'liều lượng' | 'khác'
+     response_time_ms integer,
+     created_at       timestamptz NOT NULL DEFAULT now()
+   );
+   ```
+   RLS:
+   - Authenticated users can INSERT their own rows (`user_id = auth.uid()`)
+   - Reads: service role only (admins use service role client — anon/authenticated cannot SELECT)
+   - Add UNIQUE constraint on `conversation_id` for idempotent upserts: `UNIQUE (conversation_id)`
+
+4. **`20260318_004_create_kb_documents.sql`** — `kb_documents` table:
+   ```sql
+   CREATE TABLE kb_documents (
+     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     doc_code        text NOT NULL UNIQUE,
+     doc_name        text NOT NULL,
+     chunk_count     integer NOT NULL DEFAULT 0,
+     doc_type        text,   -- 'PDF' | 'DOCX' | 'TXT'
+     category        text,
+     drug_group      text,
+     source          text,
+     relevance_score numeric(4,3),
+     status          text NOT NULL DEFAULT 'active',
+     created_at      timestamptz NOT NULL DEFAULT now()
+   );
+   ```
+   RLS: service role only.
+
+5. **`20260318_005_add_profile_trigger.sql`** — SECURITY DEFINER trigger on `auth.users` to auto-create `profiles` row on signup:
+   ```sql
+   CREATE OR REPLACE FUNCTION handle_new_user()
+   RETURNS trigger AS $$
+   BEGIN
+     INSERT INTO profiles (id, email)
+     VALUES (NEW.id, NEW.email)
+     ON CONFLICT (id) DO NOTHING;
+     RETURN NEW;
+   END;
+   $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+   CREATE TRIGGER on_auth_user_created
+     AFTER INSERT ON auth.users
+     FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+   ```
+   Must come LAST (after profiles table/column exists).
+
+**Note on materialized views**: The ROADMAP.md requirements (DB-07 through DB-09) include materialized views (`mv_monthly_queries`, `mv_daily_queries`, `mv_category_stats`, `mv_dashboard_kpis`). These are needed for Phase 3+ dashboard pages. Include them in a 6th migration file:
+
+6. **`20260318_006_create_materialized_views.sql`** — all 4 materialized views using `query_events` as the source (instead of `chat_analytics`):
+   - `mv_monthly_queries`: group by user_id, year, month → session_count, query_count
+   - `mv_daily_queries`: group by user_id, year, month, day
+   - `mv_category_stats`: group by year, month, province, clinic type, drug_category, animal_type, query_type
+   - `mv_dashboard_kpis`: single-row aggregate (total_sessions, total_queries, total_users, total_documents, total_staff, refreshed_at)
+   - Add UNIQUE indexes on first 3 views (for REFRESH CONCURRENTLY). NO unique index on mv_dashboard_kpis.
+
+### Seed Data Format (LOCKED by plan-phase args)
+
+- **Format**: Markdown tables (`.md` files) in `data/seeds/`
+- **Files**:
+  - `data/seeds/clinics.md` — clinic rows
+  - `data/seeds/profiles.md` — user profile rows (non-admin + 2 admin)
+  - `data/seeds/conversations.md` — conversation stubs
+  - `data/seeds/query_events.md` — per-conversation analytics
+  - `data/seeds/kb_documents.md` — knowledge base documents
+- **Content**: Agent has FULL creative discretion — all Vietnamese names, clinic names, drug names, etc. No placeholders. Every row written completely.
+- **Hard rules from user**:
+  - Date range: January 2024 → current date (March 2026), full coverage, no gaps
+  - Realistic Vietnamese context throughout
+  - Volume: enough for every chart, KPI, map pin, and color-coded cell in samples/ to render with ZERO empty states
+  - Clinic activity variance: all 3 color states in check-clinics pivot (>50 green, 10–50 yellow, <10 red)
+  - Minimum 10 clinics and 10 KB documents (for Top 10 charts)
+- **Auth user creation**: `supabase.auth.admin.createUser({ email, email_confirm: true })` per user. Trigger auto-creates profiles row. Follow-up UPDATE adds clinic_id, province, etc.
+
+### Seed Script (LOCKED by plan-phase args)
+
+- **File**: `scripts/seed.ts`
+- **Runner**: `npx ts-node scripts/seed.ts`
+- **Behavior**:
+  1. Parse all `.md` seed files using a markdown table parser (extract column headers + data rows)
+  2. Insert in dependency order: `clinics` → auth users/profiles → `conversations` → `query_events` → `kb_documents`
+  3. Fully idempotent: `ON CONFLICT DO NOTHING` for all tables; wrap auth user creation in try/catch
+  4. Print completion summary: count of each entity inserted/skipped
+- **Primary guard**: Count `clinics` rows first — if > 0, offer skip or force flag
 
 ### Idempotent Upsert Strategy
 
-- **Primary guard (seed entry script)**: Before inserting anything, `SELECT COUNT(*) FROM profiles` — if `> 0`, print "Already seeded — skipping" and exit with code 0. This is the fast path for accidental re-runs.
-- **Secondary guard (individual upserts)**: All data tables use `INSERT ... ON CONFLICT DO NOTHING`:
-  - `profiles`: conflict on `id` (primary key = auth user UUID)
-  - `conversations`: conflict on `id`
-  - `messages`: conflict on `id`
-  - `chat_analytics`: conflict on `conversation_id` (one analytics row per conversation; add UNIQUE constraint on `conversation_id`)
-  - `kb_documents`: conflict on `doc_code` (add UNIQUE constraint on `doc_code`)
-- **Auth user idempotency**: `supabase.auth.admin.createUser()` throws if user already exists. Wrap in try/catch — catch `User already registered` errors and continue. Log the skip.
-- **Materialized view refresh**: `scripts/refresh-views.ts` runs after seed completes. Uses `REFRESH MATERIALIZED VIEW CONCURRENTLY` for `mv_monthly_queries`, `mv_daily_queries`, `mv_category_stats`. Uses plain `REFRESH MATERIALIZED VIEW` for `mv_dashboard_kpis` (cannot use CONCURRENTLY — single-row aggregate with no unique key).
-- **Run command**: `npx tsx scripts/seed.ts && npx tsx scripts/refresh-views.ts`
+- `clinics`: conflict on `code` (UNIQUE)
+- `profiles`: conflict on `id` (primary key)
+- `conversations`: conflict on `id`
+- `query_events`: conflict on `conversation_id` (UNIQUE constraint)
+- `kb_documents`: conflict on `doc_code` (UNIQUE)
+- Auth users: try/catch on `createUser()`, log "already exists" and continue
 
 ### Claude's Discretion
 
-- All specific data values in seed files (names, addresses, message content, document names, relevance scores within spec range 0.60–0.99)
-- Exact date/time distribution of conversations within each month
-- Per-user query volume variation (spec says: heavy >50/month = ~15% of users, medium 10–50 = ~50%, light <10 = ~35%)
-- KB document chunk counts (spec says 10–200 per doc)
-- TypeScript types and interfaces for seed data arrays
+- All actual data values (Vietnamese names, clinic names, conversation content, document names)
+- Exact timestamps within each month
+- Per-clinic query volume variation achieving the 3-color distribution
+- KB document chunk counts (10–200 range)
+- Markdown table parser implementation in seed.ts
+- `refresh-views.ts` script design (runs after seed completes; CONCURRENTLY for 3 views, plain for mv_dashboard_kpis)
 
 </decisions>
 
@@ -76,18 +172,27 @@ Deploy the full Postgres schema for the admin dashboard: 3 new tables (`profiles
 
 **Downstream agents MUST read these before planning or implementing.**
 
-### Schema & Data Model
-- `docs/2026-03-18-admin-dashboard-design.md` §3 — Full table DDL for `profiles`, `chat_analytics`, `kb_documents`, all 4 materialized views, RLS policies, trigger definition
-- `docs/2026-03-18-admin-dashboard-design.md` §9 — Seed data strategy: volumes, geographic distribution, clinic type distribution, query volume schedule, category distributions
+### User-Specified Schema (PRIMARY SOURCE OF TRUTH for migrations)
+- The plan-phase args specify: `clinics`, `query_events`, ALTER `profiles` — these OVERRIDE the spec's `chat_analytics` table and profiles-embedded clinic data
 
-### Existing Schema (read before writing migrations)
-- `supabase/schema.sql` — Existing `conversations` and `messages` tables; existing `update_conversation_timestamp` SECURITY DEFINER trigger; existing RLS policies. Migrations must not alter any of this.
+### Design Spec (reference for views, RLS patterns, seed volumes)
+- `docs/2026-03-18-admin-dashboard-design.md` §3 — Original table DDL (use as reference for RLS patterns and view definitions; adapt for `query_events` replacing `chat_analytics`)
+- `docs/2026-03-18-admin-dashboard-design.md` §9 — Seed volumes and distributions (apply these to the new schema)
+
+### Existing Schema (read before writing migrations — avoid conflicts)
+- `supabase/schema.sql` — existing `conversations`, `messages`, RLS policies, existing trigger. Migrations must NOT break these.
+
+### Visual Reference (zero empty states requirement)
+- `samples/1_dashboard.jpg` — dashboard KPIs, charts, map
+- `samples/2_nhap_hang.jpg` — new activity page
+- `samples/3_ton_kho.jpg` — knowledge base page
+- `samples/4_khach_hang.jpg` — users analytics
+- `samples/5_customer.jpg` — check users page
+- `samples/6_check_distributor.jpg` — check clinics pivot (3 color states required)
+- `samples/6_check_distributor_2.jpg` — clinic detail modal
 
 ### Project Requirements
-- `.planning/REQUIREMENTS.md` — DB-01 through DB-12: all Phase 1 requirements with acceptance criteria
-
-### Pitfalls (mandatory reading before implementation)
-- `.planning/research/PITFALLS.md` — Items #1–#6 are Phase 1 relevant: migration file uniqueness, SECURITY DEFINER trigger, unique indexes in same migration file as view creation, `mv_dashboard_kpis` non-concurrent refresh constraint
+- `.planning/REQUIREMENTS.md` — DB-01 through DB-12
 
 </canonical_refs>
 
@@ -95,29 +200,30 @@ Deploy the full Postgres schema for the admin dashboard: 3 new tables (`profiles
 ## Existing Code Insights
 
 ### Reusable Assets
-- `lib/supabase/server.ts` — exports `createServiceClient()` (service role, bypasses RLS) and `createClient()` (anon). Seed script must use `createServiceClient()` for all DB writes and `supabase.auth.admin.*` for user management.
-- Existing trigger pattern in `supabase/schema.sql` (`update_conversation_timestamp`): existing SECURITY DEFINER trigger for reference — same pattern for `handle_new_user()`.
+- `lib/supabase/server.ts` — `createServiceClient()` (service role) for seed script DB writes; `supabase.auth.admin.*` for user management
+- `supabase/schema.sql` — existing SECURITY DEFINER trigger pattern to replicate for `handle_new_user()`
 
 ### Established Patterns
-- **No existing migrations directory**: `supabase/migrations/` does not exist. Must be created. Current schema lives in `supabase/schema.sql` (monolithic). New additions use separate migration files — do NOT modify `schema.sql`.
-- **No existing scripts directory**: `scripts/` does not exist. Must be created.
-- **TypeScript everywhere**: project uses strict TypeScript. Seed files and scripts must be `.ts`, run via `npx tsx`.
-- **Environment**: Supabase URL and keys in `.env.local` (gitignored). Seed script reads from `process.env.NEXT_PUBLIC_SUPABASE_URL` and `process.env.SUPABASE_SERVICE_ROLE_KEY`.
+- `supabase/migrations/` — does NOT exist yet. Must be created.
+- `scripts/` — does NOT exist yet. Must be created.
+- `data/seeds/` — does NOT exist yet. Must be created.
+- TypeScript strict mode throughout. Seed script uses `ts-node` not `tsx` (per plan-phase args).
+- Env: `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` from `.env.local`
 
 ### Integration Points
-- `supabase/schema.sql` — existing schema; read before writing migrations to avoid conflicts
-- `auth.users` (Supabase managed) — profiles FK target; trigger fires on INSERT here
-- `.env.local` — service role key needed by seed script and refresh-views script
+- `supabase/schema.sql` — read before writing any migration
+- `auth.users` — FK target for `profiles.id` and `query_events.user_id`
+- `conversations` — FK target for `query_events.conversation_id` (existing table)
 
 </code_context>
 
 <specifics>
 ## Specific Ideas
 
-- Migration filenames use today's date prefix: `20260318_add_profiles.sql`, `20260318_add_chat_analytics.sql`, etc. (same-day migrations = alphanumeric order matches dependency order)
-- The `chat_analytics` table needs a `UNIQUE (conversation_id)` constraint (not in spec DDL but required for seed idempotency ON CONFLICT)
-- The `kb_documents` table needs a `UNIQUE (doc_code)` constraint (same reason)
-- These UNIQUE constraints should be added in the same migration file as each table's CREATE TABLE statement
+- Migration numbering: `20260318_001_`, `20260318_002_`, etc. — guarantees alphanumeric sort = dependency order
+- `query_events.conversation_id` needs UNIQUE constraint for idempotent seed upserts
+- `kb_documents.doc_code` needs UNIQUE constraint for idempotent seed upserts
+- Materialized views must adapt joins to use `query_events` (not `chat_analytics`) + `clinics` (not profiles for geographic data)
 
 </specifics>
 
@@ -132,3 +238,4 @@ Deploy the full Postgres schema for the admin dashboard: 3 new tables (`profiles
 
 *Phase: 01-database-migrations-seed-data*
 *Context gathered: 2026-03-18*
+*Schema updated: user's /gsd:plan-phase args override spec — clinics + query_events tables, ALTER profiles*
