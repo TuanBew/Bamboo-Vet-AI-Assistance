@@ -38,11 +38,11 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ### Admin Shell (Phase 2)
 
-- [ ] **SHELL-01**: Admin layout (`app/admin/layout.tsx`) renders dark sidebar (`#1a1f2e` background) + top bar on all `/admin/*` pages
-- [ ] **SHELL-02**: Sidebar has 3 sections (CORE, CHECKED, OTHER) with 7 nav items, teal/cyan section labels, white active item highlight, collapsible on mobile via hamburger
-- [ ] **SHELL-03**: Top bar shows breadcrumb path + "Làm mới dữ liệu" button that triggers server action to refresh all 4 materialized views
-- [ ] **SHELL-04**: Settings page (`/admin/settings`) displays admin profile (name, email, is_admin badge), refresh button, and last-refresh timestamp from `mv_dashboard_kpis.refreshed_at`
-- [ ] **SHELL-05**: Admin pages have no language toggle (Vietnamese only) and no RAGflow chat
+- [x] **SHELL-01**: Admin layout (`app/admin/layout.tsx`) renders dark sidebar (`#1a1f2e` background) + top bar on all `/admin/*` pages
+- [x] **SHELL-02**: Sidebar has 3 sections (CORE, CHECKED, OTHER) with 7 nav items, teal/cyan section labels, white active item highlight, collapsible on mobile via hamburger
+- [x] **SHELL-03**: Top bar shows breadcrumb path + "Làm mới dữ liệu" button that triggers server action to refresh all 4 materialized views
+- [x] **SHELL-04**: Settings page (`/admin/settings`) displays admin profile (name, email, is_admin badge), refresh button, and last-refresh timestamp from `mv_dashboard_kpis.refreshed_at`
+- [x] **SHELL-05**: Admin pages have no language toggle (Vietnamese only) and no RAGflow chat
 
 ---
 
@@ -183,11 +183,11 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | AUTH-03 | Phase 2 | Complete |
 | AUTH-04 | Phase 2 | Complete |
 | AUTH-05 | Phase 2 | Complete |
-| SHELL-01 | Phase 2 | Pending |
-| SHELL-02 | Phase 2 | Pending |
-| SHELL-03 | Phase 2 | Pending |
-| SHELL-04 | Phase 2 | Pending |
-| SHELL-05 | Phase 2 | Pending |
+| SHELL-01 | Phase 2 | Complete |
+| SHELL-02 | Phase 2 | Complete |
+| SHELL-03 | Phase 2 | Complete |
+| SHELL-04 | Phase 2 | Complete |
+| SHELL-05 | Phase 2 | Complete |
 | COMP-01 | Phase 2 | Pending |
 | COMP-02 | Phase 2 | Pending |
 | COMP-03 | Phase 2 | Pending |
