@@ -48,13 +48,13 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ### Shared Admin Components (Phase 2)
 
-- [ ] **COMP-01**: `DataTable` component wraps @tanstack/react-table v8 with configurable `exportConfig` prop controlling Copy / Excel / CSV / PDF / Print button visibility per page
-- [ ] **COMP-02**: `ColorPivotTable` renders monthly or daily numeric data with color-coded cells: `>50` → green, `10–50` → yellow, `1–9` → red, `0` → grey
-- [ ] **COMP-03**: `FilterBar` provides controlled filter row with province selector, district selector, clinic_type selector, year/month date picker, and search input
-- [ ] **COMP-04**: `MapView` wraps react-leaflet using `next/dynamic` with `ssr: false` — Leaflet map component that accepts pins array with coordinates and popup content, handles marker icon fix
-- [ ] **COMP-05**: `SparklineChart` renders a minimal Recharts LineChart (no axes, no legend) for embedding in table rows as 12-month trend indicators
-- [ ] **COMP-06**: `KpiCard` renders colored card with large number, label, optional icon, optional background color prop
-- [ ] **COMP-07**: `SectionHeader` renders teal header bar with title and collapsible chevron toggle
+- [x] **COMP-01**: `DataTable` component wraps @tanstack/react-table v8 with configurable `exportConfig` prop controlling Copy / Excel / CSV / PDF / Print button visibility per page
+- [x] **COMP-02**: `ColorPivotTable` renders monthly or daily numeric data with color-coded cells: `>50` → green, `10–50` → yellow, `1–9` → red, `0` → grey
+- [x] **COMP-03**: `FilterBar` provides controlled filter row with province selector, district selector, clinic_type selector, year/month date picker, and search input
+- [x] **COMP-04**: `MapView` wraps react-leaflet using `next/dynamic` with `ssr: false` — Leaflet map component that accepts pins array with coordinates and popup content, handles marker icon fix
+- [x] **COMP-05**: `SparklineChart` renders a minimal Recharts LineChart (no axes, no legend) for embedding in table rows as 12-month trend indicators
+- [x] **COMP-06**: `KpiCard` renders colored card with large number, label, optional icon, optional background color prop
+- [x] **COMP-07**: `SectionHeader` renders teal header bar with title and collapsible chevron toggle
 
 ---
 
@@ -188,13 +188,13 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | SHELL-03 | Phase 2 | Complete |
 | SHELL-04 | Phase 2 | Complete |
 | SHELL-05 | Phase 2 | Complete |
-| COMP-01 | Phase 2 | Pending |
-| COMP-02 | Phase 2 | Pending |
-| COMP-03 | Phase 2 | Pending |
-| COMP-04 | Phase 2 | Pending |
-| COMP-05 | Phase 2 | Pending |
-| COMP-06 | Phase 2 | Pending |
-| COMP-07 | Phase 2 | Pending |
+| COMP-01 | Phase 2 | Complete |
+| COMP-02 | Phase 2 | Complete |
+| COMP-03 | Phase 2 | Complete |
+| COMP-04 | Phase 2 | Complete |
+| COMP-05 | Phase 2 | Complete |
+| COMP-06 | Phase 2 | Complete |
+| COMP-07 | Phase 2 | Complete |
 | DASH-01 | Phase 3 | Pending |
 | DASH-02 | Phase 3 | Pending |
 | DASH-03 | Phase 3 | Pending |

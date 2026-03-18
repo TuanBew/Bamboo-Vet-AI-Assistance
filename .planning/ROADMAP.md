@@ -13,7 +13,7 @@ Product B adds an internal Vietnamese-only admin SaaS dashboard at `/admin/*` to
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Database Migrations & Seed Data** - Create schema, materialized views, indexes, RLS, trigger, and idempotent seed scripts
-- [ ] **Phase 2: Admin Shell & Role-Based Routing** - Wire middleware guard, auth utilities, dark layout shell, and all shared admin components
+- [x] **Phase 2: Admin Shell & Role-Based Routing** - Wire middleware guard, auth utilities, dark layout shell, and all shared admin components (completed 2026-03-18)
 - [ ] **Phase 3: Admin Dashboard page + New Activity page** - Build primary landing page with KPIs/charts/map and the New Activity analytics view
 - [ ] **Phase 4: Knowledge Base page + Users Analytics page** - Deliver KB document registry page and the users analytics page
 - [ ] **Phase 5: Check Users page + Check Clinics page** - Build the complex data-explorer pages with pivot tables, maps, conversation drawer, and clinic modal
@@ -48,7 +48,7 @@ Plans:
   3. The `requireAdmin()` utility returns a 403 response when called from an API route by a non-admin — verified by calling `/api/admin/dashboard` as a non-admin.
   4. All seven admin pages render the dark sidebar (`#1a1f2e`), breadcrumb top bar, and "Lam moi du lieu" refresh button without hydration errors in the browser console.
   5. The `globals.css` dark mode selector fix (`(&:where(.dark, .dark *))`) is applied and Tailwind v4 dark theme utility classes render correctly inside the `.dark` wrapper div.
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 02-01-PLAN.md — Dark mode CSS fix + proxy smoke test + middleware admin guards + requireAdmin() utility
@@ -111,7 +111,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
-| 2. Admin Shell & Role-Based Routing | 2/3 | In Progress|  |
+| 2. Admin Shell & Role-Based Routing | 3/3 | Complete   | 2026-03-18 |
 | 3. Admin Dashboard + New Activity | 0/TBD | Not started | - |
 | 4. Knowledge Base + Users Analytics | 0/TBD | Not started | - |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
