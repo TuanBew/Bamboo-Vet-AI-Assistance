@@ -3,30 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-18T13:23:37.853Z"
-last_activity: 2026-03-18 — Completed 01-02 seed data files
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-18T13:55:15Z"
+last_activity: 2026-03-18 — Completed 02-01 auth guards and dark mode fix
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-03-18T11:12:44Z"
-last_activity: 2026-03-18 — Completed 01-02 seed data files
-progress:
-  [██████████] 100%
-  completed_phases: 0
-  total_plans: 3
-  completed_plans: 2
+  total_plans: 6
+  completed_plans: 4
   percent: 67
 ---
 
@@ -37,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Admins can see exactly who is using the platform, what they're asking, and where they're located — so they can manage knowledge base quality, monitor clinic engagement, and identify usage patterns across the Vietnamese veterinary market.
-**Current focus:** Phase 1 — Database Migrations & Seed Data
+**Current focus:** Phase 2 — Admin Shell & Role-Based Routing
 
 ## Current Position
 
-Phase: 1 of 6 (Database Migrations & Seed Data)
-Plan: 2 of 3 in current phase (completed)
+Phase: 2 of 6 (Admin Shell & Role-Based Routing)
+Plan: 1 of 3 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-18 — Completed 01-02 seed data files
+Last activity: 2026-03-18 — Completed 02-01 auth guards and dark mode fix
 
-Progress: [██████░░░░] 67%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -67,6 +51,7 @@ Progress: [██████░░░░] 67%
 
 *Updated after each plan completion*
 | Phase 01 P03 | 6 | 1 tasks | 1 files |
+| Phase 02 P01 | 4 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -86,6 +71,9 @@ Recent decisions affecting current work:
 - [Phase 01]: UUID prefix convention: c0a1 for clinics, p0a2 for profiles, cv for conversations, qe for query_events
 - [Phase 01]: "Others" province mapped to Thua Thien Hue + Thai Nguyen + Khanh Hoa
 - [Phase 01]: Seed script uses same dotenv+createClient pattern as refresh-views.ts
+- [Phase 02]: Dynamic import for createServiceClient in middleware avoids cookies() in proxy scope
+- [Phase 02]: proxy.ts confirmed as correct Next.js 16 convention (build shows Proxy Middleware)
+- [Phase 02]: requireAdmin returns 403 JSON not redirect since it protects API routes
 
 ### Pending Todos
 
@@ -93,12 +81,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- **Phase 2 blocker**: proxy.ts vs middleware.ts naming conflict between research agents — resolve via smoke test as first action of Phase 2 planning before writing guard code.
+- **Phase 2 blocker (RESOLVED)**: proxy.ts confirmed as correct Next.js 16 convention -- build output shows "Proxy (Middleware)", no rename needed.
 - **Phase 5 concern**: Clinic detail modal has dynamic day columns (28–31 per month) — highest-complexity single component in the spec; consider a brief spike to validate cell layout before full implementation.
 - **Phase 6 concern**: Vietnamese PDF font embedding adds ~200KB to client bundle on check-users page — decide during Phase 6 whether to lazy-load or pre-embed.
 
 ## Session Continuity
 
-Last session: 2026-03-18T13:23:37.845Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-admin-shell-role-based-routing/02-CONTEXT.md
+Last session: 2026-03-18T13:55:15Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: .planning/phases/02-admin-shell-role-based-routing/02-02-PLAN.md

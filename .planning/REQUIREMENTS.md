@@ -28,11 +28,11 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ### Auth & Role-Based Routing (Phase 2)
 
-- [ ] **AUTH-01**: Unauthenticated user accessing any `/admin/*` route is redirected to `/login`
-- [ ] **AUTH-02**: Authenticated user with `is_admin = false` accessing any `/admin/*` route is redirected to `/login`
-- [ ] **AUTH-03**: Authenticated user with `is_admin = true` accessing `/app` is redirected to `/admin/dashboard` (two-hop login flow: `/login` → `/app` → `/admin/dashboard`)
-- [ ] **AUTH-04**: `requireAdmin()` utility (`lib/admin/auth.ts`) returns `{ user, profile }` for valid admin or `NextResponse(403)` for unauthorized — used in every `/api/admin/*` route
-- [ ] **AUTH-05**: `globals.css` dark mode variant selector fixed (`(&:is(.dark *))` → `(&:where(.dark, .dark *))`) so admin dark theme renders correctly in Tailwind v4
+- [x] **AUTH-01**: Unauthenticated user accessing any `/admin/*` route is redirected to `/login`
+- [x] **AUTH-02**: Authenticated user with `is_admin = false` accessing any `/admin/*` route is redirected to `/login`
+- [x] **AUTH-03**: Authenticated user with `is_admin = true` accessing `/app` is redirected to `/admin/dashboard` (two-hop login flow: `/login` → `/app` → `/admin/dashboard`)
+- [x] **AUTH-04**: `requireAdmin()` utility (`lib/admin/auth.ts`) returns `{ user, profile }` for valid admin or `NextResponse(403)` for unauthorized — used in every `/api/admin/*` route
+- [x] **AUTH-05**: `globals.css` dark mode variant selector fixed (`(&:is(.dark *))` → `(&:where(.dark, .dark *))`) so admin dark theme renders correctly in Tailwind v4
 
 ---
 
@@ -178,11 +178,11 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | DB-10 | Phase 1 | Complete |
 | DB-11 | Phase 1 | Complete |
 | DB-12 | Phase 1 | Complete |
-| AUTH-01 | Phase 2 | Pending |
-| AUTH-02 | Phase 2 | Pending |
-| AUTH-03 | Phase 2 | Pending |
-| AUTH-04 | Phase 2 | Pending |
-| AUTH-05 | Phase 2 | Pending |
+| AUTH-01 | Phase 2 | Complete |
+| AUTH-02 | Phase 2 | Complete |
+| AUTH-03 | Phase 2 | Complete |
+| AUTH-04 | Phase 2 | Complete |
+| AUTH-05 | Phase 2 | Complete |
 | SHELL-01 | Phase 2 | Pending |
 | SHELL-02 | Phase 2 | Pending |
 | SHELL-03 | Phase 2 | Pending |
