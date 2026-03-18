@@ -11,18 +11,18 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ### Database (Phase 1)
 
-- [ ] **DB-01**: Admin can rely on `profiles` table existing for every user (auto-populated by SECURITY DEFINER trigger on `auth.users` insert) with geographic fields: province, district, ward, region, latitude, longitude, clinic_type, facility_code, staff_code
-- [ ] **DB-02**: Admin can trust that `profiles.is_admin` defaults to `false` for all new users, with promotion done via SQL only
-- [ ] **DB-03**: `chat_analytics` table stores per-conversation drug_group, animal_type, query_type metadata (service role only, no client access)
-- [ ] **DB-04**: `kb_documents` table stores knowledge base document registry (doc_code, doc_name, chunk_count, doc_type, category, drug_group, source, relevance_score, status)
-- [ ] **DB-05**: `mv_monthly_queries` materialized view (user × year × month, query + session counts) with UNIQUE INDEX on (user_id, year, month) for REFRESH CONCURRENTLY
-- [ ] **DB-06**: `mv_daily_queries` materialized view (user × year × month × day) with UNIQUE INDEX on (user_id, year, month, day) for REFRESH CONCURRENTLY
-- [ ] **DB-07**: `mv_category_stats` materialized view (year × month × province × clinic_type × drug_group × animal_type × query_type) with UNIQUE INDEX on all 7 columns for REFRESH CONCURRENTLY
-- [ ] **DB-08**: `mv_dashboard_kpis` materialized view (single-row aggregate: total_sessions, total_queries, total_users, total_documents, total_staff, refreshed_at) — no unique index, plain REFRESH only
+- [x] **DB-01**: Admin can rely on `profiles` table existing for every user (auto-populated by SECURITY DEFINER trigger on `auth.users` insert) with geographic fields: province, district, ward, region, latitude, longitude, clinic_type, facility_code, staff_code
+- [x] **DB-02**: Admin can trust that `profiles.is_admin` defaults to `false` for all new users, with promotion done via SQL only
+- [x] **DB-03**: `chat_analytics` table stores per-conversation drug_group, animal_type, query_type metadata (service role only, no client access)
+- [x] **DB-04**: `kb_documents` table stores knowledge base document registry (doc_code, doc_name, chunk_count, doc_type, category, drug_group, source, relevance_score, status)
+- [x] **DB-05**: `mv_monthly_queries` materialized view (user × year × month, query + session counts) with UNIQUE INDEX on (user_id, year, month) for REFRESH CONCURRENTLY
+- [x] **DB-06**: `mv_daily_queries` materialized view (user × year × month × day) with UNIQUE INDEX on (user_id, year, month, day) for REFRESH CONCURRENTLY
+- [x] **DB-07**: `mv_category_stats` materialized view (year × month × province × clinic_type × drug_group × animal_type × query_type) with UNIQUE INDEX on all 7 columns for REFRESH CONCURRENTLY
+- [x] **DB-08**: `mv_dashboard_kpis` materialized view (single-row aggregate: total_sessions, total_queries, total_users, total_documents, total_staff, refreshed_at) — no unique index, plain REFRESH only
 - [ ] **DB-09**: Idempotent seed script generates 82 profiles (80 non-admin + 2 admin) with realistic geographic and clinic-type distributions (Hà Nội 15, HCMC 18, Đà Nẵng 8, etc.)
 - [ ] **DB-10**: Idempotent seed script generates ~4,000 conversations + ~20,000 messages + ~4,000 chat_analytics rows across Jan 2024–Mar 2026 with correct volume curve (80/month in 2024 → 320/month in 2025 H2)
 - [ ] **DB-11**: Idempotent seed script generates 120 kb_documents with 8 drug categories, 3 doc types (PDF 60% / DOCX 30% / TXT 10%), relevance scores 0.60–0.99
-- [ ] **DB-12**: `scripts/refresh-views.ts` refreshes all 4 views (3 CONCURRENTLY, 1 plain) using service role client
+- [x] **DB-12**: `scripts/refresh-views.ts` refreshes all 4 views (3 CONCURRENTLY, 1 plain) using service role client
 
 ---
 
@@ -166,18 +166,18 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-01 | Phase 1 | Pending |
-| DB-02 | Phase 1 | Pending |
-| DB-03 | Phase 1 | Pending |
-| DB-04 | Phase 1 | Pending |
-| DB-05 | Phase 1 | Pending |
-| DB-06 | Phase 1 | Pending |
-| DB-07 | Phase 1 | Pending |
-| DB-08 | Phase 1 | Pending |
+| DB-01 | Phase 1 | Complete |
+| DB-02 | Phase 1 | Complete |
+| DB-03 | Phase 1 | Complete |
+| DB-04 | Phase 1 | Complete |
+| DB-05 | Phase 1 | Complete |
+| DB-06 | Phase 1 | Complete |
+| DB-07 | Phase 1 | Complete |
+| DB-08 | Phase 1 | Complete |
 | DB-09 | Phase 1 | Pending |
 | DB-10 | Phase 1 | Pending |
 | DB-11 | Phase 1 | Pending |
-| DB-12 | Phase 1 | Pending |
+| DB-12 | Phase 1 | Complete |
 | AUTH-01 | Phase 2 | Pending |
 | AUTH-02 | Phase 2 | Pending |
 | AUTH-03 | Phase 2 | Pending |
