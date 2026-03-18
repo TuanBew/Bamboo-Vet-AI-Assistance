@@ -20,3 +20,5 @@
 | c0a10001-1a2b-4c3d-8e4f-000000000016 | My pham thu y Ha Noi | MP-HN-001 | my_pham | Ha Noi | Cau Giay | 88 Xuan Thuy, Cau Giay | 21.036000 | 105.782000 | 2023-10-15T10:00:00Z |
 | c0a10001-1a2b-4c3d-8e4f-000000000017 | Dai ly thuoc thu y Hue | KH-HUE-001 | khac | Thua Thien Hue | Hue | 45 Hung Vuong, Hue | 16.462000 | 107.590000 | 2023-11-01T08:00:00Z |
 | c0a10001-1a2b-4c3d-8e4f-000000000018 | Trai chan nuoi Di An | TY-BD-002 | thu_y | Binh Duong | Di An | 67 Nguyen An Ninh, Di An | 10.901000 | 106.769000 | 2023-08-05T07:00:00Z |
+| c0a10001-1a2b-4c3d-8e4f-000000000019 | Trai chan nuoi Song Cong | TY-TN-001 | thu_y | Thai Nguyen | Song Cong | 12 Cach Mang Thang 10, Song Cong | 21.475000 | 105.849000 | 2023-11-10T08:00:00Z |
+| c0a10001-1a2b-4c3d-8e4f-000000000020 | My pham thu y Nha Trang | MP-KH-001 | my_pham | Khanh Hoa | Nha Trang | 56 Tran Phu, Nha Trang | 12.238000 | 109.196000 | 2023-12-01T09:00:00Z |
