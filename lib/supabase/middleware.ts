@@ -26,6 +26,39 @@ export async function updateSession(request: NextRequest) {
   // Refresh session — do not remove
   const { data: { user } } = await supabase.auth.getUser()
 
+  // --- Admin route guards ---
+  const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
+  const isApiAdminRoute = request.nextUrl.pathname.startsWith('/api/admin')
+
+  // Skip API admin routes — those use requireAdmin() in route handlers
+  if (!isApiAdminRoute && isAdminRoute) {
+    // AUTH-01: Unauthenticated users → /login
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+
+    // AUTH-02: Authenticated non-admin → /login
+    try {
+      const { createServiceClient } = await import('@/lib/supabase/server')
+      const svc = createServiceClient()
+      const { data: profile } = await svc
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.is_admin) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/login'
+        return NextResponse.redirect(url)
+      }
+    } catch {
+      // If profile fetch fails, let request through to avoid infinite redirect
+    }
+  }
+
   // Guard /app/* routes
   if (!user && request.nextUrl.pathname.startsWith('/app')) {
     const url = request.nextUrl.clone()
@@ -33,14 +66,50 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // AUTH-03: Admin hitting /app → redirect to /admin/dashboard
+  if (user && request.nextUrl.pathname.startsWith('/app')) {
+    try {
+      const { createServiceClient } = await import('@/lib/supabase/server')
+      const svc = createServiceClient()
+      const { data: profile } = await svc
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.is_admin === true) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/admin/dashboard'
+        return NextResponse.redirect(url)
+      }
+    } catch {
+      // If profile fetch fails, let request through to /app
+    }
+  }
+
   // Redirect logged-in users away from auth pages
   if (user && (
     request.nextUrl.pathname === '/login' ||
     request.nextUrl.pathname === '/signup'
   )) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/app'
-    return NextResponse.redirect(url)
+    try {
+      const { createServiceClient } = await import('@/lib/supabase/server')
+      const svc = createServiceClient()
+      const { data: profile } = await svc
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single()
+
+      const url = request.nextUrl.clone()
+      url.pathname = profile?.is_admin === true ? '/admin/dashboard' : '/app'
+      return NextResponse.redirect(url)
+    } catch {
+      // Fallback: redirect to /app if profile fetch fails
+      const url = request.nextUrl.clone()
+      url.pathname = '/app'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse
