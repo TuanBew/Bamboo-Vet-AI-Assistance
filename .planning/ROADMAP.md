@@ -46,9 +46,14 @@ Plans:
   1. Navigating to `/admin/dashboard` while logged out redirects to `/login` (smoke-test resolves proxy.ts vs middleware.ts naming before any guard code is written).
   2. Logging in with a non-admin account and visiting `/admin/dashboard` redirects to `/login`; logging in as an admin and visiting `/app` redirects to `/admin/dashboard`.
   3. The `requireAdmin()` utility returns a 403 response when called from an API route by a non-admin — verified by calling `/api/admin/dashboard` as a non-admin.
-  4. All seven admin pages render the dark sidebar (`#1a1f2e`), breadcrumb top bar, and "Làm mới dữ liệu" refresh button without hydration errors in the browser console.
+  4. All seven admin pages render the dark sidebar (`#1a1f2e`), breadcrumb top bar, and "Lam moi du lieu" refresh button without hydration errors in the browser console.
   5. The `globals.css` dark mode selector fix (`(&:where(.dark, .dark *))`) is applied and Tailwind v4 dark theme utility classes render correctly inside the `.dark` wrapper div.
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Dark mode CSS fix + proxy smoke test + middleware admin guards + requireAdmin() utility
+- [ ] 02-02-PLAN.md — Admin layout shell (sidebar + top bar) + 7 page shells + settings page
+- [ ] 02-03-PLAN.md — Shared admin component stubs (KpiCard, SectionHeader, DataTable, ColorPivotTable, FilterBar, MapView, SparklineChart, ClinicDetailModal, UserHistoryDrawer)
 
 ### Phase 3: Admin Dashboard page + New Activity page
 **Goal**: The two primary analytics pages are fully functional — `/admin/dashboard` displays platform-wide KPIs, time-series charts with a 3-month forecast dotted line, category donut charts, a user table with sparklines, and a Leaflet clinic map; `/admin/new-activity` shows 6 KPI cards, daily volume charts, recent sessions table, top popular questions, and category donuts.
@@ -70,8 +75,8 @@ Plans:
   1. `/admin/knowledge-base` renders 3 KPI cards (total documents, total chunks, unique ratio) with correct values drawn from `kb_documents`; all 6 charts (2 horizontal bar charts + 2 pie charts + 2 bar charts) render with data.
   2. The knowledge base DataTable paginates correctly, the search bar filters rows in real time, and clicking "Excel export" downloads a valid `.xlsx` file containing all document rows.
   3. `/admin/users` renders the 3 charts (new users per month LineChart, users by province BarChart, users by district horizontal BarChart) with non-zero data.
-  4. The "Tất cả khách hàng" and "Khách hàng đang truy vấn" sections each show 4 KPI tiles and a facility-type breakdown table with correct counts and percentages.
-  5. The "Người dùng nhiều truy vấn" section is collapsible and lists users exceeding the 10-queries/month threshold.
+  4. The "Tat ca khach hang" and "Khach hang dang truy van" sections each show 4 KPI tiles and a facility-type breakdown table with correct counts and percentages.
+  5. The "Nguoi dung nhieu truy van" section is collapsible and lists users exceeding the 10-queries/month threshold.
 **Plans**: TBD
 
 ### Phase 5: Check Users page + Check Clinics page
@@ -81,9 +86,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. The full-width Leaflet map on `/admin/check-users` renders with pins color-coded by `clinic_type`; clicking a pin shows a popup with full name and clinic type; no SSR crash occurs.
   2. The user DataTable offers all five export buttons (Copy, Excel, CSV, PDF, Print); each produces a valid artifact; PDF contains readable text (diacritics handled with documented strategy).
-  3. "Xem lịch sử" on a user row opens the shadcn Sheet drawer, lists that user's conversations, and selecting a conversation loads messages in a read-only chat-style view using the service role client.
+  3. "Xem lich su" on a user row opens the shadcn Sheet drawer, lists that user's conversations, and selecting a conversation loads messages in a read-only chat-style view using the service role client.
   4. The monthly pivot table (rows = users, columns = 2024-01 through 2026-03) renders with color-coded cells (green/yellow/red/grey thresholds) and the Excel export button downloads the full pivot.
-  5. Clicking a clinic row in `/admin/check-clinics` opens a dark Dialog modal (`bg-gray-900`) showing staff users as rows and days 1–31 as columns, with query and session counts in each cell using the same color thresholds.
+  5. Clicking a clinic row in `/admin/check-clinics` opens a dark Dialog modal (`bg-gray-900`) showing staff users as rows and days 1-31 as columns, with query and session counts in each cell using the same color thresholds.
 **Plans**: TBD
 
 ### Phase 6: Security & Polish
@@ -106,7 +111,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
-| 2. Admin Shell & Role-Based Routing | 0/TBD | Not started | - |
+| 2. Admin Shell & Role-Based Routing | 0/3 | Not started | - |
 | 3. Admin Dashboard + New Activity | 0/TBD | Not started | - |
 | 4. Knowledge Base + Users Analytics | 0/TBD | Not started | - |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
