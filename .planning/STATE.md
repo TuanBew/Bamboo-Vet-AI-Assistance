@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-03-18T14:27:28Z"
-last_activity: 2026-03-18 — Completed 02-03 shared admin components
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-03-18T15:31:39Z"
+last_activity: 2026-03-18 — Completed 02-04 gap closure plan
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
   percent: 100
 ---
 
@@ -26,18 +26,18 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 2 of 6 (Admin Shell & Role-Based Routing) -- COMPLETE
-Plan: 3 of 3 in current phase (completed)
+Plan: 4 of 4 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-18 — Completed 02-03 shared admin components
+Last activity: 2026-03-18 — Completed 02-04 gap closure plan
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5 min
-- Total execution time: 0.23 hours
+- Total plans completed: 4
+- Average duration: 4 min
+- Total execution time: 0.27 hours
 
 **By Phase:**
 
@@ -46,7 +46,7 @@ Progress: [██████████] 100%
 | 01-database-migrations-seed-data | 2 | 10 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2 min), 01-02 (8 min), 02-02 (4 min)
+- Last 5 plans: 01-01 (2 min), 01-02 (8 min), 02-02 (4 min), 02-04 (1 min)
 - Trend: stable
 
 *Updated after each plan completion*
@@ -54,6 +54,7 @@ Progress: [██████████] 100%
 | Phase 02 P01 | 4 | 3 tasks | 3 files |
 | Phase 02 P02 | 4 | 2 tasks | 12 files |
 | Phase 02 P03 | 3 | 2 tasks | 9 files |
+| Phase 02 P04 | 1 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,7 @@ Recent decisions affecting current work:
 - [Phase 02]: Admin sign out uses createBrowserClient in AdminTopBar for client-side auth
 - [Phase 02]: Admin component stubs use dark-themed gray-800/900 placeholder styling consistent with shell
 - [Phase 02]: ClinicDetailModal and UserHistoryDrawer use base-ui Dialog/Sheet primitives (not radix)
+- [Phase 02]: SHELL-02 updated to remove hamburger/mobile collapse, replaced with desktop-only fixed 240px
 
 ### Pending Todos
 
@@ -88,11 +90,11 @@ None yet.
 ### Blockers/Concerns
 
 - **Phase 2 blocker (RESOLVED)**: proxy.ts confirmed as correct Next.js 16 convention -- build output shows "Proxy (Middleware)", no rename needed.
-- **Phase 5 concern**: Clinic detail modal has dynamic day columns (28–31 per month) — highest-complexity single component in the spec; consider a brief spike to validate cell layout before full implementation.
-- **Phase 6 concern**: Vietnamese PDF font embedding adds ~200KB to client bundle on check-users page — decide during Phase 6 whether to lazy-load or pre-embed.
+- **Phase 5 concern**: Clinic detail modal has dynamic day columns (28-31 per month) -- highest-complexity single component in the spec; consider a brief spike to validate cell layout before full implementation.
+- **Phase 6 concern**: Vietnamese PDF font embedding adds ~200KB to client bundle on check-users page -- decide during Phase 6 whether to lazy-load or pre-embed.
 
 ## Session Continuity
 
-Last session: 2026-03-18T14:08:33.272Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-03-18T15:31:39Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None

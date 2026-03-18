@@ -48,7 +48,7 @@ Plans:
   3. The `requireAdmin()` utility returns a 403 response when called from an API route by a non-admin — verified by calling `/api/admin/dashboard` as a non-admin.
   4. All seven admin pages render the dark sidebar (`#1a1f2e`), breadcrumb top bar, and "Lam moi du lieu" refresh button without hydration errors in the browser console.
   5. The `globals.css` dark mode selector fix (`(&:where(.dark, .dark *))`) is applied and Tailwind v4 dark theme utility classes render correctly inside the `.dark` wrapper div.
-**Plans:** 4 plans (3 complete + 1 gap closure)
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] 02-01-PLAN.md — Dark mode CSS fix + proxy smoke test + middleware admin guards + requireAdmin() utility
@@ -112,7 +112,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
-| 2. Admin Shell & Role-Based Routing | 3/4 | Gap Closure | 2026-03-18 |
+| 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
 | 3. Admin Dashboard + New Activity | 0/TBD | Not started | - |
 | 4. Knowledge Base + Users Analytics | 0/TBD | Not started | - |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
