@@ -60,8 +60,8 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ### Admin Dashboard Page (Phase 3)
 
-- [ ] **DASH-01**: `GET /api/admin/dashboard` returns KPIs (platform-wide, unfiltered), monthly_series (with 3-month forecast, `is_forecast` flag), category_stats (filtered), top_users with sparklines, clinic_map pins, top_clinics
-- [ ] **DASH-02**: `lib/admin/forecast.ts` implements server-side linear regression on last 6 months of data, extrapolates 3 forecast months, appended to monthly_series with `is_forecast: true`
+- [x] **DASH-01**: `GET /api/admin/dashboard` returns KPIs (platform-wide, unfiltered), monthly_series (with 3-month forecast, `is_forecast` flag), category_stats (filtered), top_users with sparklines, clinic_map pins, top_clinics
+- [x] **DASH-02**: `lib/admin/forecast.ts` implements server-side linear regression on last 6 months of data, extrapolates 3 forecast months, appended to monthly_series with `is_forecast: true`
 - [ ] **DASH-03**: `/admin/dashboard` "Tổng quan" section: grouped BarChart (queries + sessions by year 2024/2025/2026) + AreaChart with dotted line for forecast months (`strokeDasharray="4 4"`)
 - [ ] **DASH-04**: `/admin/dashboard` "Chỉ số tập trung" section: LineChart (daily volume for selected month), 5 KPI cards, 6 PieChart donuts (drug group + animal type + query type, for queries and sessions)
 - [ ] **DASH-05**: `/admin/dashboard` "Người dùng" section: table with full_name, clinic_name, total queries, 12-month sparkline, sessions, average, days_active + 2 inline horizontal BarCharts per row
@@ -195,8 +195,8 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | COMP-05 | Phase 2 | Complete |
 | COMP-06 | Phase 2 | Complete |
 | COMP-07 | Phase 2 | Complete |
-| DASH-01 | Phase 3 | Pending |
-| DASH-02 | Phase 3 | Pending |
+| DASH-01 | Phase 3 | Complete |
+| DASH-02 | Phase 3 | Complete |
 | DASH-03 | Phase 3 | Pending |
 | DASH-04 | Phase 3 | Pending |
 | DASH-05 | Phase 3 | Pending |
