@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-03-19T05:18:04Z"
-last_activity: 2026-03-19 — Completed 03-03 new activity page
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-03-19T10:10:41Z"
+last_activity: 2026-03-19 — Completed 03-04 gap closure (column mismatches)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 11
+  completed_plans: 11
   percent: 100
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 3 of 6 (Admin Dashboard Page + New Activity Page)
-Plan: 3 of 3 in current phase (completed)
+Plan: 4 of 4 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-19 — Completed 03-03 new activity page
+Last activity: 2026-03-19 — Completed 03-04 gap closure (column mismatches)
 
 Progress: [██████████] 100%
 
@@ -58,6 +58,7 @@ Progress: [██████████] 100%
 | Phase 03 P01 | 7 | 4 tasks | 7 files |
 | Phase 03 P02 | 4 | 2 tasks | 7 files |
 | Phase 03 P03 | 4 | 2 tasks | 5 files |
+| Phase 03 P04 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Recent decisions affecting current work:
 - [Phase 03]: avg_session_duration_min computed in JS from message timestamps (not raw SQL) since Supabase JS lacks raw SQL
 - [Phase 03]: top_questions grouping done in JS with 60-char prefix slice, acceptable for single-month volume
 - [Phase 03]: New Activity page uses month-only filter (no province/clinic_type) per design spec
+- [Phase 03]: Per-user category breakdown queries query_events directly since mv_category_stats has no user_id column
+- [Phase 03]: fetchCategoryStats filters by province/clinic_type on the view instead of pre-filtering user IDs
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T05:18:04Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-03-19T10:10:41Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
