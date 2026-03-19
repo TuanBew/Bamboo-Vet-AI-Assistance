@@ -97,8 +97,8 @@ export async function getDashboardData(
   // 2. Monthly series — with optional user filter, + forecast
   const monthlySeries = await fetchMonthlySeries(db, filteredUserIds)
 
-  // 3. Category stats — filtered by month + optional user filter
-  const categoryStats = await fetchCategoryStats(db, year, month, filteredUserIds)
+  // 3. Category stats — filtered by month + optional province/clinic_type
+  const categoryStats = await fetchCategoryStats(db, year, month, filters.province || undefined, filters.clinic_type || undefined)
 
   // 4. Daily volume — for selected month
   const dailyVolume = await fetchDailyVolume(db, year, month, filteredUserIds)
@@ -203,16 +203,20 @@ async function fetchCategoryStats(
   db: ReturnType<typeof createServiceClient>,
   year: number,
   month: number,
-  filteredUserIds: string[] | null
+  province?: string,
+  clinicType?: string
 ) {
   let query = db
     .from('mv_category_stats')
-    .select('drug_group, animal_type, query_type, query_count, user_id')
+    .select('drug_category, animal_type, query_type, count')
     .eq('year', year)
     .eq('month', month)
 
-  if (filteredUserIds !== null) {
-    query = query.in('user_id', filteredUserIds)
+  if (province) {
+    query = query.eq('province', province)
+  }
+  if (clinicType) {
+    query = query.eq('clinic_type', clinicType)
   }
 
   const { data } = await query
@@ -222,8 +226,8 @@ async function fetchCategoryStats(
   const queryTypes = new Map<string, number>()
 
   for (const row of data ?? []) {
-    const count = Number(row.query_count)
-    const dg = row.drug_group || 'Khác'
+    const count = Number(row.count)
+    const dg = row.drug_category || 'Khác'
     const at = row.animal_type || 'Khác'
     const qt = row.query_type || 'Khác'
 
@@ -367,10 +371,10 @@ async function fetchTopUsers(
     }
   }
 
-  // Fetch category breakdowns for top 20
+  // Fetch category breakdowns for top 20 from query_events (has user_id, unlike mv_category_stats)
   const { data: catData } = await db
-    .from('mv_category_stats')
-    .select('user_id, drug_group, query_type, query_count')
+    .from('query_events')
+    .select('user_id, drug_category, query_type')
     .in('user_id', top20Ids)
 
   const drugBreakdownMap = new Map<string, Record<string, number>>()
@@ -378,19 +382,18 @@ async function fetchTopUsers(
 
   for (const row of catData ?? []) {
     const uid = row.user_id as string
-    const count = Number(row.query_count)
 
-    // Drug group breakdown
-    const dg = row.drug_group || 'Khác'
+    // Drug group breakdown (each query_events row = 1 event)
+    const dg = row.drug_category || 'Khác'
     if (!drugBreakdownMap.has(uid)) drugBreakdownMap.set(uid, {})
     const dgMap = drugBreakdownMap.get(uid)!
-    dgMap[dg] = (dgMap[dg] ?? 0) + count
+    dgMap[dg] = (dgMap[dg] ?? 0) + 1
 
     // Query type breakdown
     const qt = row.query_type || 'Khác'
     if (!queryTypeBreakdownMap.has(uid)) queryTypeBreakdownMap.set(uid, {})
     const qtMap = queryTypeBreakdownMap.get(uid)!
-    qtMap[qt] = (qtMap[qt] ?? 0) + count
+    qtMap[qt] = (qtMap[qt] ?? 0) + 1
   }
 
   // Build sparkline: last 12 months
