@@ -41,9 +41,9 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 3 of 6 (Admin Dashboard Page + New Activity Page)
-Plan: 4 of 4 in current phase (completed)
+Plan: 5 of 5 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-19 — Completed 03-04 gap closure (column mismatches)
+Last activity: 2026-03-19 — Completed 03-05 nhap-hang purchase order page
 
 Progress: [██████████] 100%
 
@@ -74,6 +74,7 @@ Progress: [██████████] 100%
 | Phase 03 P02 | 4 | 2 tasks | 7 files |
 | Phase 03 P03 | 4 | 2 tasks | 5 files |
 | Phase 03 P04 | 3 | 2 tasks | 2 files |
+| Phase 03 P05 | 17 | 8 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,10 @@ Recent decisions affecting current work:
 - [Phase 03]: New Activity page uses month-only filter (no province/clinic_type) per design spec
 - [Phase 03]: Per-user category breakdown queries query_events directly since mv_category_stats has no user_id column
 - [Phase 03]: fetchCategoryStats filters by province/clinic_type on the view instead of pre-filtering user IDs
+- [Phase 03]: Nhap-hang filter uses Search button click (no onChange auto-refetch) per spec
+- [Phase 03]: Recharts Tooltip formatters use implicit type inference to avoid strict TS errors
+- [Phase 03]: 86 purchase orders generated deterministically spanning Jan 2024 - Mar 2026
+- [Phase 03]: order_date transformed from ISO dash to YYYY/MM/DD slash format in service layer
 
 ### Pending Todos
 
@@ -123,6 +128,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T11:19:11.799Z
-Stopped at: Phase 3 context updated: nhap-hang purchase order page
+Last session: 2026-03-19T12:57:36Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: .planning/phases/03-admin-dashboard-page-new-activity-page/03-CONTEXT.md

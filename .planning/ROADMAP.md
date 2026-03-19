@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Database Migrations & Seed Data** - Create schema, materialized views, indexes, RLS, trigger, and idempotent seed scripts
 - [x] **Phase 2: Admin Shell & Role-Based Routing** - Wire middleware guard, auth utilities, dark layout shell, and all shared admin components (completed 2026-03-18)
-- [ ] **Phase 3: Admin Dashboard page + New Activity page** - Build primary landing page with KPIs/charts/map, New Activity analytics view, and Nhap hang purchase order page
+- [x] **Phase 3: Admin Dashboard page + New Activity page** - Build primary landing page with KPIs/charts/map, New Activity analytics view, and Nhap hang purchase order page (completed 2026-03-19)
 - [ ] **Phase 4: Knowledge Base page + Users Analytics page** - Deliver KB document registry page and the users analytics page
 - [ ] **Phase 5: Check Users page + Check Clinics page** - Build the complex data-explorer pages with pivot tables, maps, conversation drawer, and clinic modal
 - [ ] **Phase 6: Security & Polish** - Install dependencies, harden CSP, verify service role boundary, print CSS, and Vietnamese PDF strategy
@@ -66,7 +66,7 @@ Plans:
   3. The Leaflet clinic map on `/admin/dashboard` renders with color-coded pins (no SSR crash, no missing marker icons); clicking a pin shows a popup with clinic name and query volume.
   4. `/admin/new-activity` renders 6 colored KPI cards, the daily AreaChart and sessions BarChart, the recent sessions table, the top-10 questions horizontal bar chart, and 3 category donut PieCharts — all with visible data.
   5. Both pages pass `next build` with no TypeScript errors and no client-bundle exposure of the service role client.
-**Plans:** 5 plans
+**Plans:** 5/5 plans complete
 
 Plans:
 - [x] 03-01-PLAN.md — Install npm deps + forecast.ts linear regression + dashboard API service and route
@@ -120,7 +120,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
-| 3. Admin Dashboard + New Activity | 4/5 | In Progress | 2026-03-19 |
+| 3. Admin Dashboard + New Activity | 5/5 | Complete   | 2026-03-19 |
 | 4. Knowledge Base + Users Analytics | 0/TBD | Not started | - |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
 | 6. Security & Polish | 0/TBD | Not started | - |
