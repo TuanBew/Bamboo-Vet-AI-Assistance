@@ -72,7 +72,7 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 ### Knowledge Base Page (Phase 4)
 
 - [x] **KB-01**: `GET /api/admin/knowledge-base` returns 3 KPIs, 6 chart datasets (chunks by drug group, chunks by category, doc type breakdown, source breakdown, docs by group, docs by category), paginated documents with search/filter
-- [ ] **KB-02**: `/admin/knowledge-base` renders 3 KPI cards (total documents, total chunks, unique ratio) + 4 charts section 1 (2 horizontal BarCharts + 2 PieCharts) + 2 charts section 2 (2 horizontal BarCharts)
+- [x] **KB-02**: `/admin/knowledge-base` renders 3 KPI cards (total documents, total chunks, unique ratio) + 4 charts section 1 (2 horizontal BarCharts + 2 PieCharts) + 2 charts section 2 (2 horizontal BarCharts)
 - [x] **KB-03**: `/admin/knowledge-base` renders paginated DataTable with columns Mã | Tên tài liệu | Chunk count | Ngày tạo | Loại | Trạng thái | Relevance score; Copy + Excel export; search bar
 
 ---
@@ -191,7 +191,7 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | DASH-05 | Phase 3 | Complete |
 | DASH-06 | Phase 3 | Complete |
 | KB-01 | Phase 4 | Complete |
-| KB-02 | Phase 4 | Pending |
+| KB-02 | Phase 4 | Complete |
 | KB-03 | Phase 4 | Complete |
 | USERS-01 | Phase 4 | Complete |
 | USERS-02 | Phase 4 | Complete |
