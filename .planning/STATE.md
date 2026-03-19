@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-03-19T05:11:00Z"
-last_activity: 2026-03-19 — Completed 03-02 dashboard page UI
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-03-19T05:18:04Z"
+last_activity: 2026-03-19 — Completed 03-03 new activity page
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 9
-  percent: 90
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 3 of 6 (Admin Dashboard Page + New Activity Page)
-Plan: 2 of 3 in current phase (completed)
+Plan: 3 of 3 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-19 — Completed 03-02 dashboard page UI
+Last activity: 2026-03-19 — Completed 03-03 new activity page
 
-Progress: [█████████░] 90%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [█████████░] 90%
 | Phase 02 P04 | 1 | 2 tasks | 2 files |
 | Phase 03 P01 | 7 | 4 tasks | 7 files |
 | Phase 03 P02 | 4 | 2 tasks | 7 files |
+| Phase 03 P03 | 4 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,9 @@ Recent decisions affecting current work:
 - [Phase 03]: LeafletMapInner as separate file for clean dynamic import with ssr:false
 - [Phase 03]: Forecast bridge point: last real data point also sets forecast value for dashed line continuity
 - [Phase 03]: Filter changes use router.push for URL state + fetch for client-side refetch
+- [Phase 03]: avg_session_duration_min computed in JS from message timestamps (not raw SQL) since Supabase JS lacks raw SQL
+- [Phase 03]: top_questions grouping done in JS with 60-char prefix slice, acceptable for single-month volume
+- [Phase 03]: New Activity page uses month-only filter (no province/clinic_type) per design spec
 
 ### Pending Todos
 
@@ -101,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T05:11:00Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-03-19T05:18:04Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None

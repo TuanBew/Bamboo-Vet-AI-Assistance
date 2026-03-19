@@ -71,12 +71,12 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ### New Activity Page (Phase 3)
 
-- [ ] **ACT-01**: `GET /api/admin/new-activity` returns 6 KPIs (new sessions, queries, users, avg queries/session, new documents, avg session duration), daily_query_volume, daily_sessions, recent_sessions, top_questions (60-char prefix grouping, top 10), category_stats
-- [ ] **ACT-02**: `/admin/new-activity` renders 6 KPI cards with distinct colored backgrounds (blue, orange, cyan, pink, green, purple)
-- [ ] **ACT-03**: `/admin/new-activity` renders AreaChart (daily query volume) + BarChart (new sessions per day)
-- [ ] **ACT-04**: `/admin/new-activity` renders recent sessions table (Mã phiên | Ngày | Người dùng | Số truy vấn | Thời gian phút)
-- [ ] **ACT-05**: `/admin/new-activity` renders top 10 popular questions horizontal BarChart (60-char prefix vs count)
-- [ ] **ACT-06**: `/admin/new-activity` renders 3 category donut PieCharts (animal type, drug group, query type)
+- [x] **ACT-01**: `GET /api/admin/new-activity` returns 6 KPIs (new sessions, queries, users, avg queries/session, new documents, avg session duration), daily_query_volume, daily_sessions, recent_sessions, top_questions (60-char prefix grouping, top 10), category_stats
+- [x] **ACT-02**: `/admin/new-activity` renders 6 KPI cards with distinct colored backgrounds (blue, orange, cyan, pink, green, purple)
+- [x] **ACT-03**: `/admin/new-activity` renders AreaChart (daily query volume) + BarChart (new sessions per day)
+- [x] **ACT-04**: `/admin/new-activity` renders recent sessions table (Mã phiên | Ngày | Người dùng | Số truy vấn | Thời gian phút)
+- [x] **ACT-05**: `/admin/new-activity` renders top 10 popular questions horizontal BarChart (60-char prefix vs count)
+- [x] **ACT-06**: `/admin/new-activity` renders 3 category donut PieCharts (animal type, drug group, query type)
 
 ---
 
@@ -201,12 +201,12 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | DASH-04 | Phase 3 | Complete |
 | DASH-05 | Phase 3 | Complete |
 | DASH-06 | Phase 3 | Complete |
-| ACT-01 | Phase 3 | Pending |
-| ACT-02 | Phase 3 | Pending |
-| ACT-03 | Phase 3 | Pending |
-| ACT-04 | Phase 3 | Pending |
-| ACT-05 | Phase 3 | Pending |
-| ACT-06 | Phase 3 | Pending |
+| ACT-01 | Phase 3 | Complete |
+| ACT-02 | Phase 3 | Complete |
+| ACT-03 | Phase 3 | Complete |
+| ACT-04 | Phase 3 | Complete |
+| ACT-05 | Phase 3 | Complete |
+| ACT-06 | Phase 3 | Complete |
 | KB-01 | Phase 4 | Pending |
 | KB-02 | Phase 4 | Pending |
 | KB-03 | Phase 4 | Pending |
