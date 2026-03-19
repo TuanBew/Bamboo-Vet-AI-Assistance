@@ -276,7 +276,7 @@ export async function getNewActivityData(
   // 11. category_stats from mv_category_stats
   const { data: catData } = await db
     .from('mv_category_stats')
-    .select('drug_group, animal_type, query_type, count')
+    .select('drug_category, animal_type, query_type, count')
     .eq('year', year)
     .eq('month', month)
 
@@ -286,7 +286,7 @@ export async function getNewActivityData(
 
   for (const row of catData ?? []) {
     const cnt = Number(row.count)
-    const dg = (row.drug_group as string) || 'Khac'
+    const dg = (row.drug_category as string) || 'Khac'
     const at = (row.animal_type as string) || 'Khac'
     const qt = (row.query_type as string) || 'Khac'
 
