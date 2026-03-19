@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, TrendingUp, BookOpen, Users,
+  LayoutDashboard, Package, TrendingUp, BookOpen, Users,
   Building2, UserCheck, Settings,
 } from 'lucide-react'
 
@@ -12,6 +12,7 @@ const NAV_SECTIONS = [
     label: 'CORE',
     items: [
       { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/admin/nhap-hang', label: 'Nhap hang', icon: Package },
       { href: '/admin/new-activity', label: 'Nguoi dung moi', icon: TrendingUp },
       { href: '/admin/knowledge-base', label: 'Ton kho tri thuc', icon: BookOpen },
       { href: '/admin/users', label: 'Khach hang', icon: Users },
