@@ -1,5 +1,7 @@
 'use client'
 
+import { LineChart, Line } from 'recharts'
+
 export interface SparklineChartProps {
   data: number[]
   color?: string
@@ -15,12 +17,25 @@ export function SparklineChart({
   height = 30,
   className,
 }: SparklineChartProps) {
+  const chartData = data.map((value, index) => ({ index, value }))
+
   return (
-    <div
-      className={`inline-flex items-center justify-center ${className ?? ''}`}
-      style={{ width, height }}
-    >
-      <span className="text-xs text-gray-500">{data.length}pt</span>
+    <div className={className} style={{ width, height }}>
+      <LineChart
+        width={width}
+        height={height}
+        data={chartData}
+        margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+      >
+        <Line
+          type="monotone"
+          dataKey="value"
+          stroke={color}
+          strokeWidth={1.5}
+          dot={false}
+          isAnimationActive={false}
+        />
+      </LineChart>
     </div>
   )
 }

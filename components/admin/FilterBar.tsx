@@ -23,11 +23,125 @@ export interface FilterBarProps {
   showSearch?: boolean
 }
 
-export function FilterBar(props: FilterBarProps) {
+const selectClasses =
+  'bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500'
+
+export function FilterBar({
+  provinces = [],
+  districts = [],
+  clinicTypes = [],
+  selectedProvince = '',
+  selectedDistrict = '',
+  selectedClinicType = '',
+  selectedYear,
+  selectedMonth,
+  searchValue = '',
+  onProvinceChange,
+  onDistrictChange,
+  onClinicTypeChange,
+  onYearChange,
+  onMonthChange,
+  onSearchChange,
+  showProvince = false,
+  showDistrict = false,
+  showClinicType = false,
+  showDate = false,
+  showSearch = false,
+}: FilterBarProps) {
+  const currentYear = new Date().getFullYear()
+  const years = [currentYear - 2, currentYear - 1, currentYear]
+
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800 p-3 flex items-center gap-3">
-      <p className="text-sm text-gray-400">FilterBar — filters configured</p>
-      <p className="text-xs text-gray-500">Component stub — wired in Phase 3+</p>
+    <div>
+      <div className="rounded-lg border border-gray-700 bg-gray-800 p-3 flex flex-wrap items-center gap-3">
+        {showProvince && (
+          <select
+            className={selectClasses}
+            value={selectedProvince}
+            onChange={(e) => onProvinceChange?.(e.target.value)}
+          >
+            <option value="">Tat ca tinh/thanh</option>
+            {provinces.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {showDistrict && (
+          <select
+            className={selectClasses}
+            value={selectedDistrict}
+            onChange={(e) => onDistrictChange?.(e.target.value)}
+          >
+            <option value="">Tat ca quan/huyen</option>
+            {districts.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {showClinicType && (
+          <select
+            className={selectClasses}
+            value={selectedClinicType}
+            onChange={(e) => onClinicTypeChange?.(e.target.value)}
+          >
+            <option value="">Tat ca loai co so</option>
+            {clinicTypes.map((ct) => (
+              <option key={ct} value={ct}>
+                {ct}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {showDate && (
+          <div className="flex items-center gap-1">
+            <select
+              className={selectClasses}
+              value={selectedYear ?? currentYear}
+              onChange={(e) => onYearChange?.(Number(e.target.value))}
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <select
+              className={selectClasses}
+              value={selectedMonth ?? new Date().getMonth() + 1}
+              onChange={(e) => onMonthChange?.(Number(e.target.value))}
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  Thang {m}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {showSearch && (
+          <input
+            type="text"
+            className="bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            placeholder="Tim kiem..."
+            value={searchValue}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+          />
+        )}
+      </div>
+
+      {(showProvince || showClinicType) && (
+        <p className="text-xs text-gray-500 italic mt-1">
+          Bo loc ap dung cho bieu do
+        </p>
+      )}
     </div>
   )
 }
