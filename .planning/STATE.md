@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-03-19T16:35:37.803Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-19T16:36:23.260Z"
 last_activity: 2026-03-19 — Completed 03-05 nhap-hang purchase order page
 progress:
   total_phases: 6
@@ -51,16 +51,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Admins can see exactly who is using the platform, what they're asking, and where they're located — so they can manage knowledge base quality, monitor clinic engagement, and identify usage patterns across the Vietnamese veterinary market.
-**Current focus:** Phase 3 — Admin Dashboard Page + New Activity Page
+**Current focus:** Phase 4 — Knowledge Base Page + Users Analytics Page
 
 ## Current Position
 
-Phase: 3 of 6 (Admin Dashboard Page + New Activity Page)
-Plan: 5 of 5 in current phase (completed)
+Phase: 4 of 6 (Knowledge Base Page + Users Analytics Page)
+Plan: 1 of 3 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-19 — Completed 03-05 nhap-hang purchase order page
+Last activity: 2026-03-19 — Completed 04-01 DataTable + KB service/route
 
-Progress: [██████████] 100%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -91,6 +91,7 @@ Progress: [██████████] 100%
 | Phase 03 P04 | 3 | 2 tasks | 2 files |
 | Phase 03 P05 | 17 | 8 tasks | 12 files |
 | Phase 04 P03 | 4 | 3 tasks | 4 files |
+| Phase 04 P01 | 4 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,9 @@ Recent decisions affecting current work:
 - [Phase 03]: order_date transformed from ISO dash to YYYY/MM/DD slash format in service layer
 - [Phase 04]: verified_email KPI uses auth.admin.listUsers with fallback to profile count
 - [Phase 04]: heavy_users threshold >10 queries/month from mv_monthly_queries
+- [Phase 04]: DataTable supports both server-side and client-side pagination via optional totalCount/onPageChange props
+- [Phase 04]: KB service fetches all docs once for in-memory KPI/chart aggregation (acceptable for ~120 docs)
+- [Phase 04]: xlsx dynamically imported in DataTable export handler to avoid SSR bundle issues
 
 ### Pending Todos
 
@@ -146,6 +150,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T16:35:37.793Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-03-19T16:36:23.254Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None

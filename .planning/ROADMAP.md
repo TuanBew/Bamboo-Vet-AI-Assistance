@@ -85,7 +85,7 @@ Plans:
   3. `/admin/users` renders the 3 charts (new users per month LineChart, users by province BarChart, users by district horizontal BarChart) with non-zero data.
   4. The "Tat ca khach hang" and "Khach hang dang truy van" sections each show 4 KPI tiles and a facility-type breakdown table with correct counts and percentages.
   5. The "Nguoi dung nhieu truy van" section is collapsible and lists users exceeding the 10-queries/month threshold.
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 04-01-PLAN.md — Install xlsx + DataTable full implementation + KB service & API route
@@ -136,6 +136,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
 | 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
-| 4. Knowledge Base + Users Analytics | 0/3 | In Progress | - |
+| 4. Knowledge Base + Users Analytics | 2/3 | In Progress|  |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
 | 6. Security & Polish | 0/TBD | Not started | - |
