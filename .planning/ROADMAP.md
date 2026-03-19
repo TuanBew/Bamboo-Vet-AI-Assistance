@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Database Migrations & Seed Data** - Create schema, materialized views, indexes, RLS, trigger, and idempotent seed scripts
 - [x] **Phase 2: Admin Shell & Role-Based Routing** - Wire middleware guard, auth utilities, dark layout shell, and all shared admin components (completed 2026-03-18)
-- [x] **Phase 3: Admin Dashboard page + New Activity page** - Build primary landing page with KPIs/charts/map and the New Activity analytics view (completed 2026-03-19)
+- [ ] **Phase 3: Admin Dashboard page + New Activity page** - Build primary landing page with KPIs/charts/map, New Activity analytics view, and Nhap hang purchase order page
 - [ ] **Phase 4: Knowledge Base page + Users Analytics page** - Deliver KB document registry page and the users analytics page
 - [ ] **Phase 5: Check Users page + Check Clinics page** - Build the complex data-explorer pages with pivot tables, maps, conversation drawer, and clinic modal
 - [ ] **Phase 6: Security & Polish** - Install dependencies, harden CSP, verify service role boundary, print CSS, and Vietnamese PDF strategy
@@ -48,7 +48,7 @@ Plans:
   3. The `requireAdmin()` utility returns a 403 response when called from an API route by a non-admin — verified by calling `/api/admin/dashboard` as a non-admin.
   4. All seven admin pages render the dark sidebar (`#1a1f2e`), breadcrumb top bar, and "Lam moi du lieu" refresh button without hydration errors in the browser console.
   5. The `globals.css` dark mode selector fix (`(&:where(.dark, .dark *))`) is applied and Tailwind v4 dark theme utility classes render correctly inside the `.dark` wrapper div.
-**Plans:** 4/4 plans complete
+**Plans:** 5 plans
 
 Plans:
 - [ ] 02-01-PLAN.md — Dark mode CSS fix + proxy smoke test + middleware admin guards + requireAdmin() utility
@@ -66,13 +66,14 @@ Plans:
   3. The Leaflet clinic map on `/admin/dashboard` renders with color-coded pins (no SSR crash, no missing marker icons); clicking a pin shows a popup with clinic name and query volume.
   4. `/admin/new-activity` renders 6 colored KPI cards, the daily AreaChart and sessions BarChart, the recent sessions table, the top-10 questions horizontal bar chart, and 3 category donut PieCharts — all with visible data.
   5. Both pages pass `next build` with no TypeScript errors and no client-bundle exposure of the service role client.
-**Plans:** 4/4 plans complete
+**Plans:** 5 plans
 
 Plans:
 - [x] 03-01-PLAN.md — Install npm deps + forecast.ts linear regression + dashboard API service and route
 - [x] 03-02-PLAN.md — Wire FilterBar/SparklineChart/MapView components + build Dashboard page client
 - [x] 03-03-PLAN.md — New Activity API service/route + New Activity page client
 - [ ] 03-04-PLAN.md — Gap closure: fix mv_category_stats column mismatches (drug_group->drug_category, query_count->count, user_id removal)
+- [ ] 03-05-PLAN.md — Gap closure: complete rebuild of /admin/nhap-hang as purchase order analytics page (DB tables, seed data, API, page UI)
 
 ### Phase 4: Knowledge Base page + Users Analytics page
 **Goal**: `/admin/knowledge-base` displays document registry KPIs, 6 charts across two sections, and a paginated searchable DataTable with Excel export; `/admin/users` displays user growth charts, facility breakdown sections with KPI tiles, and a collapsible heavy-users table.
@@ -119,7 +120,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
-| 3. Admin Dashboard + New Activity | 4/4 | Complete   | 2026-03-19 |
+| 3. Admin Dashboard + New Activity | 4/5 | In Progress | 2026-03-19 |
 | 4. Knowledge Base + Users Analytics | 0/TBD | Not started | - |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
 | 6. Security & Polish | 0/TBD | Not started | - |
