@@ -39,7 +39,7 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 ### Admin Shell (Phase 2)
 
 - [x] **SHELL-01**: Admin layout (`app/admin/layout.tsx`) renders dark sidebar (`#1a1f2e` background) + top bar on all `/admin/*` pages
-- [x] **SHELL-02**: Sidebar has 3 sections (CORE, CHECKED, OTHER) with 7 nav items, teal/cyan section labels, white active item highlight (desktop-only fixed 240px — no mobile collapse per design decision)
+- [x] **SHELL-02**: Sidebar has 3 sections (CORE, CHECKED, OTHER) with 6 nav items, teal/cyan section labels, white active item highlight (desktop-only fixed 240px — no mobile collapse per design decision)
 - [x] **SHELL-03**: Top bar shows breadcrumb path + "Làm mới dữ liệu" button that triggers server action to refresh all 4 materialized views
 - [x] **SHELL-04**: Settings page (`/admin/settings`) displays admin profile (name, email, is_admin badge), refresh button, and last-refresh timestamp from `mv_dashboard_kpis.refreshed_at`
 - [x] **SHELL-05**: Admin pages have no language toggle (Vietnamese only) and no RAGflow chat
@@ -66,17 +66,6 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 - [x] **DASH-04**: `/admin/dashboard` "Chỉ số tập trung" section: LineChart (daily volume for selected month), 5 KPI cards, 6 PieChart donuts (drug group + animal type + query type, for queries and sessions)
 - [x] **DASH-05**: `/admin/dashboard` "Người dùng" section: table with full_name, clinic_name, total queries, 12-month sparkline, sessions, average, days_active + 2 inline horizontal BarCharts per row
 - [x] **DASH-06**: `/admin/dashboard` "Phòng khám" section: Leaflet map with color-coded pins by query volume (click → tooltip) + top 10 horizontal BarChart
-
----
-
-### New Activity Page (Phase 3)
-
-- [x] **ACT-01**: `GET /api/admin/new-activity` returns 6 KPIs (new sessions, queries, users, avg queries/session, new documents, avg session duration), daily_query_volume, daily_sessions, recent_sessions, top_questions (60-char prefix grouping, top 10), category_stats
-- [x] **ACT-02**: `/admin/new-activity` renders 6 KPI cards with distinct colored backgrounds (blue, orange, cyan, pink, green, purple)
-- [x] **ACT-03**: `/admin/new-activity` renders AreaChart (daily query volume) + BarChart (new sessions per day)
-- [x] **ACT-04**: `/admin/new-activity` renders recent sessions table (Mã phiên | Ngày | Người dùng | Số truy vấn | Thời gian phút)
-- [x] **ACT-05**: `/admin/new-activity` renders top 10 popular questions horizontal BarChart (60-char prefix vs count)
-- [x] **ACT-06**: `/admin/new-activity` renders 3 category donut PieCharts (animal type, drug group, query type)
 
 ---
 
@@ -201,12 +190,6 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | DASH-04 | Phase 3 | Complete |
 | DASH-05 | Phase 3 | Complete |
 | DASH-06 | Phase 3 | Complete |
-| ACT-01 | Phase 3 | Complete |
-| ACT-02 | Phase 3 | Complete |
-| ACT-03 | Phase 3 | Complete |
-| ACT-04 | Phase 3 | Complete |
-| ACT-05 | Phase 3 | Complete |
-| ACT-06 | Phase 3 | Complete |
 | KB-01 | Phase 4 | Pending |
 | KB-02 | Phase 4 | Pending |
 | KB-03 | Phase 4 | Pending |
@@ -233,8 +216,8 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | POL-05 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 61 total
-- Mapped to phases: 61
+- v1 requirements: 55 total
+- Mapped to phases: 55
 - Unmapped: 0 ✓
 
 ---

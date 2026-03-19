@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Database Migrations & Seed Data** - Create schema, materialized views, indexes, RLS, trigger, and idempotent seed scripts
 - [x] **Phase 2: Admin Shell & Role-Based Routing** - Wire middleware guard, auth utilities, dark layout shell, and all shared admin components (completed 2026-03-18)
-- [x] **Phase 3: Admin Dashboard page + New Activity page** - Build primary landing page with KPIs/charts/map, New Activity analytics view, and Nhap hang purchase order page (completed 2026-03-19)
+- [x] **Phase 3: Admin Dashboard page + Nhap Hang page** - Build primary landing page with KPIs/charts/map and Nhap hang purchase order analytics page (completed 2026-03-19)
 - [ ] **Phase 4: Knowledge Base page + Users Analytics page** - Deliver KB document registry page and the users analytics page
 - [ ] **Phase 5: Check Users page + Check Clinics page** - Build the complex data-explorer pages with pivot tables, maps, conversation drawer, and clinic modal
 - [ ] **Phase 6: Security & Polish** - Install dependencies, harden CSP, verify service role boundary, print CSS, and Vietnamese PDF strategy
@@ -56,15 +56,15 @@ Plans:
 - [ ] 02-03-PLAN.md — Shared admin component stubs (KpiCard, SectionHeader, DataTable, ColorPivotTable, FilterBar, MapView, SparklineChart, ClinicDetailModal, UserHistoryDrawer)
 - [ ] 02-04-PLAN.md — Gap closure: update SHELL-02 requirement (desktop-only) + fix MapView.tsx dynamic import (ssr: false)
 
-### Phase 3: Admin Dashboard page + New Activity page
-**Goal**: The two primary analytics pages are fully functional — `/admin/dashboard` displays platform-wide KPIs, time-series charts with a 3-month forecast dotted line, category donut charts, a user table with sparklines, and a Leaflet clinic map; `/admin/new-activity` shows 6 KPI cards, daily volume charts, recent sessions table, top popular questions, and category donuts.
+### Phase 3: Admin Dashboard page + Nhap Hang page
+**Goal**: The primary analytics pages are fully functional — `/admin/dashboard` displays platform-wide KPIs, time-series charts with a 3-month forecast dotted line, category donut charts, a user table with sparklines, and a Leaflet clinic map; `/admin/nhap-hang` shows 6 KPI cards, purchase order charts, orders table with detail drawer, and supplier/product analytics.
 **Depends on**: Phase 2
-**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, DASH-06, ACT-01, ACT-02, ACT-03, ACT-04, ACT-05, ACT-06
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, DASH-06
 **Success Criteria** (what must be TRUE):
   1. `/admin/dashboard` loads without SSR hydration errors; KPI cards show non-zero platform totals drawn from `mv_dashboard_kpis`; the grouped bar chart and area chart both render with visible data for 2024/2025/2026.
   2. The forecast dotted line appears on the area chart for the 3 months beyond the latest real data point (`is_forecast: true` months use `strokeDasharray="4 4"`); `lib/admin/forecast.ts` linear regression runs server-side.
   3. The Leaflet clinic map on `/admin/dashboard` renders with color-coded pins (no SSR crash, no missing marker icons); clicking a pin shows a popup with clinic name and query volume.
-  4. `/admin/new-activity` renders 6 colored KPI cards, the daily AreaChart and sessions BarChart, the recent sessions table, the top-10 questions horizontal bar chart, and 3 category donut PieCharts — all with visible data.
+  4. `/admin/nhap-hang` renders 6 KPI cards, AreaChart (daily revenue), BarChart (daily quantity), orders table, top 10 products chart, donut charts, and RadarChart — all with visible data.
   5. Both pages pass `next build` with no TypeScript errors and no client-bundle exposure of the service role client.
 **Plans:** 5/5 plans complete
 
@@ -120,7 +120,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
-| 3. Admin Dashboard + New Activity | 5/5 | Complete   | 2026-03-19 |
+| 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
 | 4. Knowledge Base + Users Analytics | 0/TBD | Not started | - |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
 | 6. Security & Polish | 0/TBD | Not started | - |
