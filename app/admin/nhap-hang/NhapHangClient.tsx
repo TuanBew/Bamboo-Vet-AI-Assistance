@@ -194,10 +194,10 @@ export function NhapHangClient({
               <AreaChart data={data.daily_revenue}>
                 <CartesianGrid stroke="#374151" strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={AXIS_TICK} />
-                <YAxis tick={AXIS_TICK} tickFormatter={(v: number) => formatVND(v)} />
+                <YAxis tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
-                  formatter={(value: number) => [formatVND(value), 'Doanh so']}
+                  formatter={(value) => [formatVND(Number(value)), 'Doanh so']}
                 />
                 <Area
                   type="monotone"
@@ -275,17 +275,17 @@ export function NhapHangClient({
                 margin={{ left: 10, right: 40 }}
               >
                 <CartesianGrid stroke="#374151" strokeDasharray="3 3" />
-                <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v: number) => formatVND(v)} />
+                <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
                 <YAxis
                   type="category"
                   dataKey="product_name"
                   width={180}
                   tick={{ fill: '#9ca3af', fontSize: 11 }}
-                  tickFormatter={(v: string) => v.length > 25 ? v.slice(0, 25) + '...' : v}
+                  tickFormatter={(v) => String(v).length > 25 ? String(v).slice(0, 25) + '...' : String(v)}
                 />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
-                  formatter={(value: number) => [formatVND(value), 'Doanh so']}
+                  formatter={(value) => [formatVND(Number(value)), 'Doanh so']}
                 />
                 <Bar dataKey="total_revenue" fill="#06b6d4" name="Doanh so">
                   <LabelList
@@ -293,7 +293,7 @@ export function NhapHangClient({
                     position="right"
                     fill="#9ca3af"
                     fontSize={11}
-                    formatter={(v: number) => formatVND(v)}
+                    formatter={(v) => formatVND(Number(v))}
                   />
                 </Bar>
               </BarChart>
@@ -316,7 +316,7 @@ export function NhapHangClient({
                   cy="50%"
                   innerRadius={60}
                   outerRadius={90}
-                  label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
+                  label={({ percent }) => `${((percent ?? 0) * 100).toFixed(1)}%`}
                   labelLine={false}
                 >
                   {data.by_industry.filter(d => d.revenue > 0).map((_, i) => (
@@ -325,7 +325,7 @@ export function NhapHangClient({
                 </Pie>
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
-                  formatter={(value: number) => [formatVND(value), 'Doanh so']}
+                  formatter={(value) => [formatVND(Number(value)), 'Doanh so']}
                 />
                 <Legend
                   layout="vertical"
@@ -350,7 +350,7 @@ export function NhapHangClient({
                   cy="50%"
                   innerRadius={60}
                   outerRadius={90}
-                  label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
+                  label={({ percent }) => `${((percent ?? 0) * 100).toFixed(1)}%`}
                   labelLine={false}
                 >
                   {data.by_product_group.filter(d => d.revenue > 0).map((_, i) => (
@@ -359,7 +359,7 @@ export function NhapHangClient({
                 </Pie>
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
-                  formatter={(value: number) => [formatVND(value), 'Doanh so']}
+                  formatter={(value) => [formatVND(Number(value)), 'Doanh so']}
                 />
                 <Legend
                   layout="vertical"
@@ -389,7 +389,7 @@ export function NhapHangClient({
               />
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
-                formatter={(value: number) => [formatVND(value), 'Doanh so']}
+                formatter={(value) => [formatVND(Number(value)), 'Doanh so']}
               />
               <Legend />
             </RadarChart>
