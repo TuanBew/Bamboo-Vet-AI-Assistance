@@ -45,7 +45,7 @@ Exceptions:
 - Filter bar height: 52px (non-standard, accommodates select + search input comfortably)
 - KPI card minimum height: 100px (ensures icon + value + label stack without cramping)
 - Map container height: 400px (fixed, sufficient for Vietnam country view at zoom 6)
-- Sparkline cell: 120px width x 30px height (inline in table rows)
+- Sparkline cell: 120px width x 32px height (inline in table rows)
 - Inline stacked BarChart cell: 120px width x 24px height (inline in table rows)
 
 ---
@@ -54,16 +54,18 @@ Exceptions:
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
+| Label | 12px | 400 (regular) | 1.4 | KPI card labels (`text-sm opacity-80`), section subtitles, chart legends, filter bar hint text |
 | Body | 14px | 400 (regular) | 1.5 | Table cells, filter labels, chart axis labels, general text |
-| Label | 12px | 500 (medium) | 1.4 | KPI card labels (`text-sm opacity-80`), section subtitles, chart legends, filter bar hint text |
-| Heading | 20px | 600 (semibold) | 1.3 | Page title (already in AdminTopBar breadcrumb) |
+| Heading | 20px | 700 (bold) | 1.3 | Page title (already in AdminTopBar breadcrumb) |
 | Display | 28px | 700 (bold) | 1.2 | KPI card large numbers (`text-2xl font-bold` on KpiCard), summary tile values |
 
+**Font weights used: 2 only — 400 (regular) and 700 (bold).**
+
 **Additional type specs:**
-- SectionHeader title: 12px, 600 weight, uppercase, `tracking-wider`, color `text-teal-400` (already implemented in SectionHeader.tsx)
-- Table header cells: 12px, 500 weight, uppercase, `text-gray-400`
+- SectionHeader title: 12px, 700 weight, uppercase, `tracking-wider`, color `text-teal-400` (already implemented in SectionHeader.tsx)
+- Table header cells: 12px, 400 weight, uppercase, `text-gray-400`
 - Chart tooltip text: 12px, 400 weight, white on `bg-gray-900` tooltip
-- Filter bar "Bo loc ap dung cho bieu do" hint: 11px, 400 weight, `text-gray-500`, italic
+- Filter bar "Bo loc ap dung cho bieu do" hint: 12px, 400 weight, `text-gray-500`, italic
 
 ---
 
@@ -184,6 +186,8 @@ Use the same Recharts 10-color palette above. Each donut uses colors 0-N for its
 
 **Donut layout:** 2 rows of 3 donuts. Row 1 labeled "Ti trong nhap hang thang MM-YYYY" (queries). Row 2 labeled "Ti trong ban hang thang MM-YYYY" (sessions). Each donut has a center label showing the category name.
 
+**Primary focal point:** KPI card row (5 cards) in the "Chi so tap trung" section — 28px bold display values are the visual anchor of the Dashboard page.
+
 ### Dashboard — "Nguoi dung" Section
 
 | Element | Type | Height | Data |
@@ -191,7 +195,7 @@ Use the same Recharts 10-color palette above. Each donut uses colors 0-N for its
 | User leaderboard table | HTML table (not DataTable) | Auto (20 rows max) | Top 20 users sorted by total_queries desc |
 | Drug group breakdown | Recharts `<BarChart>` horizontal stacked, inline | 24px per row | Per-user drug group distribution |
 | Query type breakdown | Recharts `<BarChart>` horizontal stacked, inline | 24px per row | Per-user query type distribution |
-| 12-month sparkline | `<SparklineChart>` (existing component) | 30px | monthly_sparkline array from API |
+| 12-month sparkline | `<SparklineChart>` (existing component) | 32px | monthly_sparkline array from API |
 
 **Table columns:** Ten nhan vien | Doanh so theo ngay (sparkline) | TOTAL | Don hang (sessions) | Trung binh | Khach hang (queries) | Ngay > 1tv (days active)
 
