@@ -66,7 +66,7 @@ Plans:
   3. The Leaflet clinic map on `/admin/dashboard` renders with color-coded pins (no SSR crash, no missing marker icons); clicking a pin shows a popup with clinic name and query volume.
   4. `/admin/new-activity` renders 6 colored KPI cards, the daily AreaChart and sessions BarChart, the recent sessions table, the top-10 questions horizontal bar chart, and 3 category donut PieCharts — all with visible data.
   5. Both pages pass `next build` with no TypeScript errors and no client-bundle exposure of the service role client.
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 03-01-PLAN.md — Install npm deps + forecast.ts linear regression + dashboard API service and route
@@ -118,7 +118,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
-| 3. Admin Dashboard + New Activity | 0/3 | Not started | - |
+| 3. Admin Dashboard + New Activity | 2/3 | In Progress|  |
 | 4. Knowledge Base + Users Analytics | 0/TBD | Not started | - |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
 | 6. Security & Polish | 0/TBD | Not started | - |
