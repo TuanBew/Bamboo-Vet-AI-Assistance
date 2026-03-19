@@ -79,11 +79,11 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ### Users Analytics Page (Phase 4)
 
-- [ ] **USERS-01**: `GET /api/admin/users` returns monthly_new_users, users_by_province, users_by_district, all_users_kpis (total_active, verified_email via Supabase admin API, geo_located, facility_type_count), facility_breakdown, users_with_queries_kpis, users_with_queries_breakdown, heavy_users
-- [ ] **USERS-02**: `/admin/users` renders 3 charts: LineChart (new users per month), BarChart (users by province), horizontal BarChart (users by district)
-- [ ] **USERS-03**: `/admin/users` "Tất cả khách hàng" section: 4 KPI tiles + breakdown table (Mã | Loại cơ sở | Icon | Số lượng | %)
-- [ ] **USERS-04**: `/admin/users` "Khách hàng đang truy vấn" section: same 4 KPI tiles + breakdown table with % tổng KH + % KH còn hoạt động columns
-- [ ] **USERS-05**: `/admin/users` "Người dùng nhiều truy vấn" collapsible section: table with Tên | Cơ sở | Truy vấn tháng này (>10/month threshold)
+- [x] **USERS-01**: `GET /api/admin/users` returns monthly_new_users, users_by_province, users_by_district, all_users_kpis (total_active, verified_email via Supabase admin API, geo_located, facility_type_count), facility_breakdown, users_with_queries_kpis, users_with_queries_breakdown, heavy_users
+- [x] **USERS-02**: `/admin/users` renders 3 charts: LineChart (new users per month), BarChart (users by province), horizontal BarChart (users by district)
+- [x] **USERS-03**: `/admin/users` "Tất cả khách hàng" section: 4 KPI tiles + breakdown table (Mã | Loại cơ sở | Icon | Số lượng | %)
+- [x] **USERS-04**: `/admin/users` "Khách hàng đang truy vấn" section: same 4 KPI tiles + breakdown table with % tổng KH + % KH còn hoạt động columns
+- [x] **USERS-05**: `/admin/users` "Người dùng nhiều truy vấn" collapsible section: table with Tên | Cơ sở | Truy vấn tháng này (>10/month threshold)
 
 ---
 
@@ -193,11 +193,11 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | KB-01 | Phase 4 | Pending |
 | KB-02 | Phase 4 | Pending |
 | KB-03 | Phase 4 | Pending |
-| USERS-01 | Phase 4 | Pending |
-| USERS-02 | Phase 4 | Pending |
-| USERS-03 | Phase 4 | Pending |
-| USERS-04 | Phase 4 | Pending |
-| USERS-05 | Phase 4 | Pending |
+| USERS-01 | Phase 4 | Complete |
+| USERS-02 | Phase 4 | Complete |
+| USERS-03 | Phase 4 | Complete |
+| USERS-04 | Phase 4 | Complete |
+| USERS-05 | Phase 4 | Complete |
 | CHKU-01 | Phase 5 | Pending |
 | CHKU-02 | Phase 5 | Pending |
 | CHKU-03 | Phase 5 | Pending |
