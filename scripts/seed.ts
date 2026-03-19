@@ -17,10 +17,14 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
+import { fileURLToPath } from 'url'
+import dotenv from 'dotenv'
 
-// ts-node does not auto-load .env.local — load manually
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-require('dotenv').config({ path: path.resolve(__dirname, '..', '.env.local') })
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// tsx does not auto-load .env.local — load manually
+dotenv.config({ path: path.resolve(__dirname, '..', '.env.local') })
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -259,13 +263,16 @@ async function seedProfiles(): Promise<SeedResult> {
         inserted++
       }
 
-      // 2. Get the user id — either from creation result or by looking it up
+      // 2. Get the user id — either from creation result or by looking up profiles by email
       let userId = authData?.user?.id
       if (!userId) {
-        // Look up existing user by email
-        const { data: listData } = await supabase.auth.admin.listUsers()
-        const existingUser = listData?.users?.find(u => u.email === row.email)
-        userId = existingUser?.id
+        // Look up via profiles table (trigger sets email on signup)
+        const { data: profileRow } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', row.email)
+          .single()
+        userId = profileRow?.id
       }
 
       if (!userId) {
@@ -440,21 +447,42 @@ async function seedConversations(): Promise<SeedResult> {
 async function seedMessages(): Promise<SeedResult> {
   console.log('Seeding messages...')
 
-  // Get all conversation ids
-  const { data: conversations, error: fetchErr } = await supabase
-    .from('conversations')
-    .select('id')
-    .order('created_at', { ascending: true })
+  // Get all conversation ids (paginate to bypass 1000-row PostgREST limit)
+  const allConvIds: Array<{ id: string }> = []
+  let from = 0
+  const pageSize = 1000
+  while (true) {
+    const { data: page, error: pageErr } = await supabase
+      .from('conversations')
+      .select('id')
+      .order('created_at', { ascending: true })
+      .range(from, from + pageSize - 1)
+    if (pageErr || !page || page.length === 0) break
+    allConvIds.push(...page)
+    if (page.length < pageSize) break
+    from += pageSize
+  }
+  const conversations = allConvIds
 
-  if (fetchErr || !conversations) {
-    console.error('  Error fetching conversations:', fetchErr?.message)
+  if (conversations.length === 0) {
+    console.error('  Error fetching conversations or none found')
     return { inserted: 0, skipped: 0 }
   }
 
-  // Check which conversations already have messages
-  const { data: existingMsgConvs } = await supabase
-    .from('messages')
-    .select('conversation_id')
+  // Check which conversations already have messages (paginate)
+  const allExistingMsgConvs: Array<{ conversation_id: string }> = []
+  let msgFrom = 0
+  while (true) {
+    const { data: msgPage } = await supabase
+      .from('messages')
+      .select('conversation_id')
+      .range(msgFrom, msgFrom + pageSize - 1)
+    if (!msgPage || msgPage.length === 0) break
+    allExistingMsgConvs.push(...msgPage)
+    if (msgPage.length < pageSize) break
+    msgFrom += pageSize
+  }
+  const existingMsgConvs = allExistingMsgConvs
 
   const existingSet = new Set((existingMsgConvs ?? []).map(m => m.conversation_id))
 
@@ -559,20 +587,36 @@ async function seedQueryEvents(): Promise<SeedResult> {
   }
   console.log(`  Template query_events: ${templateInserted} inserted, ${templateRecords.length - templateInserted} skipped`)
 
-  // 2. Get conversations without query_events
-  // First get all conversation_ids that already have query_events
-  const { data: existingQEs } = await supabase
-    .from('query_events')
-    .select('conversation_id')
+  // 2. Get conversations without query_events (paginate both fetches)
+  const allQEs: Array<{ conversation_id: string }> = []
+  let qePage = 0
+  while (true) {
+    const { data: qePage_ } = await supabase
+      .from('query_events')
+      .select('conversation_id')
+      .range(qePage * 1000, qePage * 1000 + 999)
+    if (!qePage_ || qePage_.length === 0) break
+    allQEs.push(...qePage_)
+    if (qePage_.length < 1000) break
+    qePage++
+  }
+  const existingConvIds = new Set(allQEs.map(qe => qe.conversation_id))
 
-  const existingConvIds = new Set((existingQEs ?? []).map(qe => qe.conversation_id))
+  const allConvsFull: Array<{ id: string; user_id: string; created_at: string }> = []
+  let convPage = 0
+  while (true) {
+    const { data: convPage_ } = await supabase
+      .from('conversations')
+      .select('id, user_id, created_at')
+      .range(convPage * 1000, convPage * 1000 + 999)
+    if (!convPage_ || convPage_.length === 0) break
+    allConvsFull.push(...convPage_)
+    if (convPage_.length < 1000) break
+    convPage++
+  }
+  const allConversations = allConvsFull
 
-  // Get all conversations with their user_id
-  const { data: allConversations } = await supabase
-    .from('conversations')
-    .select('id, user_id, created_at')
-
-  if (!allConversations) {
+  if (allConversations.length === 0) {
     return { inserted: templateInserted, skipped: templateRecords.length - templateInserted }
   }
 
@@ -583,10 +627,20 @@ async function seedQueryEvents(): Promise<SeedResult> {
     return { inserted: templateInserted, skipped: templateRecords.length - templateInserted + existingConvIds.size }
   }
 
-  // Build user -> clinic_id mapping
-  const { data: profilesData } = await supabase
-    .from('profiles')
-    .select('id, clinic_id')
+  // Build user -> clinic_id mapping (paginate)
+  const allProfiles: Array<{ id: string; clinic_id: string | null }> = []
+  let profPage = 0
+  while (true) {
+    const { data: profPage_ } = await supabase
+      .from('profiles')
+      .select('id, clinic_id')
+      .range(profPage * 1000, profPage * 1000 + 999)
+    if (!profPage_ || profPage_.length === 0) break
+    allProfiles.push(...profPage_)
+    if (profPage_.length < 1000) break
+    profPage++
+  }
+  const profilesData = allProfiles
 
   const userClinicMap = new Map<string, string>()
   for (const p of profilesData ?? []) {
@@ -637,6 +691,136 @@ async function seedQueryEvents(): Promise<SeedResult> {
   const totalInserted = templateInserted + generatedInserted
   console.log(`  Generated query_events: ${generatedInserted} inserted`)
   return { inserted: totalInserted, skipped: templateRecords.length - templateInserted }
+}
+
+// ---------------------------------------------------------------------------
+// Nhap-hang Seed Functions
+// ---------------------------------------------------------------------------
+
+async function seedSuppliers(): Promise<SeedResult> {
+  console.log('Seeding suppliers...')
+
+  // Idempotency check: if suppliers already exist, skip all nhap-hang seeding
+  const { count } = await supabase.from('suppliers').select('*', { count: 'exact', head: true })
+  if (count && count > 0) {
+    console.log(`  Nhap-hang tables already seeded (${count} suppliers). Skipping.`)
+    return { inserted: 0, skipped: count }
+  }
+
+  const { SUPPLIERS } = await import('../data/seeds/suppliers')
+
+  const { data, error } = await supabase
+    .from('suppliers')
+    .upsert(SUPPLIERS, { onConflict: 'supplier_code', ignoreDuplicates: true })
+    .select('id')
+
+  if (error) {
+    console.error('  Error seeding suppliers:', error.message)
+    return { inserted: 0, skipped: SUPPLIERS.length }
+  }
+
+  const inserted = data?.length ?? 0
+  console.log(`  Suppliers: ${inserted} inserted, ${SUPPLIERS.length - inserted} skipped`)
+  return { inserted, skipped: SUPPLIERS.length - inserted }
+}
+
+async function seedProducts(): Promise<SeedResult> {
+  console.log('Seeding products...')
+  const { PRODUCTS } = await import('../data/seeds/products')
+
+  const { data, error } = await supabase
+    .from('products')
+    .upsert(PRODUCTS, { onConflict: 'product_code', ignoreDuplicates: true })
+    .select('id')
+
+  if (error) {
+    console.error('  Error seeding products:', error.message)
+    return { inserted: 0, skipped: PRODUCTS.length }
+  }
+
+  const inserted = data?.length ?? 0
+  console.log(`  Products: ${inserted} inserted, ${PRODUCTS.length - inserted} skipped`)
+  return { inserted, skipped: PRODUCTS.length - inserted }
+}
+
+async function seedPurchaseOrders(): Promise<SeedResult> {
+  console.log('Seeding purchase_orders...')
+  // Import items too so that totals are computed
+  await import('../data/seeds/purchase_order_items')
+  const { PURCHASE_ORDERS } = await import('../data/seeds/purchase_orders')
+
+  // Build supplier_code -> id map
+  const { data: suppliers } = await supabase.from('suppliers').select('id, supplier_code')
+  const supplierMap = new Map((suppliers ?? []).map(s => [s.supplier_code, s.id]))
+
+  const records = PURCHASE_ORDERS.map(o => ({
+    order_code: o.order_code,
+    order_date: o.order_date,
+    supplier_id: supplierMap.get(o.supplier_code)!,
+    total_amount: o.total_amount,
+    total_promo_qty: o.total_promo_qty,
+  }))
+
+  let inserted = 0
+  for (let i = 0; i < records.length; i += 100) {
+    const batch = records.slice(i, i + 100)
+    const { data, error } = await supabase
+      .from('purchase_orders')
+      .upsert(batch, { onConflict: 'order_code', ignoreDuplicates: true })
+      .select('id')
+
+    if (error) {
+      console.error(`  Error seeding purchase_orders batch ${i}:`, error.message)
+    } else {
+      inserted += data?.length ?? 0
+    }
+  }
+
+  console.log(`  Purchase orders: ${inserted} inserted, ${records.length - inserted} skipped`)
+  return { inserted, skipped: records.length - inserted }
+}
+
+async function seedPurchaseOrderItems(): Promise<SeedResult> {
+  console.log('Seeding purchase_order_items...')
+  const { PURCHASE_ORDER_ITEMS } = await import('../data/seeds/purchase_order_items')
+
+  // Build product_code -> id map
+  const { data: products } = await supabase.from('products').select('id, product_code')
+  const productMap = new Map((products ?? []).map(p => [p.product_code, p.id]))
+
+  // Build order_code -> id map
+  const { data: orders } = await supabase.from('purchase_orders').select('id, order_code')
+  const orderMap = new Map((orders ?? []).map(o => [o.order_code, o.id]))
+
+  const records = PURCHASE_ORDER_ITEMS.map(item => ({
+    order_id: orderMap.get(item.order_code)!,
+    product_id: productMap.get(item.product_code)!,
+    quantity: item.quantity,
+    promo_qty: item.promo_qty,
+    unit_price: item.unit_price,
+  }))
+
+  let inserted = 0
+  for (let i = 0; i < records.length; i += 100) {
+    const batch = records.slice(i, i + 100)
+    const { data, error } = await supabase
+      .from('purchase_order_items')
+      .insert(batch)
+      .select('id')
+
+    if (error) {
+      console.error(`  Error seeding purchase_order_items batch ${i}:`, error.message)
+    } else {
+      inserted += data?.length ?? 0
+    }
+
+    if (i % 500 === 0 && i > 0) {
+      console.log(`  Purchase order items progress: ${i}/${records.length}`)
+    }
+  }
+
+  console.log(`  Purchase order items: ${inserted} inserted, ${records.length - inserted} skipped`)
+  return { inserted, skipped: records.length - inserted }
 }
 
 async function seedKbDocuments(): Promise<SeedResult> {
@@ -698,6 +882,12 @@ async function main() {
   const queryEvents = await seedQueryEvents()
   const kbDocs = await seedKbDocuments()
 
+  // Nhap-hang tables (FK order: suppliers -> products -> orders -> items)
+  const suppliers = await seedSuppliers()
+  const products = await seedProducts()
+  const purchaseOrders = await seedPurchaseOrders()
+  const purchaseOrderItems = await seedPurchaseOrderItems()
+
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
 
   console.log('\n=== Seed Complete ===')
@@ -707,6 +897,10 @@ async function main() {
   console.log(`Messages:      ${messages.inserted} inserted, ${messages.skipped} skipped`)
   console.log(`Query Events:  ${queryEvents.inserted} inserted, ${queryEvents.skipped} skipped`)
   console.log(`KB Documents:  ${kbDocs.inserted} inserted, ${kbDocs.skipped} skipped`)
+  console.log(`Suppliers:     ${suppliers.inserted} inserted, ${suppliers.skipped} skipped`)
+  console.log(`Products:      ${products.inserted} inserted, ${products.skipped} skipped`)
+  console.log(`PO Orders:     ${purchaseOrders.inserted} inserted, ${purchaseOrders.skipped} skipped`)
+  console.log(`PO Items:      ${purchaseOrderItems.inserted} inserted, ${purchaseOrderItems.skipped} skipped`)
   console.log(`\nTotal time: ${elapsed}s`)
 }
 
