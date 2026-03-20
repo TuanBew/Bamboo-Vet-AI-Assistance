@@ -72,8 +72,8 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 ### Tồn Kho Page (Phase 4)
 
 - [ ] **TK-01**: New migration `20260320_008_add_ton_kho_khach_hang_tables.sql` creates `inventory_snapshots`, `customers`, `customer_purchases` tables; seed script adds ~806 snapshot rows (62 products × 13 weekly dates), ~200 customers (TH 28% / GSO 34% / PHA 14% / SPS 12% / BTS 9% / OTHER+PLT+WMO 3%), ~500–800 purchase rows; old KB/Users files deleted; `AdminSidebar.tsx` hrefs updated to `/admin/ton-kho` and `/admin/khach-hang`
-- [ ] **TK-02**: `GET /api/admin/ton-kho` returns `kpis` (total_value, total_qty, sku_count, total_sku), `charts` (value_by_group, value_by_brand, value_by_category, qty_by_group, qty_by_brand, qty_by_category), `products` (paginated list with product_code, product_name, qty, unit_price, total_value, snapshot_date) — all filtered by `snapshot_date` param (defaults to today, uses latest snapshot on or before date)
-- [ ] **TK-03**: `/admin/ton-kho` renders filter bar (NPP dropdown + date picker + Nhóm dropdown + search), 3 KPI cards (Tổng giá trị tồn blue / Tổng số lượng orange / Số SKU teal), 6 charts in 2×3 grid (Row 1: Giá trị theo nhóm H-BarChart | Giá trị theo thương hiệu H-BarChart | Giá trị theo ngành hàng Donut; Row 2: Số lượng theo nhóm H-BarChart | Số lượng theo thương hiệu H-BarChart | Số lượng theo ngành hàng Donut), DataTable "Danh sách sản phẩm tồn kho" with Copy + Excel export
+- [x] **TK-02**: `GET /api/admin/ton-kho` returns `kpis` (total_value, total_qty, sku_count, total_sku), `charts` (value_by_group, value_by_brand, value_by_category, qty_by_group, qty_by_brand, qty_by_category), `products` (paginated list with product_code, product_name, qty, unit_price, total_value, snapshot_date) — all filtered by `snapshot_date` param (defaults to today, uses latest snapshot on or before date)
+- [x] **TK-03**: `/admin/ton-kho` renders filter bar (NPP dropdown + date picker + Nhóm dropdown + search), 3 KPI cards (Tổng giá trị tồn blue / Tổng số lượng orange / Số SKU teal), 6 charts in 2×3 grid (Row 1: Giá trị theo nhóm H-BarChart | Giá trị theo thương hiệu H-BarChart | Giá trị theo ngành hàng Donut; Row 2: Số lượng theo nhóm H-BarChart | Số lượng theo thương hiệu H-BarChart | Số lượng theo ngành hàng Donut), DataTable "Danh sách sản phẩm tồn kho" with Copy + Excel export
 
 ---
 
@@ -191,8 +191,8 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | DASH-05 | Phase 3 | Complete |
 | DASH-06 | Phase 3 | Complete |
 | TK-01 | Phase 4 | Pending |
-| TK-02 | Phase 4 | Pending |
-| TK-03 | Phase 4 | Pending |
+| TK-02 | Phase 4 | Complete |
+| TK-03 | Phase 4 | Complete |
 | KH-01 | Phase 4 | Pending |
 | KH-02 | Phase 4 | Pending |
 | KH-03 | Phase 4 | Pending |

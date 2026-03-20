@@ -3,11 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-03-20T05:08:45.499Z"
+last_activity: 2026-03-20 — Completed 04-02 Ton Kho page (service + API + SSR + client)
+progress:
+  total_phases: 6
+  completed_phases: 4
+  total_plans: 15
+  completed_plans: 15
+  percent: 93
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
 stopped_at: Phase 4 context gathered — ton-kho + khach-hang rebuild
 last_updated: "2026-03-20T02:21:06.094Z"
 last_activity: 2026-03-19 — Completed 04-01 DataTable + KB service/route
 progress:
-  total_phases: 6
+  [█████████░] 93%
   completed_phases: 4
   total_plans: 15
   completed_plans: 15
@@ -72,11 +88,11 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 4 of 6 (Knowledge Base Page + Users Analytics Page)
-Plan: 1 of 3 in current phase (completed)
+Plan: 2 of 3 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-19 — Completed 04-01 DataTable + KB service/route
+Last activity: 2026-03-20 — Completed 04-02 Ton Kho page (service + API + SSR + client)
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 95%
 
 ## Performance Metrics
 
@@ -109,6 +125,7 @@ Progress: [█████████░] 93%
 | Phase 04 P03 | 4 | 3 tasks | 4 files |
 | Phase 04 P01 | 4 | 3 tasks | 5 files |
 | Phase 04 P02 | 2 | 2 tasks | 2 files |
+| Phase 04 P03 | 8 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -155,6 +172,9 @@ Recent decisions affecting current work:
 - [Phase 04]: KB service fetches all docs once for in-memory KPI/chart aggregation (acceptable for ~120 docs)
 - [Phase 04]: xlsx dynamically imported in DataTable export handler to avoid SSR bundle issues
 - [Phase 04]: DataTable generic types cast via unknown for typed KBDocument compatibility
+- [Phase 04]: Inventory snapshot deduplication uses JS Map for latest-per-product filtering
+- [Phase 04]: Last import date derived from purchase_order_items + purchase_orders join in JS
+- [Phase 04]: Chart sub-components HorizontalBarChartCard/DonutChartCard extracted within TonKhoClient
 
 ### Pending Todos
 
@@ -168,6 +188,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T02:21:06.090Z
-Stopped at: Phase 4 context gathered — ton-kho + khach-hang rebuild
-Resume file: .planning/phases/04-knowledge-base-page-users-analytics-page/04-CONTEXT.md
+Last session: 2026-03-20T05:07:04Z
+Stopped at: Completed 04-02-PLAN.md
+Resume file: .planning/phases/04-knowledge-base-page-users-analytics-page/04-03-PLAN.md
