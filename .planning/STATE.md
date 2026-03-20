@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-20T13:57:34.224Z"
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-03-20T14:55:58.963Z"
 last_activity: 2026-03-20 — Completed 04-02 Ton Kho page (service + API + SSR + client)
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 18
-  completed_plans: 17
+  completed_phases: 5
+  total_plans: 20
+  completed_plans: 20
   percent: 93
 ---
 
@@ -129,6 +129,8 @@ Progress: [█████████░] 95%
 | Phase 04 P01 | 9 | 2 tasks | 14 files |
 | Phase 05 P01 | 7 | 2 tasks | 9 files |
 | Phase 05 P02 | 3 | 2 tasks | 5 files |
+| Phase 05 P04 | 5 | 2 tasks | 7 files |
+| Phase 05 P05 | 5 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -184,6 +186,11 @@ Recent decisions affecting current work:
 - [Phase 05]: Revenue pivot aggregates customer_purchases by product manufacturer and month
 - [Phase 05]: All geo-located customers returned as map_pins regardless of distributor filter
 - [Phase 05]: Used onMapReady callback pattern instead of forwardRef for Leaflet flyTo (dynamic imports + forwardRef unreliable in Next.js)
+- [Phase 05]: JS-side join for profiles+clinics since Supabase JS cannot join profiles (auth.users FK) with clinics directly
+- [Phase 05]: Service role client for conversations/messages APIs to bypass owner-only RLS
+- [Phase 05]: UserHistoryDrawer uses single-panel view switching (list vs thread) with back-arrow navigation
+- [Phase 05]: Clinic aggregation sums user metrics via clinic_id join rather than direct clinic-level queries
+- [Phase 05]: jsPDF + jspdf-autotable for real PDF export replacing console.log stub in ColorPivotTable
 
 ### Pending Todos
 
@@ -197,6 +204,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T13:57:34.201Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-20T14:55:58.951Z
+Stopped at: Completed 05-05-PLAN.md
 Resume file: None
