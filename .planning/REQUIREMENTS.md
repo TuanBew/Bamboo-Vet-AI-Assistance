@@ -90,12 +90,12 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 ### Check Users Page (Phase 5)
 
 - [x] **CHKU-01**: `GET /api/admin/check-users` returns map_pins (lat/lng per user with clinic_type for color coding) + paginated users with all profile fields + monthly pivot table (user × "2024-01"→"2026-03" query counts)
-- [ ] **CHKU-02**: `GET /api/admin/users/[userId]/conversations` returns conversation list (id, title, created_at, message_count) using service role client (bypasses RLS)
-- [ ] **CHKU-03**: `GET /api/admin/users/[userId]/conversations/[conversationId]/messages` returns message array (id, role, content, created_at) using service role client
-- [ ] **CHKU-04**: `/admin/check-users` renders full-width Leaflet map with pins color-coded by clinic_type, popup shows full_name + clinic_type
-- [ ] **CHKU-05**: `/admin/check-users` renders paginated DataTable (10 default rows) with columns Mã KH | Tên KH | Email | Địa chỉ | Quận/Huyện | Tỉnh | Loại cơ sở | Ảnh cơ sở | Ngày tạo | Định vị | Xem lịch sử; all 5 export formats (Copy + Excel + CSV + PDF + Print)
-- [ ] **CHKU-06**: "Xem lịch sử" action opens shadcn Sheet (right drawer), lists conversations, selecting one loads messages in read-only chat-style view
-- [ ] **CHKU-07**: `/admin/check-users` renders monthly pivot table (rows=users, columns=2024-01→2026-03, values=query_count) with Excel export and search
+- [x] **CHKU-02**: `GET /api/admin/users/[userId]/conversations` returns conversation list (id, title, created_at, message_count) using service role client (bypasses RLS)
+- [x] **CHKU-03**: `GET /api/admin/users/[userId]/conversations/[conversationId]/messages` returns message array (id, role, content, created_at) using service role client
+- [x] **CHKU-04**: `/admin/check-users` renders full-width Leaflet map with pins color-coded by clinic_type, popup shows full_name + clinic_type
+- [x] **CHKU-05**: `/admin/check-users` renders paginated DataTable (10 default rows) with columns Mã KH | Tên KH | Email | Địa chỉ | Quận/Huyện | Tỉnh | Loại cơ sở | Ảnh cơ sở | Ngày tạo | Định vị | Xem lịch sử; all 5 export formats (Copy + Excel + CSV + PDF + Print)
+- [x] **CHKU-06**: "Xem lịch sử" action opens shadcn Sheet (right drawer), lists conversations, selecting one loads messages in read-only chat-style view
+- [x] **CHKU-07**: `/admin/check-users` renders monthly pivot table (rows=users, columns=2024-01→2026-03, values=query_count) with Excel export and search
 
 ---
 
@@ -199,12 +199,12 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | KH-04 | Phase 4 | Complete |
 | KH-05 | Phase 4 | Complete |
 | CHKU-01 | Phase 5 | Complete |
-| CHKU-02 | Phase 5 | Pending |
-| CHKU-03 | Phase 5 | Pending |
-| CHKU-04 | Phase 5 | Pending |
-| CHKU-05 | Phase 5 | Pending |
-| CHKU-06 | Phase 5 | Pending |
-| CHKU-07 | Phase 5 | Pending |
+| CHKU-02 | Phase 5 | Complete |
+| CHKU-03 | Phase 5 | Complete |
+| CHKU-04 | Phase 5 | Complete |
+| CHKU-05 | Phase 5 | Complete |
+| CHKU-06 | Phase 5 | Complete |
+| CHKU-07 | Phase 5 | Complete |
 | CHKC-01 | Phase 5 | Complete |
 | CHKC-02 | Phase 5 | Complete |
 | CHKC-03 | Phase 5 | Pending |

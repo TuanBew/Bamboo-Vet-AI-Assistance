@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-20T13:51:58.500Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-20T13:57:34.224Z"
 last_activity: 2026-03-20 — Completed 04-02 Ton Kho page (service + API + SSR + client)
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 18
-  completed_plans: 16
+  completed_plans: 17
   percent: 93
 ---
 
@@ -128,6 +128,7 @@ Progress: [█████████░] 95%
 | Phase 04 P03 | 8 | 2 tasks | 4 files |
 | Phase 04 P01 | 9 | 2 tasks | 14 files |
 | Phase 05 P01 | 7 | 2 tasks | 9 files |
+| Phase 05 P02 | 3 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -182,6 +183,7 @@ Recent decisions affecting current work:
 - [Phase 05]: Deterministic hash for distributor staff daily data (no real staff->order link)
 - [Phase 05]: Revenue pivot aggregates customer_purchases by product manufacturer and month
 - [Phase 05]: All geo-located customers returned as map_pins regardless of distributor filter
+- [Phase 05]: Used onMapReady callback pattern instead of forwardRef for Leaflet flyTo (dynamic imports + forwardRef unreliable in Next.js)
 
 ### Pending Todos
 
@@ -195,6 +197,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T13:51:58.495Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-20T13:57:34.201Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
