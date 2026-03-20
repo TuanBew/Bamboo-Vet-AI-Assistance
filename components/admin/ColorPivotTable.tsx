@@ -187,9 +187,40 @@ export function ColorPivotTable({
     URL.revokeObjectURL(url)
   }, [dimColumnLabels, visibleCols, paginatedRows, columnHeaderPrefix])
 
-  const handlePdf = useCallback(() => {
-    console.log('PDF export placeholder')
-  }, [])
+  const handlePdf = useCallback(async () => {
+    const jsPDFModule = await import('jspdf')
+    const jsPDF = jsPDFModule.default
+    await import('jspdf-autotable')
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+
+    // Build header row
+    const headers = [
+      ...dimColumnLabels.map(d => d.label),
+      ...visibleCols.map(col => `${columnHeaderPrefix}${col}`),
+    ]
+
+    // Build data rows
+    const body = paginatedRows.map(row => [
+      ...dimColumnLabels.map(d => row.dimColumns?.[d.key] ?? row.label),
+      ...visibleCols.map(col => {
+        const val = row.values[col] ?? 0
+        return val.toLocaleString('vi-VN')
+      }),
+    ])
+
+    // Use autoTable for formatted table output
+    ;(doc as unknown as Record<string, Function>).autoTable({
+      head: [headers],
+      body,
+      startY: 15,
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [31, 41, 55], textColor: [255, 255, 255] },
+      theme: 'grid',
+    })
+
+    doc.save('export.pdf')
+  }, [dimColumnLabels, visibleCols, paginatedRows, columnHeaderPrefix])
 
   const handlePrint = useCallback(() => {
     window.print()
