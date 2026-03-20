@@ -69,21 +69,21 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ---
 
-### Knowledge Base Page (Phase 4)
+### Tồn Kho Page (Phase 4)
 
-- [x] **KB-01**: `GET /api/admin/knowledge-base` returns 3 KPIs, 6 chart datasets (chunks by drug group, chunks by category, doc type breakdown, source breakdown, docs by group, docs by category), paginated documents with search/filter
-- [x] **KB-02**: `/admin/knowledge-base` renders 3 KPI cards (total documents, total chunks, unique ratio) + 4 charts section 1 (2 horizontal BarCharts + 2 PieCharts) + 2 charts section 2 (2 horizontal BarCharts)
-- [x] **KB-03**: `/admin/knowledge-base` renders paginated DataTable with columns Mã | Tên tài liệu | Chunk count | Ngày tạo | Loại | Trạng thái | Relevance score; Copy + Excel export; search bar
+- [ ] **TK-01**: New migration `20260320_008_add_ton_kho_khach_hang_tables.sql` creates `inventory_snapshots`, `customers`, `customer_purchases` tables; seed script adds ~806 snapshot rows (62 products × 13 weekly dates), ~200 customers (TH 28% / GSO 34% / PHA 14% / SPS 12% / BTS 9% / OTHER+PLT+WMO 3%), ~500–800 purchase rows; old KB/Users files deleted; `AdminSidebar.tsx` hrefs updated to `/admin/ton-kho` and `/admin/khach-hang`
+- [ ] **TK-02**: `GET /api/admin/ton-kho` returns `kpis` (total_value, total_qty, sku_count, total_sku), `charts` (value_by_group, value_by_brand, value_by_category, qty_by_group, qty_by_brand, qty_by_category), `products` (paginated list with product_code, product_name, qty, unit_price, total_value, snapshot_date) — all filtered by `snapshot_date` param (defaults to today, uses latest snapshot on or before date)
+- [ ] **TK-03**: `/admin/ton-kho` renders filter bar (NPP dropdown + date picker + Nhóm dropdown + search), 3 KPI cards (Tổng giá trị tồn blue / Tổng số lượng orange / Số SKU teal), 6 charts in 2×3 grid (Row 1: Giá trị theo nhóm H-BarChart | Giá trị theo thương hiệu H-BarChart | Giá trị theo ngành hàng Donut; Row 2: Số lượng theo nhóm H-BarChart | Số lượng theo thương hiệu H-BarChart | Số lượng theo ngành hàng Donut), DataTable "Danh sách sản phẩm tồn kho" with Copy + Excel export
 
 ---
 
-### Users Analytics Page (Phase 4)
+### Khách Hàng Page (Phase 4)
 
-- [x] **USERS-01**: `GET /api/admin/users` returns monthly_new_users, users_by_province, users_by_district, all_users_kpis (total_active, verified_email via Supabase admin API, geo_located, facility_type_count), facility_breakdown, users_with_queries_kpis, users_with_queries_breakdown, heavy_users
-- [x] **USERS-02**: `/admin/users` renders 3 charts: LineChart (new users per month), BarChart (users by province), horizontal BarChart (users by district)
-- [x] **USERS-03**: `/admin/users` "Tất cả khách hàng" section: 4 KPI tiles + breakdown table (Mã | Loại cơ sở | Icon | Số lượng | %)
-- [x] **USERS-04**: `/admin/users` "Khách hàng đang truy vấn" section: same 4 KPI tiles + breakdown table with % tổng KH + % KH còn hoạt động columns
-- [x] **USERS-05**: `/admin/users` "Người dùng nhiều truy vấn" collapsible section: table with Tên | Cơ sở | Truy vấn tháng này (>10/month threshold)
+- [ ] **KH-01**: `GET /api/admin/khach-hang` returns `new_by_month` (LineChart data), `by_province` (BarChart), `by_district` (horizontal BarChart), `all_customers` (kpis: active_count, mapped_pct, geo_pct, type_count; breakdown: array of {type_code, type_name, count, pct}), `purchasing_customers` (kpis + breakdown with pct_of_total and pct_of_active columns), `high_value_stores` (stores with total purchase value > 300,000 VND)
+- [ ] **KH-02**: `/admin/khach-hang` renders filter bar (NPP dropdown), 3 chart panels (LineChart new customers per month | BarChart customers by province | horizontal BarChart customers by district) with non-zero seed data
+- [ ] **KH-03**: `/admin/khach-hang` "Tất cả khách hàng" section (open by default): 4 KPI tiles (Còn hoạt động | Đã phân tuyến % | Đã định vị % | Số loại cửa hiệu) + breakdown table (Mã | Icon | Loại cửa hiệu | Số lượng | %) for 8 types: TH (Tạp hóa) / GSO (Bách hóa) / PHA (Nhà thuốc) / SPS (Mẹ & Bé) / BTS (Mỹ phẩm) / OTHER (Khác) / PLT (Phụ liệu tóc) / WMO (Chợ)
+- [ ] **KH-04**: `/admin/khach-hang` "Khách hàng đang mua hàng" section (open by default): 4 KPI tiles + breakdown table with columns Mã | Icon | Loại cửa hiệu | Số lượng | % theo Tổng KH | % theo KH còn hoạt động
+- [ ] **KH-05**: `/admin/khach-hang` "Số lượng cửa hiệu thực phẩm >300K" section (collapsed by default): table of stores with total purchase value > 300,000 VND; graceful empty state if no qualifying stores
 
 ---
 
@@ -190,14 +190,14 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | DASH-04 | Phase 3 | Complete |
 | DASH-05 | Phase 3 | Complete |
 | DASH-06 | Phase 3 | Complete |
-| KB-01 | Phase 4 | Complete |
-| KB-02 | Phase 4 | Complete |
-| KB-03 | Phase 4 | Complete |
-| USERS-01 | Phase 4 | Complete |
-| USERS-02 | Phase 4 | Complete |
-| USERS-03 | Phase 4 | Complete |
-| USERS-04 | Phase 4 | Complete |
-| USERS-05 | Phase 4 | Complete |
+| TK-01 | Phase 4 | Pending |
+| TK-02 | Phase 4 | Pending |
+| TK-03 | Phase 4 | Pending |
+| KH-01 | Phase 4 | Pending |
+| KH-02 | Phase 4 | Pending |
+| KH-03 | Phase 4 | Pending |
+| KH-04 | Phase 4 | Pending |
+| KH-05 | Phase 4 | Pending |
 | CHKU-01 | Phase 5 | Pending |
 | CHKU-02 | Phase 5 | Pending |
 | CHKU-03 | Phase 5 | Pending |

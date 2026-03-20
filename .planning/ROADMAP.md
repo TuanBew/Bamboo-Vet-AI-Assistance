@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Database Migrations & Seed Data** - Create schema, materialized views, indexes, RLS, trigger, and idempotent seed scripts
 - [x] **Phase 2: Admin Shell & Role-Based Routing** - Wire middleware guard, auth utilities, dark layout shell, and all shared admin components (completed 2026-03-18)
 - [x] **Phase 3: Admin Dashboard page + Nhap Hang page** - Build primary landing page with KPIs/charts/map and Nhap hang purchase order analytics page (completed 2026-03-19)
-- [ ] **Phase 4: Knowledge Base page + Users Analytics page** - Deliver KB document registry page and the users analytics page
+- [ ] **Phase 4: Tồn Kho page + Khách Hàng page** - Build inventory stock analytics page and business customer analytics page (complete rebuild from prior wrong scope)
 - [ ] **Phase 5: Check Users page + Check Clinics page** - Build the complex data-explorer pages with pivot tables, maps, conversation drawer, and clinic modal
 - [ ] **Phase 6: Security & Polish** - Install dependencies, harden CSP, verify service role boundary, print CSS, and Vietnamese PDF strategy
 
@@ -75,22 +75,19 @@ Plans:
 - [ ] 03-04-PLAN.md — Gap closure: fix mv_category_stats column mismatches (drug_group->drug_category, query_count->count, user_id removal)
 - [ ] 03-05-PLAN.md — Gap closure: complete rebuild of /admin/nhap-hang as purchase order analytics page (DB tables, seed data, API, page UI)
 
-### Phase 4: Knowledge Base page + Users Analytics page
-**Goal**: `/admin/knowledge-base` displays document registry KPIs, 6 charts across two sections, and a paginated searchable DataTable with Excel export; `/admin/users` displays user growth charts, facility breakdown sections with KPI tiles, and a collapsible heavy-users table.
+### Phase 4: Tồn Kho page + Khách Hàng page
+**Goal**: `/admin/ton-kho` displays inventory stock analytics — 3 KPI cards, 6 charts in a 2×3 grid, and a paginated DataTable — all filtered by date-based inventory snapshots; `/admin/khach-hang` displays business customer analytics — 3 charts, two KPI+breakdown sections, and a collapsible high-value stores section. Phase also includes new DB migration + seed data and teardown of wrong KB/Users implementation.
 **Depends on**: Phase 3
-**Requirements**: KB-01, KB-02, KB-03, USERS-01, USERS-02, USERS-03, USERS-04, USERS-05
+**Requirements**: TK-01, TK-02, TK-03, KH-01, KH-02, KH-03, KH-04, KH-05
 **Success Criteria** (what must be TRUE):
-  1. `/admin/knowledge-base` renders 3 KPI cards (total documents, total chunks, unique ratio) with correct values drawn from `kb_documents`; all 6 charts (2 horizontal bar charts + 2 pie charts + 2 bar charts) render with data.
-  2. The knowledge base DataTable paginates correctly, the search bar filters rows in real time, and clicking "Excel export" downloads a valid `.xlsx` file containing all document rows.
-  3. `/admin/users` renders the 3 charts (new users per month LineChart, users by province BarChart, users by district horizontal BarChart) with non-zero data.
-  4. The "Tat ca khach hang" and "Khach hang dang truy van" sections each show 4 KPI tiles and a facility-type breakdown table with correct counts and percentages.
-  5. The "Nguoi dung nhieu truy van" section is collapsible and lists users exceeding the 10-queries/month threshold.
-**Plans:** 2/3 plans executed
+  1. Migration `20260320_008` creates `inventory_snapshots`, `customers`, `customer_purchases` tables; seed script populates ~806 snapshot rows, ~200 customers, ~500–800 purchase rows; old KB/Users files are deleted; `AdminSidebar.tsx` links point to `/admin/ton-kho` and `/admin/khach-hang`.
+  2. `/admin/ton-kho` renders 3 KPI cards (Tổng giá trị tồn, Tổng số lượng, Số SKU/Tổng SKU), 6 charts (4 horizontal BarCharts + 2 Donut PieCharts), and a DataTable with Copy + Excel export — all reflecting data for the selected snapshot date.
+  3. `/admin/khach-hang` renders 3 chart panels (LineChart new customers per month, BarChart by province, horizontal BarChart by district) with non-zero data for the selected NPP filter.
+  4. "Tất cả khách hàng" section shows 4 KPI tiles + breakdown table for all 8 customer types (TH/GSO/PHA/SPS/BTS/OTHER/PLT/WMO) with correct Số lượng and %.
+  5. "Khách hàng đang mua hàng" section shows 4 KPI tiles + breakdown table with % theo Tổng KH + % theo KH còn hoạt động; "Số lượng cửa hiệu >300K" section is collapsible with graceful empty state.
+**Plans:** 0 plans
 
-Plans:
-- [ ] 04-01-PLAN.md — Install xlsx + DataTable full implementation + KB service & API route
-- [ ] 04-02-PLAN.md — Knowledge Base page UI (SSR + KnowledgeBaseClient with charts + DataTable)
-- [ ] 04-03-PLAN.md — Users service & API route + Users page UI (SSR + UsersClient with charts + sections)
+Plans: (to be generated)
 
 ### Phase 5: Check Users page + Check Clinics page
 **Goal**: The two data-explorer pages are fully operational — `/admin/check-users` shows a full-width Leaflet map, a paginated user table with all five export formats, a monthly pivot table, and a conversation history drawer; `/admin/check-clinics` shows a color-coded monthly clinic pivot table with a multi-filter bar and a clinic detail modal with daily breakdown grid.
@@ -136,6 +133,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
 | 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
-| 4. Knowledge Base + Users Analytics | 2/3 | In Progress|  |
+| 4. Tồn Kho + Khách Hàng | 0/TBD | Planning |  |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
 | 6. Security & Polish | 0/TBD | Not started | - |
