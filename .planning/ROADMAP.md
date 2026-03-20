@@ -93,7 +93,7 @@ Plans:
 - [ ] 04-03-PLAN.md — Khach Hang service/API route + page UI (charts, 3 collapsible sections, breakdown tables)
 
 ### Phase 5: Check Customers page + Check Distributor page
-**Goal**: The two data-explorer pages are fully operational — `/admin/check-customers` shows a full-width Leaflet map with customer pins, a paginated DataTable with all five export formats and Check Location flyTo, a brand x month revenue pivot table, and a display programs section; `/admin/check-distributor` shows a color-coded monthly distributor pivot table with multi-filter bar, Column Visibility toggle, and a dark-themed daily detail modal showing staff x day breakdown with stacked revenue and customer count cells.
+**Goal**: The two data-explorer pages are fully operational — `/admin/check-customers` shows a full-width Leaflet map with customer pins, a paginated DataTable with all five export formats and Check Location flyTo, a brand x month revenue pivot table, and a display programs section; `/admin/check-distributor` shows a color-coded monthly distributor pivot table with multi-filter bar, Column Visibility toggle, and a dark-themed daily detail modal showing staff x day breakdown with stacked revenue and customer count cells. Additionally, `/admin/check-users` shows chatbot user analytics with Leaflet map, user DataTable, conversation history drawer, and monthly pivot; `/admin/check-clinics` shows facility analytics with clinic pivot table and daily staff detail modal.
 **Depends on**: Phase 4
 **Requirements**: CHKU-01, CHKU-02, CHKU-03, CHKU-04, CHKU-05, CHKU-06, CHKU-07, CHKC-01, CHKC-02, CHKC-03, CHKC-04
 **Success Criteria** (what must be TRUE):
@@ -102,12 +102,16 @@ Plans:
   3. The brand x month revenue pivot table shows manufacturer rows vs month columns with VND-formatted values, pagination, and all 5 export formats.
   4. The distributor pivot table on `/admin/check-distributor` shows color-coded cells (green >= 100M, yellow 10M-99M, red 1-9.9M, grey 0) with Column Visibility toggle and Truoc/Tiep theo pagination.
   5. Clicking a distributor row opens a dark Dialog modal (`bg-gray-900`) showing staff rows x days 1-31 columns, with stacked revenue + KH count per cell using the same color thresholds.
-**Plans:** 1/3 plans executed
+  6. `/admin/check-users` renders Leaflet map with user pins, DataTable with 11 columns + Xem lich su action, and monthly pivot table.
+  7. `/admin/check-clinics` renders ColorPivotTable with Mien/Vung/Tinh/Ma/Ten + Thang 1-12 columns; clicking a row opens dark Dialog with staff x day grid.
+**Plans:** 5 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Database migration (display_programs + distributor_staff tables, ALTER customers/suppliers) + seed data + service layer + API routes
-- [ ] 05-02-PLAN.md — Check Customers page (SSR + client with map, DataTable, revenue pivot, display programs) + MapView flyTo enhancement + sidebar update
-- [ ] 05-03-PLAN.md — Check Distributor page (SSR + client with filter bar, ColorPivotTable full implementation, DistributorDetailModal)
+- [x] 05-01-PLAN.md — Database migration (display_programs + distributor_staff tables, ALTER customers/suppliers) + seed data + service layer + API routes
+- [x] 05-02-PLAN.md — Check Customers page (SSR + client with map, DataTable, revenue pivot, display programs) + MapView flyTo enhancement + sidebar update
+- [x] 05-03-PLAN.md — Check Distributor page (SSR + client with filter bar, ColorPivotTable full implementation, DistributorDetailModal)
+- [ ] 05-04-PLAN.md — Gap closure: Check Users page (service layer + 3 API routes + SSR page + client with map, DataTable, UserHistoryDrawer, monthly pivot)
+- [ ] 05-05-PLAN.md — Gap closure: Check Clinics page (service layer + 2 API routes + SSR page + client with ColorPivotTable, ClinicDetailModal) + ColorPivotTable PDF export fix
 
 ### Phase 6: Security & Polish
 **Goal**: All new npm packages are installed at correct versions (including jsPDF >=4.2.0 for CVE-2025-68428); the service role client is provably absent from the client bundle; CSP allows Leaflet tiles; print CSS hides the sidebar; Vietnamese diacritics in PDF export are handled with a documented and tested strategy.
@@ -134,5 +138,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
 | 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
 | 4. Tồn Kho + Khách Hàng | 3/3 | Complete   | 2026-03-20 |
-| 5. Check Customers + Check Distributor | 1/3 | In Progress|  |
+| 5. Check Customers + Check Distributor | 3/5 | In Progress|  |
 | 6. Security & Polish | 0/TBD | Not started | - |
