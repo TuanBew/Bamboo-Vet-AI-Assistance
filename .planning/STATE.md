@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-20T12:36:04.186Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-20T13:51:58.500Z"
 last_activity: 2026-03-20 — Completed 04-02 Ton Kho page (service + API + SSR + client)
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 18
+  completed_plans: 16
   percent: 93
 ---
 
@@ -127,6 +127,7 @@ Progress: [█████████░] 95%
 | Phase 04 P02 | 2 | 2 tasks | 2 files |
 | Phase 04 P03 | 8 | 2 tasks | 4 files |
 | Phase 04 P01 | 9 | 2 tasks | 14 files |
+| Phase 05 P01 | 7 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -178,6 +179,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Chart sub-components HorizontalBarChartCard/DonutChartCard extracted within TonKhoClient
 - [Phase 04]: total_with_orders KPI uses purchase record count (not distinct customers) to match reference image
 - [Phase 04]: Deterministic sin-based hash for reproducible seed data without external RNG library
+- [Phase 05]: Deterministic hash for distributor staff daily data (no real staff->order link)
+- [Phase 05]: Revenue pivot aggregates customer_purchases by product manufacturer and month
+- [Phase 05]: All geo-located customers returned as map_pins regardless of distributor filter
 
 ### Pending Todos
 
@@ -191,6 +195,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T12:36:04.182Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-check-users-page-check-clinics-page/05-CONTEXT.md
+Last session: 2026-03-20T13:51:58.495Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

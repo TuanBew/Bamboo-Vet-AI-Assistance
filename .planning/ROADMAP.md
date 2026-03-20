@@ -102,7 +102,7 @@ Plans:
   3. The brand x month revenue pivot table shows manufacturer rows vs month columns with VND-formatted values, pagination, and all 5 export formats.
   4. The distributor pivot table on `/admin/check-distributor` shows color-coded cells (green >= 100M, yellow 10M-99M, red 1-9.9M, grey 0) with Column Visibility toggle and Truoc/Tiep theo pagination.
   5. Clicking a distributor row opens a dark Dialog modal (`bg-gray-900`) showing staff rows x days 1-31 columns, with stacked revenue + KH count per cell using the same color thresholds.
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 05-01-PLAN.md — Database migration (display_programs + distributor_staff tables, ALTER customers/suppliers) + seed data + service layer + API routes
@@ -134,5 +134,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
 | 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
 | 4. Tồn Kho + Khách Hàng | 3/3 | Complete   | 2026-03-20 |
-| 5. Check Customers + Check Distributor | 0/3 | Planning complete | - |
+| 5. Check Customers + Check Distributor | 1/3 | In Progress|  |
 | 6. Security & Polish | 0/TBD | Not started | - |

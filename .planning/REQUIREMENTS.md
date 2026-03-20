@@ -89,7 +89,7 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ### Check Users Page (Phase 5)
 
-- [ ] **CHKU-01**: `GET /api/admin/check-users` returns map_pins (lat/lng per user with clinic_type for color coding) + paginated users with all profile fields + monthly pivot table (user × "2024-01"→"2026-03" query counts)
+- [x] **CHKU-01**: `GET /api/admin/check-users` returns map_pins (lat/lng per user with clinic_type for color coding) + paginated users with all profile fields + monthly pivot table (user × "2024-01"→"2026-03" query counts)
 - [ ] **CHKU-02**: `GET /api/admin/users/[userId]/conversations` returns conversation list (id, title, created_at, message_count) using service role client (bypasses RLS)
 - [ ] **CHKU-03**: `GET /api/admin/users/[userId]/conversations/[conversationId]/messages` returns message array (id, role, content, created_at) using service role client
 - [ ] **CHKU-04**: `/admin/check-users` renders full-width Leaflet map with pins color-coded by clinic_type, popup shows full_name + clinic_type
@@ -101,8 +101,8 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ### Check Clinics Page (Phase 5)
 
-- [ ] **CHKC-01**: `GET /api/admin/check-clinics` returns paginated clinics list (facility_code, region, zone, province, clinic_name, monthly_data dict key "1"–"12")
-- [ ] **CHKC-02**: `GET /api/admin/check-clinics/[facilityCode]/detail` returns all staff users under that facility_code with day-by-day query + session counts for selected year/month
+- [x] **CHKC-01**: `GET /api/admin/check-clinics` returns paginated clinics list (facility_code, region, zone, province, clinic_name, monthly_data dict key "1"–"12")
+- [x] **CHKC-02**: `GET /api/admin/check-clinics/[facilityCode]/detail` returns all staff users under that facility_code with day-by-day query + session counts for selected year/month
 - [ ] **CHKC-03**: `/admin/check-clinics` renders ColorPivotTable with columns Miền | Vùng | Tỉnh | Mã | Tên | Tháng 1–12; filter bar (year, metric, clinic_type, province, drug_group, search); Copy + Excel export; column visibility toggle
 - [ ] **CHKC-04**: Clicking any clinic row opens shadcn Dialog (dark `bg-gray-900`) showing clinic detail with daily breakdown grid (rows=staff users, columns=days 1–31, cells show query count + session count with same color thresholds)
 
@@ -198,15 +198,15 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | KH-03 | Phase 4 | Complete |
 | KH-04 | Phase 4 | Complete |
 | KH-05 | Phase 4 | Complete |
-| CHKU-01 | Phase 5 | Pending |
+| CHKU-01 | Phase 5 | Complete |
 | CHKU-02 | Phase 5 | Pending |
 | CHKU-03 | Phase 5 | Pending |
 | CHKU-04 | Phase 5 | Pending |
 | CHKU-05 | Phase 5 | Pending |
 | CHKU-06 | Phase 5 | Pending |
 | CHKU-07 | Phase 5 | Pending |
-| CHKC-01 | Phase 5 | Pending |
-| CHKC-02 | Phase 5 | Pending |
+| CHKC-01 | Phase 5 | Complete |
+| CHKC-02 | Phase 5 | Complete |
 | CHKC-03 | Phase 5 | Pending |
 | CHKC-04 | Phase 5 | Pending |
 | POL-01 | Phase 6 | Pending |
