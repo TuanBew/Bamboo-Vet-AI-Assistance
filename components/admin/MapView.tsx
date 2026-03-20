@@ -2,6 +2,9 @@
 
 import dynamic from 'next/dynamic'
 
+// Re-export MapHandle type for consumers
+export type { MapHandle } from './LeafletMapInner'
+
 export interface MapPin {
   id: string
   latitude: number
@@ -16,6 +19,8 @@ export interface MapViewProps {
   center?: [number, number]
   zoom?: number
   className?: string
+  /** Callback that receives a handle with flyTo method once the map is ready */
+  onMapReady?: (handle: { flyTo: (lat: number, lng: number, zoom?: number) => void }) => void
 }
 
 // Leaflet requires browser-only rendering — dynamic import with ssr: false
