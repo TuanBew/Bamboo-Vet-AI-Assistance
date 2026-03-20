@@ -103,8 +103,8 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 - [x] **CHKC-01**: `GET /api/admin/check-clinics` returns paginated clinics list (facility_code, region, zone, province, clinic_name, monthly_data dict key "1"–"12")
 - [x] **CHKC-02**: `GET /api/admin/check-clinics/[facilityCode]/detail` returns all staff users under that facility_code with day-by-day query + session counts for selected year/month
-- [ ] **CHKC-03**: `/admin/check-clinics` renders ColorPivotTable with columns Miền | Vùng | Tỉnh | Mã | Tên | Tháng 1–12; filter bar (year, metric, clinic_type, province, drug_group, search); Copy + Excel export; column visibility toggle
-- [ ] **CHKC-04**: Clicking any clinic row opens shadcn Dialog (dark `bg-gray-900`) showing clinic detail with daily breakdown grid (rows=staff users, columns=days 1–31, cells show query count + session count with same color thresholds)
+- [x] **CHKC-03**: `/admin/check-clinics` renders ColorPivotTable with columns Miền | Vùng | Tỉnh | Mã | Tên | Tháng 1–12; filter bar (year, metric, clinic_type, province, drug_group, search); Copy + Excel export; column visibility toggle
+- [x] **CHKC-04**: Clicking any clinic row opens shadcn Dialog (dark `bg-gray-900`) showing clinic detail with daily breakdown grid (rows=staff users, columns=days 1–31, cells show query count + session count with same color thresholds)
 
 ---
 
@@ -207,8 +207,8 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | CHKU-07 | Phase 5 | Complete |
 | CHKC-01 | Phase 5 | Complete |
 | CHKC-02 | Phase 5 | Complete |
-| CHKC-03 | Phase 5 | Pending |
-| CHKC-04 | Phase 5 | Pending |
+| CHKC-03 | Phase 5 | Complete |
+| CHKC-04 | Phase 5 | Complete |
 | POL-01 | Phase 6 | Pending |
 | POL-02 | Phase 6 | Pending |
 | POL-03 | Phase 6 | Pending |
