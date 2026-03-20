@@ -862,6 +862,128 @@ async function seedKbDocuments(): Promise<SeedResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Ton-kho + Khach-hang Seed Functions
+// ---------------------------------------------------------------------------
+
+async function seedInventorySnapshots(): Promise<SeedResult> {
+  console.log('Seeding inventory_snapshots...')
+
+  const { count } = await supabase.from('inventory_snapshots').select('*', { count: 'exact', head: true })
+  if (count && count > 0) {
+    console.log(`  Inventory snapshots already seeded (${count} rows). Skipping.`)
+    return { inserted: 0, skipped: count }
+  }
+
+  const { INVENTORY_SNAPSHOTS } = await import('../data/seeds/inventory_snapshots')
+
+  // Look up product IDs
+  const { data: products } = await supabase.from('products').select('id, product_code')
+  const productMap = new Map((products ?? []).map(p => [p.product_code, p.id]))
+
+  const records = INVENTORY_SNAPSHOTS.map(row => ({
+    product_id: productMap.get(row.product_code)!,
+    snapshot_date: row.snapshot_date,
+    qty: row.qty,
+    unit_price: row.unit_price,
+  }))
+
+  let inserted = 0
+  for (let i = 0; i < records.length; i += 200) {
+    const batch = records.slice(i, i + 200)
+    const { data, error } = await supabase
+      .from('inventory_snapshots')
+      .upsert(batch, { onConflict: 'product_id,snapshot_date', ignoreDuplicates: true })
+      .select('id')
+
+    if (error) {
+      console.error(`  Error seeding inventory_snapshots batch ${i}:`, error.message)
+    } else {
+      inserted += data?.length ?? 0
+    }
+  }
+
+  console.log(`  Inventory snapshots: ${inserted} inserted, ${records.length - inserted} skipped`)
+  return { inserted, skipped: records.length - inserted }
+}
+
+async function seedCustomers(): Promise<SeedResult> {
+  console.log('Seeding customers...')
+
+  const { count } = await supabase.from('customers').select('*', { count: 'exact', head: true })
+  if (count && count > 0) {
+    console.log(`  Customers already seeded (${count} rows). Skipping.`)
+    return { inserted: 0, skipped: count }
+  }
+
+  const { CUSTOMERS } = await import('../data/seeds/customers')
+
+  let inserted = 0
+  for (let i = 0; i < CUSTOMERS.length; i += 200) {
+    const batch = CUSTOMERS.slice(i, i + 200)
+    const { data, error } = await supabase
+      .from('customers')
+      .upsert(batch, { onConflict: 'customer_code', ignoreDuplicates: true })
+      .select('id')
+
+    if (error) {
+      console.error(`  Error seeding customers batch ${i}:`, error.message)
+    } else {
+      inserted += data?.length ?? 0
+    }
+  }
+
+  console.log(`  Customers: ${inserted} inserted, ${CUSTOMERS.length - inserted} skipped`)
+  return { inserted, skipped: CUSTOMERS.length - inserted }
+}
+
+async function seedCustomerPurchases(): Promise<SeedResult> {
+  console.log('Seeding customer_purchases...')
+
+  const { count } = await supabase.from('customer_purchases').select('*', { count: 'exact', head: true })
+  if (count && count > 0) {
+    console.log(`  Customer purchases already seeded (${count} rows). Skipping.`)
+    return { inserted: 0, skipped: count }
+  }
+
+  // Look up customer IDs
+  const { data: customers } = await supabase.from('customers').select('id, customer_code')
+  const customerMap = new Map((customers ?? []).map(c => [c.customer_code, c.id]))
+
+  // Look up product IDs
+  const { data: products } = await supabase.from('products').select('id, product_code')
+  const productMap = new Map((products ?? []).map(p => [p.product_code, p.id]))
+
+  const { CUSTOMER_PURCHASES } = await import('../data/seeds/customer_purchases')
+
+  const records = CUSTOMER_PURCHASES.map(row => ({
+    customer_id: customerMap.get(row.customer_code)!,
+    product_id: productMap.get(row.product_code)!,
+    purchase_date: row.purchase_date,
+    qty: row.qty,
+    unit_price: row.unit_price,
+    total_value: row.total_value,
+  }))
+
+  let inserted = 0
+  for (let i = 0; i < records.length; i += 200) {
+    const batch = records.slice(i, i + 200)
+    const { data, error } = await supabase
+      .from('customer_purchases')
+      .insert(batch)
+      .select('id')
+
+    if (error) {
+      console.error(`  Error seeding customer_purchases batch ${i}:`, error.message)
+    } else {
+      inserted += data?.length ?? 0
+    }
+  }
+
+  console.log(`  Customer purchases: ${inserted} inserted, ${records.length - inserted} skipped`)
+  return { inserted, skipped: records.length - inserted }
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -888,6 +1010,11 @@ async function main() {
   const purchaseOrders = await seedPurchaseOrders()
   const purchaseOrderItems = await seedPurchaseOrderItems()
 
+  // Ton-kho + Khach-hang tables (FK order: snapshots need products, purchases need customers + products)
+  const inventorySnapshots = await seedInventorySnapshots()
+  const customersResult = await seedCustomers()
+  const customerPurchases = await seedCustomerPurchases()
+
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
 
   console.log('\n=== Seed Complete ===')
@@ -901,6 +1028,9 @@ async function main() {
   console.log(`Products:      ${products.inserted} inserted, ${products.skipped} skipped`)
   console.log(`PO Orders:     ${purchaseOrders.inserted} inserted, ${purchaseOrders.skipped} skipped`)
   console.log(`PO Items:      ${purchaseOrderItems.inserted} inserted, ${purchaseOrderItems.skipped} skipped`)
+  console.log(`Inv Snapshots: ${inventorySnapshots.inserted} inserted, ${inventorySnapshots.skipped} skipped`)
+  console.log(`Customers:     ${customersResult.inserted} inserted, ${customersResult.skipped} skipped`)
+  console.log(`Cust Purchases:${customerPurchases.inserted} inserted, ${customerPurchases.skipped} skipped`)
   console.log(`\nTotal time: ${elapsed}s`)
 }
 

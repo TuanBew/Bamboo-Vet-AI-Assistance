@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, Package, BookOpen, Users,
+  LayoutDashboard, Package, Warehouse, Users,
   Building2, UserCheck, Settings,
 } from 'lucide-react'
 
@@ -13,8 +13,8 @@ const NAV_SECTIONS = [
     items: [
       { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { href: '/admin/nhap-hang', label: 'Nhap hang', icon: Package },
-      { href: '/admin/knowledge-base', label: 'Ton kho tri thuc', icon: BookOpen },
-      { href: '/admin/users', label: 'Khach hang', icon: Users },
+      { href: '/admin/ton-kho', label: 'Ton kho', icon: Warehouse },
+      { href: '/admin/khach-hang', label: 'Khach hang', icon: Users },
     ],
   },
   {
