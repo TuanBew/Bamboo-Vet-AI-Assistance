@@ -20,8 +20,8 @@ const NAV_SECTIONS = [
   {
     label: 'CHECKED',
     items: [
-      { href: '/admin/check-clinics', label: 'Check Phong kham', icon: Building2 },
-      { href: '/admin/check-users', label: 'Check Nguoi dung', icon: UserCheck },
+      { href: '/admin/check-customers', label: 'Check Khach hang', icon: Building2 },
+      { href: '/admin/check-distributor', label: 'Check NPP', icon: UserCheck },
     ],
   },
   {
