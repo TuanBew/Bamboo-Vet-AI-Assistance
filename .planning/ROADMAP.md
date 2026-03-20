@@ -85,9 +85,12 @@ Plans:
   3. `/admin/khach-hang` renders 3 chart panels (LineChart new customers per month, BarChart by province, horizontal BarChart by district) with non-zero data for the selected NPP filter.
   4. "Tất cả khách hàng" section shows 4 KPI tiles + breakdown table for all 8 customer types (TH/GSO/PHA/SPS/BTS/OTHER/PLT/WMO) with correct Số lượng and %.
   5. "Khách hàng đang mua hàng" section shows 4 KPI tiles + breakdown table with % theo Tổng KH + % theo KH còn hoạt động; "Số lượng cửa hiệu >300K" section is collapsible with graceful empty state.
-**Plans:** 0 plans
+**Plans:** 3 plans
 
-Plans: (to be generated)
+Plans:
+- [ ] 04-01-PLAN.md — Migration + seed data (3 tables, ~1600 rows) + teardown old KB/Users files + sidebar update
+- [ ] 04-02-PLAN.md — Ton Kho service/API route + page UI (KPIs, 2x3 chart grid, DataTable)
+- [ ] 04-03-PLAN.md — Khach Hang service/API route + page UI (charts, 3 collapsible sections, breakdown tables)
 
 ### Phase 5: Check Users page + Check Clinics page
 **Goal**: The two data-explorer pages are fully operational — `/admin/check-users` shows a full-width Leaflet map, a paginated user table with all five export formats, a monthly pivot table, and a conversation history drawer; `/admin/check-clinics` shows a color-coded monthly clinic pivot table with a multi-filter bar and a clinic detail modal with daily breakdown grid.
@@ -99,12 +102,9 @@ Plans: (to be generated)
   3. "Xem lich su" on a user row opens the shadcn Sheet drawer, lists that user's conversations, and selecting a conversation loads messages in a read-only chat-style view using the service role client.
   4. The monthly pivot table (rows = users, columns = 2024-01 through 2026-03) renders with color-coded cells (green/yellow/red/grey thresholds) and the Excel export button downloads the full pivot.
   5. Clicking a clinic row in `/admin/check-clinics` opens a dark Dialog modal (`bg-gray-900`) showing staff users as rows and days 1-31 as columns, with query and session counts in each cell using the same color thresholds.
-**Plans:** 3 plans
+**Plans:** 0 plans
 
-Plans:
-- [ ] 04-01-PLAN.md — Install xlsx + DataTable full implementation + KB service & API route
-- [ ] 04-02-PLAN.md — Knowledge Base page UI (SSR + KnowledgeBaseClient with charts + DataTable)
-- [ ] 04-03-PLAN.md — Users service & API route + Users page UI (SSR + UsersClient with charts + sections)
+Plans: (to be generated)
 
 ### Phase 6: Security & Polish
 **Goal**: All new npm packages are installed at correct versions (including jsPDF >=4.2.0 for CVE-2025-68428); the service role client is provably absent from the client bundle; CSP allows Leaflet tiles; print CSS hides the sidebar; Vietnamese diacritics in PDF export are handled with a documented and tested strategy.
@@ -116,12 +116,9 @@ Plans:
   3. Running `next build` and inspecting the client bundle (via `ANALYZE=true` or build output) confirms `createServiceClient` and the Supabase service role key do not appear in any client chunk.
   4. The Content Security Policy in `next.config.js` includes `https://*.tile.openstreetmap.org` in `img-src` and `connect-src`; the Leaflet map loads tiles without CSP violations in the browser console.
   5. Exporting a PDF from the Check Users page produces a file where Vietnamese diacritics (e.g., "Nguyen Thi Hoa", "Ha Noi") are legible — either via embedded Unicode font or a documented fallback strategy with a known limitation noted in code comments.
-**Plans:** 3 plans
+**Plans:** 0 plans
 
-Plans:
-- [ ] 04-01-PLAN.md — Install xlsx + DataTable full implementation + KB service & API route
-- [ ] 04-02-PLAN.md — Knowledge Base page UI (SSR + KnowledgeBaseClient with charts + DataTable)
-- [ ] 04-03-PLAN.md — Users service & API route + Users page UI (SSR + UsersClient with charts + sections)
+Plans: (to be generated)
 
 ## Progress
 
@@ -133,6 +130,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
 | 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
-| 4. Tồn Kho + Khách Hàng | 0/TBD | Planning |  |
+| 4. Tồn Kho + Khách Hàng | 0/3 | Planning |  |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
 | 6. Security & Polish | 0/TBD | Not started | - |
