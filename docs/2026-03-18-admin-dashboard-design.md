@@ -14,7 +14,7 @@ Bamboo Vet is a single Next.js monorepo (currently v16, described throughout as 
 - **Product A** — Customer-facing bilingual AI veterinary chatbot (`/`, `/chat`, `/app`). Already built. No changes.
 - **Product B** — Internal admin SaaS dashboard (`/admin/*`). This spec covers Product B entirely.
 
-The admin dashboard is a Vietnamese-only analytics and management platform visible exclusively to users with `is_admin = true`. It provides platform usage analytics, user/clinic management, knowledge base stats, and a pivot-table-heavy data explorer for the veterinary chatbot platform.
+The admin dashboard is a Vietnamese-only analytics and management platform visible exclusively to users with `is_admin = true`. It provides platform usage analytics, inventory/stock tracking, business customer analytics, user/clinic management, and a pivot-table-heavy data explorer for the veterinary chatbot platform.
 
 ---
 
@@ -534,32 +534,33 @@ Response shape:
 
 ---
 
-### `GET /api/admin/knowledge-base`
-Query params: `page`, `page_size`, `search`, `doc_type`, `category`
+### `GET /api/admin/ton-kho`
+Query params: `snapshot_date` (YYYY-MM-DD, default = today), `nhom` (product group filter), `phan_loai` (classification/brand filter), `search`, `page`, `page_size`
 
 Response shape:
 ```typescript
 {
   kpis: {
-    total_documents: number;
-    total_chunks: number;
-    unique_ratio: string;
+    total_value: number;         // SUM(qty * unit_price) for all products in snapshot
+    total_qty: number;           // SUM(qty) for all products in snapshot
+    sku_in_stock: number;        // COUNT of products with qty > 0
+    total_sku: number;           // total product count
   };
-  chunks_by_drug_group: Array<{ name: string; count: number }>;
-  chunks_by_category:   Array<{ name: string; count: number }>;
-  doc_type_breakdown:   Array<{ name: string; count: number }>;
-  source_breakdown:     Array<{ name: string; count: number }>;
-  docs_by_group:        Array<{ name: string; count: number }>;
-  docs_by_category:     Array<{ name: string; count: number }>;
-  documents: {
+  value_by_nhom:     Array<{ name: string; value: number }>;  // horizontal bar chart data
+  value_by_phan_loai: Array<{ name: string; value: number }>;
+  value_by_nganh_hang: Array<{ name: string; value: number }>; // donut chart data
+  qty_by_nhom:       Array<{ name: string; value: number }>;
+  qty_by_phan_loai:  Array<{ name: string; value: number }>;
+  qty_by_nganh_hang: Array<{ name: string; value: number }>;
+  products: {
     data: Array<{
-      doc_code: string;
-      doc_name: string;
-      chunk_count: number;
-      created_at: string;
-      doc_type: string;
-      status: string;
-      relevance_score: number;
+      product_code: string;
+      product_name: string;
+      qty: number;
+      min_stock: number;        // minimum stock threshold (for low-stock indicator)
+      last_import_date: string; // most recent purchase order date for this product
+      unit_price: number;
+      total_value: number;      // qty * unit_price
     }>;
     total: number;
     page: number;
@@ -570,48 +571,45 @@ Response shape:
 
 ---
 
-### `GET /api/admin/users`
-Query params: `year`, `month`, `province`, `clinic_type`
+### `GET /api/admin/khach-hang`
+Query params: `npp` (NPP filter), `province`, `district`, `customer_type`, `search`, `page`, `page_size`
 
 Response shape:
 ```typescript
 {
-  monthly_new_users: Array<{ year: number; month: number; count: number }>;
-  users_by_province: Array<{ province: string; count: number }>;
-  users_by_district: Array<{ district: string; count: number }>;
-  all_users_kpis: {
-    total_active: number;         // COUNT(*) FROM profiles WHERE is_admin = false
-                                  // "active" = registered (no soft-delete yet; all non-admin users are active)
-    verified_email: number;       // COUNT(*) FROM auth.users WHERE email_confirmed_at IS NOT NULL
-                                  // (service role client can query auth.users via Supabase admin API:
-                                  //  supabase.auth.admin.listUsers() — filter by email_confirmed_at)
-    geo_located: number;          // COUNT(*) FROM profiles WHERE latitude IS NOT NULL AND is_admin = false
-    facility_type_count: number;  // COUNT(DISTINCT clinic_type) FROM profiles WHERE is_admin = false
+  monthly_new_customers: Array<{ month: string; count: number }>;  // "2025-01" format
+  customers_by_province:  Array<{ province: string; count: number }>;
+  customers_by_district:  Array<{ district: string; count: number }>;
+  all_customers_kpis: {
+    total_active: number;           // COUNT(*) active customers
+    mapped_pct: number;             // % Đã phân tuyến (assigned to route)
+    geo_located_pct: number;        // % Đã định vị (has coordinates)
+    customer_type_count: number;    // COUNT(DISTINCT customer_type)
   };
-  facility_breakdown: Array<{
-    code: string;
-    label: string;
+  all_customers_breakdown: Array<{
+    code: string;    // TH | GSO | PHA | SPS | BTS | OTHER | PLT | WMO
+    label: string;   // Vietnamese label for the type
     count: number;
     percentage: number;
   }>;
-  users_with_queries_kpis: {
-    total: number;
-    verified_pct: number;
+  buying_customers_kpis: {
+    total: number;              // customers with at least one purchase
+    mapped_pct: number;
     geo_located_pct: number;
-    facility_type_count: number;
+    customer_type_count: number;
   };
-  users_with_queries_breakdown: Array<{
+  buying_customers_breakdown: Array<{
     code: string;
     label: string;
     count: number;
-    pct_of_total: number;
-    pct_of_active: number;
+    pct_of_total: number;      // % of total active customers
+    pct_of_active: number;     // % of buying customers who are active
   }>;
-  heavy_users: Array<{
-    user_id: string;
-    full_name: string;
-    clinic_name: string;
-    monthly_query_count: number;
+  high_value_stores: Array<{   // stores with purchase_value > 300,000 VND
+    customer_code: string;
+    customer_name: string;
+    customer_type: string;
+    total_purchase_value: number;
   }>;
 }
 ```
@@ -793,7 +791,8 @@ All `DataTable` instances share the same toolbar component. Feature set varies b
 
 | Page | Copy | Excel | CSV | PDF | Print | Search |
 |---|---|---|---|---|---|---|
-| Knowledge Base | ✓ | ✓ | – | – | – | ✓ |
+| Tồn kho (product list) | ✓ | ✓ | – | – | – | ✓ |
+| Khách hàng (customer list) | ✓ | ✓ | – | – | – | ✓ |
 | Check Người dùng | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Check Phòng khám | ✓ | ✓ | – | – | – | ✓ |
 | Monthly pivot tables | – | ✓ | – | – | – | ✓ |
@@ -825,8 +824,8 @@ CORE
   🏠 Dashboard              → /admin/dashboard
   📦 Nhập hàng              → /admin/nhap-hang
   📈 Người dùng mới         → /admin/new-activity
-  📚 Tồn kho tri thức       → /admin/knowledge-base
-  👥 Khách hàng             → /admin/users
+  📦 Tồn kho                → /admin/ton-kho
+  👥 Khách hàng             → /admin/khach-hang
 
 CHECKED
   🏥 Check Phòng khám       → /admin/check-clinics
@@ -918,42 +917,65 @@ No pagination (show all orders for selected month — typically 2–5 rows).
 
 ---
 
-### 7.4 `/admin/knowledge-base`
+### 7.4 `/admin/ton-kho`
 
-**3 KPI cards:** Tổng tài liệu | Tổng chunk | Unique ratio
+**Reference design:** `samples/3_ton_kho.jpg` — read this image before implementing.
 
-**Charts section 1:**
-- Horizontal `BarChart`: chunk count by drug group
-- Horizontal `BarChart`: chunk count by category
-- `PieChart`: document type (PDF/DOCX/TXT)
-- `PieChart`: by source
+**Filter bar:** NPP dropdown | Date picker (snapshot date, default = today) | Brand/Nhóm dropdown | Search button
 
-**Charts section 2:**
-- Horizontal `BarChart`: doc count by drug group
-- Horizontal `BarChart`: doc count by category
+**3 KPI cards** (colored backgrounds):
+| # | Label | Value source | Color |
+|---|---|---|---|
+| 1 | Tổng giá trị tồn | SUM(qty × unit_price) across all products in snapshot | Blue |
+| 2 | Tổng số lượng | SUM(qty) across all products in snapshot | Orange |
+| 3 | Số SKU / Tổng SKU | Count of products with qty > 0 / total product count | Teal |
 
-**Paginated table:**
-Columns: Mã | Tên tài liệu | Chunk count | Ngày tạo | Loại | Trạng thái | Relevance score
+**Charts section 1** (3-column grid, row 1):
+- Left: `"Giá trị tồn theo nhóm"` — Horizontal `BarChart`: Y = product_group (Nhóm), X = total_value. Show top groups.
+- Center: `"Giá trị tồn theo thương hiệu"` — Horizontal `BarChart`: Y = brand/classification (Phân loại), X = total_value.
+- Right: `"Giá trị tồn theo ngành hàng"` — Donut `PieChart`: segments = product category slices, value = total_value.
+
+**Charts section 2** (3-column grid, row 2):
+- Left: `"Số lượng tồn theo nhóm"` — Horizontal `BarChart`: Y = product_group, X = qty.
+- Center: `"Số lượng tồn theo thương hiệu"` — Horizontal `BarChart`: Y = brand/classification, X = qty.
+- Right: `"Số lượng tồn theo ngành hàng"` — Donut `PieChart`: segments = category slices, value = qty.
+
+**Paginated table — "Danh sách sản phẩm tồn kho":**
+Columns: Mã sản phẩm | Tên sản phẩm | Số lượng | Tồn min | Ngày nhập mới nhất | Đơn giá | Thành tiền
 Export: Copy + Excel. Search bar.
+
+**Data source:** `inventory_snapshots` table joined to `products`. Query uses the selected date (or nearest snapshot ≤ selected date) to return per-product stock levels.
+
+**Product catalog:** 62 products from `samples/Danh_muc_san_pham_FULL.xlsx` — columns: STT, Nhóm (group), TÊN SP (name), Phân loại (brand/classification), Dạng sản phẩm (form), Quy cách (packaging), Nhà sản xuất (manufacturer). These products must be seeded in the `products` table (or a dedicated `catalog_products` table separate from nhap-hang's `products` if their schemas conflict).
 
 ---
 
-### 7.5 `/admin/users`
+### 7.5 `/admin/khach-hang`
 
-**Charts:**
-- `LineChart`: new users per month
-- `BarChart`: users by province
-- Horizontal `BarChart`: users by district
+**Reference design:** `samples/4_khach_hang.jpg` — read this image before implementing.
 
-**Tất cả khách hàng:**
-- 4 KPI tiles: Còn hoạt động | Đã phân tuyến % | Đã định vị % | Loại cơ sở count
-- Breakdown table: Mã | Loại cơ sở | Icon | Số lượng | %
+**Filter bar:** NPP dropdown (top, always visible)
 
-**Khách hàng đang truy vấn:**
-- Same 4 KPI tiles + breakdown table + % tổng KH + % KH còn hoạt động
+**Charts (3 separate panels):**
+- `"Số lượng khách hàng mới theo tháng"` — `LineChart`: X = month ("01-2026"), Y = new_customer_count. Single series.
+- `"Số lượng khách hàng theo tỉnh"` — `BarChart`: X = province, Y = count. Single series (Doanh số / count).
+- `"Số lượng khách hàng theo huyện"` — Horizontal `BarChart`: Y = district, X = count.
 
-**Người dùng nhiều truy vấn (>10/tháng) — collapsible:**
-- Table: Tên | Cơ sở | Truy vấn tháng này
+**"Tất cả khách hàng" section** (collapsible, open by default):
+- 4 KPI tiles (large colored cards): Khách hàng còn hoạt động | Đã phân tuyến % | Đã định vị % | Số loại cửa hiệu
+- Breakdown table (right of KPI tiles): Mã | Icon | Loại cửa hiệu | Số lượng | %
+  - Customer types with icon badges: TH (Tạp hóa) | GSO (Bách hóa) | PHA (Nhà thuốc) | SPS (Mẹ & Bé) | BTS (Mỹ phẩm) | OTHER (Khác) | PLT (Phụ liệu tóc) | WMO (Chợ)
+
+**Brand filter button** ("Tất cả thương hiệu") — full-width search/filter row between sections.
+
+**"Khách hàng đang mua hàng" section** (collapsible, open by default):
+- 4 KPI tiles: Total customers with orders (can exceed active count — same customer orders multiple times) | Đã phân tuyến % | Đã định vị % | Số loại cửa hiệu
+- Breakdown table: Mã | Icon | Loại cửa hiệu | Số lượng | % theo Tổng KH | % theo KH còn hoạt động
+
+**"Số lượng cửa hiệu thực phẩm >300K" section** (collapsible, collapsed by default):
+- Table showing stores with purchase value > 300,000 VND. May be empty if no qualifying customers in seed data — show empty state gracefully.
+
+**Data source:** `customers` table (all customers) joined to `customer_purchases` (orders). Customer types mapped to Vietnamese labels and icon badges per type code.
 
 ---
 
@@ -1164,8 +1186,8 @@ app/
     dashboard/page.tsx
     nhap-hang/page.tsx
     new-activity/page.tsx
-    knowledge-base/page.tsx
-    users/page.tsx
+    ton-kho/page.tsx
+    khach-hang/page.tsx
     check-users/page.tsx
     check-clinics/page.tsx
     settings/page.tsx
