@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Admin Shell & Role-Based Routing** - Wire middleware guard, auth utilities, dark layout shell, and all shared admin components (completed 2026-03-18)
 - [x] **Phase 3: Admin Dashboard page + Nhap Hang page** - Build primary landing page with KPIs/charts/map and Nhap hang purchase order analytics page (completed 2026-03-19)
 - [x] **Phase 4: Tồn Kho page + Khách Hàng page** - Build inventory stock analytics page and business customer analytics page (complete rebuild from prior wrong scope) (completed 2026-03-20)
-- [ ] **Phase 5: Check Users page + Check Clinics page** - Build the complex data-explorer pages with pivot tables, maps, conversation drawer, and clinic modal
+- [ ] **Phase 5: Check Customers page + Check Distributor page** - Build data-explorer pages with Leaflet map, pivot tables, color-coded cells, and daily detail modal
 - [ ] **Phase 6: Security & Polish** - Install dependencies, harden CSP, verify service role boundary, print CSS, and Vietnamese PDF strategy
 
 ## Phase Details
@@ -92,19 +92,22 @@ Plans:
 - [ ] 04-02-PLAN.md — Ton Kho service/API route + page UI (KPIs, 2x3 chart grid, DataTable)
 - [ ] 04-03-PLAN.md — Khach Hang service/API route + page UI (charts, 3 collapsible sections, breakdown tables)
 
-### Phase 5: Check Users page + Check Clinics page
-**Goal**: The two data-explorer pages are fully operational — `/admin/check-users` shows a full-width Leaflet map, a paginated user table with all five export formats, a monthly pivot table, and a conversation history drawer; `/admin/check-clinics` shows a color-coded monthly clinic pivot table with a multi-filter bar and a clinic detail modal with daily breakdown grid.
+### Phase 5: Check Customers page + Check Distributor page
+**Goal**: The two data-explorer pages are fully operational — `/admin/check-customers` shows a full-width Leaflet map with customer pins, a paginated DataTable with all five export formats and Check Location flyTo, a brand x month revenue pivot table, and a display programs section; `/admin/check-distributor` shows a color-coded monthly distributor pivot table with multi-filter bar, Column Visibility toggle, and a dark-themed daily detail modal showing staff x day breakdown with stacked revenue and customer count cells.
 **Depends on**: Phase 4
 **Requirements**: CHKU-01, CHKU-02, CHKU-03, CHKU-04, CHKU-05, CHKU-06, CHKU-07, CHKC-01, CHKC-02, CHKC-03, CHKC-04
 **Success Criteria** (what must be TRUE):
-  1. The full-width Leaflet map on `/admin/check-users` renders with pins color-coded by `clinic_type`; clicking a pin shows a popup with full name and clinic type; no SSR crash occurs.
-  2. The user DataTable offers all five export buttons (Copy, Excel, CSV, PDF, Print); each produces a valid artifact; PDF contains readable text (diacritics handled with documented strategy).
-  3. "Xem lich su" on a user row opens the shadcn Sheet drawer, lists that user's conversations, and selecting a conversation loads messages in a read-only chat-style view using the service role client.
-  4. The monthly pivot table (rows = users, columns = 2024-01 through 2026-03) renders with color-coded cells (green/yellow/red/grey thresholds) and the Excel export button downloads the full pivot.
-  5. Clicking a clinic row in `/admin/check-clinics` opens a dark Dialog modal (`bg-gray-900`) showing staff users as rows and days 1-31 as columns, with query and session counts in each cell using the same color thresholds.
-**Plans:** 0 plans
+  1. `/admin/check-customers` renders a Leaflet map with customer pins; clicking a pin shows store name and type; clicking "Check Location" in the DataTable pans the map to that customer's coordinates.
+  2. The customer DataTable offers all five export buttons (Copy, Excel, CSV, PDF, Print) and shows 11 columns including image thumbnail, geo-location badge, and Check Location action.
+  3. The brand x month revenue pivot table shows manufacturer rows vs month columns with VND-formatted values, pagination, and all 5 export formats.
+  4. The distributor pivot table on `/admin/check-distributor` shows color-coded cells (green >= 100M, yellow 10M-99M, red 1-9.9M, grey 0) with Column Visibility toggle and Truoc/Tiep theo pagination.
+  5. Clicking a distributor row opens a dark Dialog modal (`bg-gray-900`) showing staff rows x days 1-31 columns, with stacked revenue + KH count per cell using the same color thresholds.
+**Plans:** 3 plans
 
-Plans: (to be generated)
+Plans:
+- [ ] 05-01-PLAN.md — Database migration (display_programs + distributor_staff tables, ALTER customers/suppliers) + seed data + service layer + API routes
+- [ ] 05-02-PLAN.md — Check Customers page (SSR + client with map, DataTable, revenue pivot, display programs) + MapView flyTo enhancement + sidebar update
+- [ ] 05-03-PLAN.md — Check Distributor page (SSR + client with filter bar, ColorPivotTable full implementation, DistributorDetailModal)
 
 ### Phase 6: Security & Polish
 **Goal**: All new npm packages are installed at correct versions (including jsPDF >=4.2.0 for CVE-2025-68428); the service role client is provably absent from the client bundle; CSP allows Leaflet tiles; print CSS hides the sidebar; Vietnamese diacritics in PDF export are handled with a documented and tested strategy.
@@ -131,5 +134,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
 | 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
 | 4. Tồn Kho + Khách Hàng | 3/3 | Complete   | 2026-03-20 |
-| 5. Check Users + Check Clinics | 0/TBD | Not started | - |
+| 5. Check Customers + Check Distributor | 0/3 | Planning complete | - |
 | 6. Security & Polish | 0/TBD | Not started | - |
