@@ -984,6 +984,225 @@ async function seedCustomerPurchases(): Promise<SeedResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Check-customers + Check-distributor Seed Functions
+// ---------------------------------------------------------------------------
+
+async function seedDisplayPrograms(): Promise<SeedResult> {
+  console.log('Seeding display_programs...')
+
+  const { count } = await supabase.from('display_programs').select('*', { count: 'exact', head: true })
+  if (count && count > 0) {
+    console.log(`  Display programs already seeded (${count} rows). Skipping.`)
+    return { inserted: 0, skipped: count }
+  }
+
+  const { DISPLAY_PROGRAMS } = await import('../data/seeds/display-programs')
+
+  // Get customer IDs to assign display programs to
+  const { data: customers } = await supabase.from('customers').select('id').limit(5)
+  if (!customers || customers.length === 0) {
+    console.error('  No customers found. Skipping display programs.')
+    return { inserted: 0, skipped: DISPLAY_PROGRAMS.length }
+  }
+
+  const records = DISPLAY_PROGRAMS.map((dp, idx) => ({
+    customer_id: customers[idx % customers.length].id,
+    program_name: dp.program_name,
+    staff_name: dp.staff_name,
+    time_period: dp.time_period,
+    registration_image_url: dp.registration_image_url,
+    execution_image_url: dp.execution_image_url,
+  }))
+
+  const { data, error } = await supabase
+    .from('display_programs')
+    .insert(records)
+    .select('id')
+
+  if (error) {
+    console.error('  Error seeding display_programs:', error.message)
+    return { inserted: 0, skipped: records.length }
+  }
+
+  const inserted = data?.length ?? 0
+  console.log(`  Display programs: ${inserted} inserted`)
+  return { inserted, skipped: records.length - inserted }
+}
+
+async function seedDistributorStaff(): Promise<SeedResult> {
+  console.log('Seeding distributor_staff...')
+
+  const { count } = await supabase.from('distributor_staff').select('*', { count: 'exact', head: true })
+  if (count && count > 0) {
+    console.log(`  Distributor staff already seeded (${count} rows). Skipping.`)
+    return { inserted: 0, skipped: count }
+  }
+
+  const { DISTRIBUTOR_STAFF } = await import('../data/seeds/distributor-staff')
+
+  // Build supplier_code -> id map
+  const { data: suppliers } = await supabase.from('suppliers').select('id, supplier_code')
+  const supplierMap = new Map((suppliers ?? []).map(s => [s.supplier_code, s.id]))
+
+  const records = DISTRIBUTOR_STAFF.map(staff => ({
+    supplier_id: supplierMap.get(staff.supplier_code)!,
+    staff_code: staff.staff_code,
+    staff_name: staff.staff_name,
+  }))
+
+  let inserted = 0
+  for (let i = 0; i < records.length; i += 100) {
+    const batch = records.slice(i, i + 100)
+    const { data, error } = await supabase
+      .from('distributor_staff')
+      .upsert(batch, { onConflict: 'supplier_id,staff_code', ignoreDuplicates: true })
+      .select('id')
+
+    if (error) {
+      console.error(`  Error seeding distributor_staff batch ${i}:`, error.message)
+    } else {
+      inserted += data?.length ?? 0
+    }
+  }
+
+  console.log(`  Distributor staff: ${inserted} inserted, ${records.length - inserted} skipped`)
+  return { inserted, skipped: records.length - inserted }
+}
+
+async function updateSuppliersRegionZone(): Promise<SeedResult> {
+  console.log('Updating suppliers with region/zone...')
+
+  // Check if already updated (if first supplier has region set)
+  const { data: check } = await supabase
+    .from('suppliers')
+    .select('region')
+    .eq('supplier_code', 'NPP001')
+    .single()
+
+  if (check?.region) {
+    console.log('  Suppliers already have region/zone data. Skipping.')
+    return { inserted: 0, skipped: 5 }
+  }
+
+  const regionData = [
+    { supplier_code: 'NPP001', region: 'Miền Bắc', zone: 'Đồng Bằng Sông Hồng' },
+    { supplier_code: 'NPP002', region: 'Miền Trung', zone: 'Duyên Hải Miền Trung' },
+    { supplier_code: 'NPP003', region: 'Miền Nam', zone: 'Đông Nam Bộ' },
+    { supplier_code: 'NPP004', region: 'Miền Bắc', zone: 'Đồng Bằng Sông Hồng' },
+    { supplier_code: 'NPP005', region: 'Miền Bắc', zone: 'Đồng Bằng Sông Hồng' },
+  ]
+
+  let updated = 0
+  for (const item of regionData) {
+    const { error } = await supabase
+      .from('suppliers')
+      .update({ region: item.region, zone: item.zone })
+      .eq('supplier_code', item.supplier_code)
+
+    if (error) {
+      console.error(`  Error updating supplier ${item.supplier_code}:`, error.message)
+    } else {
+      updated++
+    }
+  }
+
+  console.log(`  Suppliers updated: ${updated}`)
+  return { inserted: updated, skipped: regionData.length - updated }
+}
+
+async function updateCustomersAddressFields(): Promise<SeedResult> {
+  console.log('Updating customers with address fields...')
+
+  // Check if already updated
+  const { data: check } = await supabase
+    .from('customers')
+    .select('address')
+    .not('address', 'is', null)
+    .limit(1)
+
+  if (check && check.length > 0) {
+    console.log('  Customers already have address data. Skipping.')
+    return { inserted: 0, skipped: 0 }
+  }
+
+  // Fetch all customers
+  const allCustomers: Array<{ id: string; customer_code: string; district: string | null; province: string | null }> = []
+  let from = 0
+  const pageSize = 1000
+  while (true) {
+    const { data: page } = await supabase
+      .from('customers')
+      .select('id, customer_code, district, province')
+      .range(from, from + pageSize - 1)
+    if (!page || page.length === 0) break
+    allCustomers.push(...page)
+    if (page.length < pageSize) break
+    from += pageSize
+  }
+
+  if (allCustomers.length === 0) {
+    console.log('  No customers found. Skipping.')
+    return { inserted: 0, skipped: 0 }
+  }
+
+  const STREETS = [
+    'Nguyễn Huệ', 'Lê Lợi', 'Trần Hưng Đạo', 'Hai Bà Trưng',
+    'Phạm Ngũ Lão', 'Võ Văn Tần', 'Lý Thường Kiệt', 'Nguyễn Trãi',
+    'Lê Duẩn', 'Pasteur', 'Điện Biên Phủ', 'Nguyễn Thị Minh Khai',
+    'Cách Mạng Tháng 8', 'Trường Chinh', 'Lạc Long Quân', 'Hoàng Văn Thụ',
+  ]
+
+  const WARDS = [
+    'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 5',
+    'Phường 6', 'Phường 7', 'Phường 8', 'Phường Tân Định', 'Phường Bến Thành',
+    'Phường Đa Kao', 'Phường Nguyễn Cư Trinh', 'Phường Cầu Ông Lãnh',
+    'Phường Bến Nghé', 'Phường Cô Giang', 'Phường Phạm Ngũ Lão',
+  ]
+
+  // Deterministic hash: use character codes of customer_code
+  function simpleHash(s: string): number {
+    let h = 0
+    for (let i = 0; i < s.length; i++) {
+      h = ((h << 5) - h + s.charCodeAt(i)) | 0
+    }
+    return Math.abs(h)
+  }
+
+  let updated = 0
+  const batchSize = 50
+  for (let i = 0; i < allCustomers.length; i += batchSize) {
+    const batch = allCustomers.slice(i, i + batchSize)
+
+    for (const cust of batch) {
+      const hash = simpleHash(cust.customer_code)
+      const streetNum = (hash % 200) + 1
+      const street = STREETS[hash % STREETS.length]
+      const ward = WARDS[(hash >> 4) % WARDS.length]
+      const district = cust.district || 'Quận 1'
+      const address = `${streetNum} ${street}, ${ward}, ${district}`
+
+      const { error } = await supabase
+        .from('customers')
+        .update({ address, street, ward })
+        .eq('id', cust.id)
+
+      if (error) {
+        console.error(`  Error updating customer ${cust.customer_code}:`, error.message)
+      } else {
+        updated++
+      }
+    }
+
+    if (i % 100 === 0 && i > 0) {
+      console.log(`  Customer address update progress: ${i}/${allCustomers.length}`)
+    }
+  }
+
+  console.log(`  Customers updated with address: ${updated}`)
+  return { inserted: updated, skipped: allCustomers.length - updated }
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -1015,6 +1234,12 @@ async function main() {
   const customersResult = await seedCustomers()
   const customerPurchases = await seedCustomerPurchases()
 
+  // Check-customers + Check-distributor tables
+  const displayPrograms = await seedDisplayPrograms()
+  const distributorStaff = await seedDistributorStaff()
+  const suppliersRegion = await updateSuppliersRegionZone()
+  const customersAddress = await updateCustomersAddressFields()
+
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
 
   console.log('\n=== Seed Complete ===')
@@ -1031,6 +1256,10 @@ async function main() {
   console.log(`Inv Snapshots: ${inventorySnapshots.inserted} inserted, ${inventorySnapshots.skipped} skipped`)
   console.log(`Customers:     ${customersResult.inserted} inserted, ${customersResult.skipped} skipped`)
   console.log(`Cust Purchases:${customerPurchases.inserted} inserted, ${customerPurchases.skipped} skipped`)
+  console.log(`Disp Programs: ${displayPrograms.inserted} inserted, ${displayPrograms.skipped} skipped`)
+  console.log(`Dist Staff:    ${distributorStaff.inserted} inserted, ${distributorStaff.skipped} skipped`)
+  console.log(`Supp Region:   ${suppliersRegion.inserted} updated, ${suppliersRegion.skipped} skipped`)
+  console.log(`Cust Address:  ${customersAddress.inserted} updated, ${customersAddress.skipped} skipped`)
   console.log(`\nTotal time: ${elapsed}s`)
 }
 
