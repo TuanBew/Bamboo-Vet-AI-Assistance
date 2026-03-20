@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Database Migrations & Seed Data** - Create schema, materialized views, indexes, RLS, trigger, and idempotent seed scripts
 - [x] **Phase 2: Admin Shell & Role-Based Routing** - Wire middleware guard, auth utilities, dark layout shell, and all shared admin components (completed 2026-03-18)
 - [x] **Phase 3: Admin Dashboard page + Nhap Hang page** - Build primary landing page with KPIs/charts/map and Nhap hang purchase order analytics page (completed 2026-03-19)
-- [ ] **Phase 4: Tồn Kho page + Khách Hàng page** - Build inventory stock analytics page and business customer analytics page (complete rebuild from prior wrong scope)
+- [x] **Phase 4: Tồn Kho page + Khách Hàng page** - Build inventory stock analytics page and business customer analytics page (complete rebuild from prior wrong scope) (completed 2026-03-20)
 - [ ] **Phase 5: Check Users page + Check Clinics page** - Build the complex data-explorer pages with pivot tables, maps, conversation drawer, and clinic modal
 - [ ] **Phase 6: Security & Polish** - Install dependencies, harden CSP, verify service role boundary, print CSS, and Vietnamese PDF strategy
 
@@ -85,7 +85,7 @@ Plans:
   3. `/admin/khach-hang` renders 3 chart panels (LineChart new customers per month, BarChart by province, horizontal BarChart by district) with non-zero data for the selected NPP filter.
   4. "Tất cả khách hàng" section shows 4 KPI tiles + breakdown table for all 8 customer types (TH/GSO/PHA/SPS/BTS/OTHER/PLT/WMO) with correct Số lượng and %.
   5. "Khách hàng đang mua hàng" section shows 4 KPI tiles + breakdown table with % theo Tổng KH + % theo KH còn hoạt động; "Số lượng cửa hiệu >300K" section is collapsible with graceful empty state.
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 04-01-PLAN.md — Migration + seed data (3 tables, ~1600 rows) + teardown old KB/Users files + sidebar update
@@ -130,6 +130,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
 | 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
-| 4. Tồn Kho + Khách Hàng | 2/3 | In Progress|  |
+| 4. Tồn Kho + Khách Hàng | 3/3 | Complete   | 2026-03-20 |
 | 5. Check Users + Check Clinics | 0/TBD | Not started | - |
 | 6. Security & Polish | 0/TBD | Not started | - |
