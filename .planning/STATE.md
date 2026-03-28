@@ -104,9 +104,9 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 6 of 6 (Security Hardening & Polish)
-Plan: 5 of 7 in current phase (completed)
+Plan: 6 of 7 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-28 — Completed 06-05 seed data expansion generators (132 profiles, 10K conversations, 52K messages)
+Last activity: 2026-03-28 — Completed 06-06 seed data expansion (450 customers, 90 products, 10 suppliers, batch-insert runner)
 
 Progress: [█████████░] 96%
 
@@ -218,6 +218,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Roboto Regular TTF v2.138 pre-embedded as base64 static export for Vietnamese PDF diacritics
 - [Phase 06]: Removed `as const` from NAV_SECTIONS, added NavSection/NavItem types for dynamic VI.* values
 - [Phase 06]: VI namespace pattern: import { VI } from '@/lib/i18n/vietnamese' for all admin Vietnamese strings
+- [Phase 06]: Province distribution uses weighted hash for HCMC 25%, Ha Noi 15%, Da Nang 8% geographic clustering
+- [Phase 06]: Customer purchases use month-based loop (not per-customer) for guaranteed 27-month coverage
+- [Phase 06]: Seed runner uses static imports and batchInsert helper with configurable chunk sizes
 
 ### Pending Todos
 
@@ -231,6 +234,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T14:24:54Z
-Stopped at: Completed 06-05-PLAN.md
+Last session: 2026-03-28T14:37:17Z
+Stopped at: Completed 06-06-PLAN.md
 Resume file: None
