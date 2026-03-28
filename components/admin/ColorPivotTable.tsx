@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { addVietnameseFont } from '@/lib/pdf/vietnamese-font'
+import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,7 +59,7 @@ export function ColorPivotTable({
   dimColumnLabels = [],
   onRowClick,
   exportConfig,
-  searchPlaceholder = 'Tim kiem',
+  searchPlaceholder = VI.table.search,
   showColumnVisibility = false,
   showPageSizeDropdown = true,
   pageSize: initialPageSize = 10,
@@ -263,7 +264,7 @@ export function ColorPivotTable({
         <div className="flex items-center gap-2">
           {showPageSizeDropdown && (
             <div className="flex items-center gap-1">
-              <span className="text-sm text-gray-400">Hien thi</span>
+              <span className="text-sm text-gray-400">{VI.table.display}</span>
               <select
                 value={pageSize}
                 onChange={e => {
@@ -274,7 +275,7 @@ export function ColorPivotTable({
               >
                 {[10, 25, 50, 100].map(size => (
                   <option key={size} value={size}>
-                    {size} dong
+                    {size} {VI.table.rows}
                   </option>
                 ))}
               </select>
@@ -284,27 +285,27 @@ export function ColorPivotTable({
           {/* Export buttons */}
           {exportConfig?.copy && (
             <button onClick={handleCopy} className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors">
-              Copy
+              {VI.buttons.copy}
             </button>
           )}
           {exportConfig?.excel && (
             <button onClick={handleExcel} className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors">
-              Excel
+              {VI.buttons.excel}
             </button>
           )}
           {exportConfig?.csv && (
             <button onClick={handleCsv} className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors">
-              CSV
+              {VI.buttons.csv}
             </button>
           )}
           {exportConfig?.pdf && (
             <button onClick={handlePdf} className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors">
-              PDF
+              {VI.buttons.pdf}
             </button>
           )}
           {exportConfig?.print && (
             <button onClick={handlePrint} className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors">
-              Print
+              {VI.buttons.print}
             </button>
           )}
 
@@ -341,7 +342,7 @@ export function ColorPivotTable({
 
         {/* Search */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">Tim kiem</span>
+          <span className="text-sm text-gray-400">{VI.filter.search}</span>
           <input
             type="text"
             placeholder={searchPlaceholder}
@@ -397,7 +398,7 @@ export function ColorPivotTable({
                     colSpan={dimColumnLabels.length + visibleCols.length}
                     className="px-4 py-8 text-center text-sm text-gray-400"
                   >
-                    Khong co du lieu
+                    {VI.table.noData}
                   </td>
                 </tr>
               ) : (
@@ -446,7 +447,7 @@ export function ColorPivotTable({
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <span className="text-sm text-gray-400">
-          ang hien thi {showingStart} den {showingEnd} trong tong so {sortedRows.length} ban ghi
+          {VI.table.showing} {showingStart} - {showingEnd} {VI.table.of} {sortedRows.length} {VI.table.records}
         </span>
         <div className="flex items-center gap-1">
           <button
@@ -454,7 +455,7 @@ export function ColorPivotTable({
             disabled={safePage <= 1}
             className="bg-gray-700 text-white text-sm px-3 py-1.5 rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
           >
-            Truoc
+            {VI.table.prev}
           </button>
           {paginationButtons.map((page, i) =>
             page === 'ellipsis' ? (
@@ -480,7 +481,7 @@ export function ColorPivotTable({
             disabled={safePage >= totalPages}
             className="bg-gray-700 text-white text-sm px-3 py-1.5 rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
           >
-            Tiep theo
+            {VI.table.next}
           </button>
         </div>
       </div>

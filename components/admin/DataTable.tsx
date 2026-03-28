@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { addVietnameseFont } from '@/lib/pdf/vietnamese-font'
+import { VI } from '@/lib/i18n/vietnamese'
 import {
   useReactTable,
   getCoreRowModel,
@@ -76,7 +77,7 @@ export function DataTable<T extends Record<string, unknown>>({
   data,
   columns,
   exportConfig,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder = VI.table.search,
   pageSize: initialPageSize = 10,
   totalCount,
   currentPage,
@@ -298,7 +299,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   onClick={handleCopy}
                   className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors"
                 >
-                  Copy
+                  {VI.buttons.copy}
                 </button>
               )}
               {exportConfig?.excel && (
@@ -306,7 +307,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   onClick={handleExcel}
                   className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors"
                 >
-                  Excel
+                  {VI.buttons.excel}
                 </button>
               )}
               {exportConfig?.csv && (
@@ -314,7 +315,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   onClick={handleCsv}
                   className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors"
                 >
-                  CSV
+                  {VI.buttons.csv}
                 </button>
               )}
               {exportConfig?.pdf && (
@@ -322,7 +323,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   onClick={handlePdf}
                   className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors"
                 >
-                  PDF
+                  {VI.buttons.pdf}
                 </button>
               )}
               {exportConfig?.print && (
@@ -330,7 +331,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   onClick={handlePrint}
                   className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors"
                 >
-                  Print
+                  {VI.buttons.print}
                 </button>
               )}
             </div>
@@ -376,7 +377,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     colSpan={columns.length}
                     className="px-4 py-8 text-center text-sm text-gray-400"
                   >
-                    No data available
+                    {VI.table.noData}
                   </td>
                 </tr>
               ) : (
@@ -404,7 +405,7 @@ export function DataTable<T extends Record<string, unknown>>({
           {/* Page size dropdown */}
           {showPageSizeDropdown ? (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Rows per page:</span>
+              <span className="text-sm text-gray-400">{VI.table.rowsPerPage}</span>
               <select
                 value={pageSizeState}
                 onChange={e => handlePageSizeChange(Number(e.target.value))}
@@ -428,7 +429,7 @@ export function DataTable<T extends Record<string, unknown>>({
               disabled={serverCurrentPage <= 1}
               className="bg-gray-700 text-white text-sm px-3 py-1.5 rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
             >
-              Prev
+              {VI.table.prev}
             </button>
             {paginationButtons.map((page, i) =>
               page === 'ellipsis' ? (
@@ -454,7 +455,7 @@ export function DataTable<T extends Record<string, unknown>>({
               disabled={serverCurrentPage >= serverTotalPages}
               className="bg-gray-700 text-white text-sm px-3 py-1.5 rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-600 transition-colors"
             >
-              Next
+              {VI.table.next}
             </button>
           </div>
         </div>

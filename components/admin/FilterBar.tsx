@@ -1,5 +1,7 @@
 'use client'
 
+import { VI } from '@/lib/i18n/vietnamese'
+
 export interface FilterBarProps {
   provinces?: string[]
   districts?: string[]
@@ -60,7 +62,7 @@ export function FilterBar({
             value={selectedProvince}
             onChange={(e) => onProvinceChange?.(e.target.value)}
           >
-            <option value="">Tat ca tinh/thanh</option>
+            <option value="">{VI.filter.allProvinces}</option>
             {provinces.map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -75,7 +77,7 @@ export function FilterBar({
             value={selectedDistrict}
             onChange={(e) => onDistrictChange?.(e.target.value)}
           >
-            <option value="">Tat ca quan/huyen</option>
+            <option value="">{VI.filter.allDistricts}</option>
             {districts.map((d) => (
               <option key={d} value={d}>
                 {d}
@@ -90,7 +92,7 @@ export function FilterBar({
             value={selectedClinicType}
             onChange={(e) => onClinicTypeChange?.(e.target.value)}
           >
-            <option value="">Tat ca loai co so</option>
+            <option value="">{VI.filter.allClinicTypes}</option>
             {clinicTypes.map((ct) => (
               <option key={ct} value={ct}>
                 {ct}
@@ -119,7 +121,7 @@ export function FilterBar({
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                 <option key={m} value={m}>
-                  Thang {m}
+                  {VI.filter.month} {m}
                 </option>
               ))}
             </select>
@@ -130,7 +132,7 @@ export function FilterBar({
           <input
             type="text"
             className="bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-            placeholder="Tim kiem..."
+            placeholder={VI.table.search}
             value={searchValue}
             onChange={(e) => onSearchChange?.(e.target.value)}
           />
@@ -139,7 +141,7 @@ export function FilterBar({
 
       {(showProvince || showClinicType) && (
         <p className="text-xs text-gray-500 italic mt-1">
-          Bo loc ap dung cho bieu do
+          {VI.filter.filterHint}
         </p>
       )}
     </div>

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { RefreshCw, LogOut } from 'lucide-react'
+import { VI } from '@/lib/i18n/vietnamese'
 import { Button } from '@/components/ui/button'
 import { refreshMaterializedViews } from '@/app/admin/_actions/refresh-views'
 
@@ -54,7 +55,7 @@ export function AdminTopBar() {
           className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isPending ? 'animate-spin' : ''}`} />
-          {isPending ? 'Dang lam moi...' : 'Lam moi du lieu'}
+          {isPending ? VI.topbar.refreshing : VI.topbar.refresh}
         </Button>
 
         <Button
@@ -64,7 +65,7 @@ export function AdminTopBar() {
           className="dark:text-gray-300 dark:hover:bg-gray-700"
         >
           <LogOut className="h-4 w-4 mr-2" />
-          Dang xuat
+          {VI.topbar.signOut}
         </Button>
       </div>
     </header>
