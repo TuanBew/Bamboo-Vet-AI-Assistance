@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-28T14:20:14.661Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-28T14:20:25.932Z"
 last_activity: 2026-03-28 — Completed 06-01 package verification, CSP update, print CSS
 progress:
   total_phases: 6
@@ -148,6 +148,7 @@ Progress: [████████░░] 78%
 | Phase 05 P04 | 5 | 2 tasks | 7 files |
 | Phase 05 P05 | 5 | 2 tasks | 7 files |
 | Phase 06 P01 | 2 | 2 tasks | 4 files |
+| Phase 06 P02 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -210,6 +211,7 @@ Recent decisions affecting current work:
 - [Phase 05]: jsPDF + jspdf-autotable for real PDF export replacing console.log stub in ColorPivotTable
 - [Phase 06]: xlsx audit vulnerabilities (4 high) accepted as no-fix-available; admin-only usage limits attack surface
 - [Phase 06]: CSP includes explicit tile.openstreetmap.org in both img-src and connect-src per CONTEXT.md locked decision
+- [Phase 06]: Roboto Regular TTF v2.138 pre-embedded as base64 static export for Vietnamese PDF diacritics
 
 ### Pending Todos
 
@@ -223,6 +225,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T14:18:15Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-28T14:20:25.925Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
