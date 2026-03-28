@@ -74,3 +74,35 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+@media print {
+  /* Hide navigation chrome */
+  #admin-sidebar,
+  #admin-topbar {
+    display: none !important;
+  }
+
+  /* Full-width content without sidebar margin */
+  #admin-main {
+    margin: 0 !important;
+    padding: 8px !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* Override dark background for print */
+  body,
+  .bg-gray-900,
+  .bg-gray-800 {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Keep color-coded cells in pivot tables for print */
+  .bg-green-500,
+  .bg-yellow-400,
+  .bg-red-500 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

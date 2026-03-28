@@ -11,10 +11,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="dark">
       <div className="flex h-screen bg-gray-900">
-        <AdminSidebar />
+        <div id="admin-sidebar"><AdminSidebar /></div>
         <div className="flex flex-col flex-1 overflow-hidden">
-          <AdminTopBar />
-          <main className="flex-1 overflow-auto p-6 bg-gray-900">
+          <div id="admin-topbar"><AdminTopBar /></div>
+          <main id="admin-main" className="flex-1 overflow-auto p-6 bg-gray-900">
             {children}
           </main>
         </div>
