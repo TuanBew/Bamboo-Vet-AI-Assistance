@@ -3,14 +3,30 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-05-PLAN.md
-last_updated: "2026-03-20T15:02:54.200Z"
-last_activity: 2026-03-20 — Completed 04-02 Ton Kho page (service + API + SSR + client)
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-28T14:20:14.661Z"
+last_activity: 2026-03-28 — Completed 06-01 package verification, CSP update, print CSS
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 27
+  completed_plans: 22
+  percent: 81
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-03-28T14:19:10.098Z"
+last_activity: 2026-03-20 — Completed 04-02 Ton Kho page (service + API + SSR + client)
+progress:
+  [████████░░] 81%
+  completed_phases: 5
+  total_plans: 27
+  completed_plans: 21
   percent: 93
 ---
 
@@ -83,16 +99,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Admins can see exactly who is using the platform, what they're asking, and where they're located — so they can manage knowledge base quality, monitor clinic engagement, and identify usage patterns across the Vietnamese veterinary market.
-**Current focus:** Phase 4 — Knowledge Base Page + Users Analytics Page
+**Current focus:** Phase 6 — Security Hardening & Polish
 
 ## Current Position
 
-Phase: 4 of 6 (Knowledge Base Page + Users Analytics Page)
-Plan: 2 of 3 in current phase (completed)
+Phase: 6 of 6 (Security Hardening & Polish)
+Plan: 1 of 7 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-20 — Completed 04-02 Ton Kho page (service + API + SSR + client)
+Last activity: 2026-03-28 — Completed 06-01 package verification, CSP update, print CSS
 
-Progress: [█████████░] 95%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -131,6 +147,7 @@ Progress: [█████████░] 95%
 | Phase 05 P02 | 3 | 2 tasks | 5 files |
 | Phase 05 P04 | 5 | 2 tasks | 7 files |
 | Phase 05 P05 | 5 | 2 tasks | 7 files |
+| Phase 06 P01 | 2 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -191,6 +208,8 @@ Recent decisions affecting current work:
 - [Phase 05]: UserHistoryDrawer uses single-panel view switching (list vs thread) with back-arrow navigation
 - [Phase 05]: Clinic aggregation sums user metrics via clinic_id join rather than direct clinic-level queries
 - [Phase 05]: jsPDF + jspdf-autotable for real PDF export replacing console.log stub in ColorPivotTable
+- [Phase 06]: xlsx audit vulnerabilities (4 high) accepted as no-fix-available; admin-only usage limits attack surface
+- [Phase 06]: CSP includes explicit tile.openstreetmap.org in both img-src and connect-src per CONTEXT.md locked decision
 
 ### Pending Todos
 
@@ -204,6 +223,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T14:55:58.951Z
-Stopped at: Completed 05-05-PLAN.md
+Last session: 2026-03-28T14:18:15Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
