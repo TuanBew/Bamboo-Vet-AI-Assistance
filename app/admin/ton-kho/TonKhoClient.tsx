@@ -19,6 +19,7 @@ import type { TonKhoData, TonKhoFilters } from '@/lib/admin/services/ton-kho'
 import { KpiCard } from '@/components/admin/KpiCard'
 import { DataTable, type DataTableColumn } from '@/components/admin/DataTable'
 import { DollarSign, Package, Layers, Search } from 'lucide-react'
+import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
 // Constants (consistent with NhapHangClient)
@@ -85,7 +86,7 @@ function HorizontalBarChartCard({
       <h3 className="text-sm font-semibold text-gray-300 mb-3">{title}</h3>
       {chartData.length === 0 ? (
         <div className="h-[250px] flex items-center justify-center text-gray-500 text-sm">
-          Khong co du lieu
+          {VI.tonKho.noData}
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={Math.max(250, chartData.length * 30)}>
@@ -135,7 +136,7 @@ function DonutChartCard({
       <h3 className="text-sm font-semibold text-gray-300 mb-3">{title}</h3>
       {filteredData.length === 0 ? (
         <div className="h-[280px] flex items-center justify-center text-gray-500 text-sm">
-          Khong co du lieu
+          {VI.tonKho.noData}
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={280}>
@@ -208,21 +209,21 @@ export function TonKhoClient({
 
   // DataTable columns
   const columns: DataTableColumn<ProductRow>[] = [
-    { key: 'product_code', label: 'Ma san pham', sortable: true },
-    { key: 'product_name', label: 'Ten san pham', sortable: true },
-    { key: 'qty', label: 'So luong', sortable: true, render: (v) => formatVND(Number(v)) },
-    { key: 'min_stock', label: 'Ton min', sortable: true },
-    { key: 'last_import_date', label: 'Ngay nhap moi nhat', sortable: true },
-    { key: 'unit_price', label: 'Don gia', sortable: true, render: (v) => formatVND(Number(v)) },
-    { key: 'total_value', label: 'Thanh tien', sortable: true, render: (v) => formatVND(Number(v)) },
+    { key: 'product_code', label: VI.tonKho.productCode, sortable: true },
+    { key: 'product_name', label: VI.tonKho.productName, sortable: true },
+    { key: 'qty', label: VI.tonKho.quantity, sortable: true, render: (v) => formatVND(Number(v)) },
+    { key: 'min_stock', label: VI.tonKho.minStock, sortable: true },
+    { key: 'last_import_date', label: VI.tonKho.latestImport, sortable: true },
+    { key: 'unit_price', label: VI.tonKho.unitPrice, sortable: true, render: (v) => formatVND(Number(v)) },
+    { key: 'total_value', label: VI.tonKho.totalAmount, sortable: true, render: (v) => formatVND(Number(v)) },
   ]
 
   return (
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-100">Ton kho</h1>
-        <p className="text-sm text-gray-400 mt-1">Phan tich ton kho san pham</p>
+        <h1 className="text-2xl font-bold text-gray-100">{VI.tonKho.title}</h1>
+        <p className="text-sm text-gray-400 mt-1">{VI.tonKho.subtitle}</p>
       </div>
 
       {/* Filter bar */}
@@ -231,7 +232,7 @@ export function TonKhoClient({
           className="bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 text-sm min-w-[200px]"
           disabled
         >
-          <option>Tat ca NPP</option>
+          <option>{VI.tonKho.allNpp}</option>
         </select>
 
         <input
@@ -246,7 +247,7 @@ export function TonKhoClient({
           value={filters.nhom}
           onChange={(e) => setFilters(f => ({ ...f, nhom: e.target.value }))}
         >
-          <option value="">Tat ca nhom</option>
+          <option value="">{VI.tonKho.allGroups}</option>
           {nhomOptions.map(nhom => (
             <option key={nhom} value={nhom}>{nhom}</option>
           ))}
@@ -256,7 +257,7 @@ export function TonKhoClient({
           <input
             type="text"
             className="bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 text-sm min-w-[200px]"
-            placeholder="Tim kiem san pham..."
+            placeholder={VI.tonKho.searchProduct}
             value={filters.search}
             onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
           />
@@ -268,7 +269,7 @@ export function TonKhoClient({
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
         >
           <Search className="h-4 w-4" />
-          Tim kiem
+          {VI.tonKho.search}
         </button>
       </div>
 
@@ -285,21 +286,21 @@ export function TonKhoClient({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <KpiCard
               value={formatVND(data.kpis.total_value)}
-              label="Tong gia tri ton"
+              label={VI.tonKho.totalValue}
               icon={<DollarSign className="h-5 w-5" />}
               bgColor="bg-blue-500"
               textColor="text-white"
             />
             <KpiCard
               value={formatVND(data.kpis.total_qty)}
-              label="Tong so luong"
+              label={VI.tonKho.totalQty}
               icon={<Package className="h-5 w-5" />}
               bgColor="bg-orange-500"
               textColor="text-white"
             />
             <KpiCard
               value={`${data.kpis.sku_in_stock}/${data.kpis.total_sku}`}
-              label="So SKU / Tong SKU"
+              label={VI.tonKho.skuInStock}
               icon={<Layers className="h-5 w-5" />}
               bgColor="bg-teal-500"
               textColor="text-white"
@@ -309,54 +310,54 @@ export function TonKhoClient({
           {/* Row 1: Value charts (2x3 grid) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <HorizontalBarChartCard
-              title="Gia tri ton theo nhom"
+              title={VI.tonKho.valueByGroupFull}
               data={data.value_by_nhom}
               color={CHART_COLORS[0]}
-              label="Gia tri"
+              label={VI.tonKho.valueStock}
             />
             <HorizontalBarChartCard
-              title="Gia tri ton theo thuong hieu"
+              title={VI.tonKho.valueByBrandFull}
               data={data.value_by_brand}
               color={CHART_COLORS[1]}
-              label="Gia tri"
+              label={VI.tonKho.valueStock}
             />
             <DonutChartCard
-              title="Gia tri ton theo nganh hang"
+              title={VI.tonKho.valueByCategFull}
               data={data.value_by_category}
-              label="Gia tri"
+              label={VI.tonKho.valueStock}
             />
           </div>
 
           {/* Row 2: Quantity charts */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <HorizontalBarChartCard
-              title="So luong ton theo nhom"
+              title={VI.tonKho.qtyByGroupFull}
               data={data.qty_by_nhom}
               color={CHART_COLORS[2]}
-              label="So luong"
+              label={VI.tonKho.qtyStock}
             />
             <HorizontalBarChartCard
-              title="So luong ton theo thuong hieu"
+              title={VI.tonKho.qtyByBrandFull}
               data={data.qty_by_brand}
               color={CHART_COLORS[3]}
-              label="So luong"
+              label={VI.tonKho.qtyStock}
             />
             <DonutChartCard
-              title="So luong ton theo nganh hang"
+              title={VI.tonKho.qtyByCategFull}
               data={data.qty_by_category}
-              label="So luong"
+              label={VI.tonKho.qtyStock}
             />
           </div>
 
           {/* DataTable section */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-100 mb-4">Danh sach san pham ton kho</h2>
+            <h2 className="text-lg font-semibold text-gray-100 mb-4">{VI.tonKho.productList}</h2>
             <DataTable
               data={data.products as unknown as Record<string, unknown>[]}
               columns={columns as unknown as DataTableColumn<Record<string, unknown>>[]}
               exportConfig={{ copy: true, excel: true }}
               showSearch={true}
-              searchPlaceholder="Tim kiem san pham..."
+              searchPlaceholder={VI.tonKho.searchProduct}
               pageSize={10}
             />
           </div>

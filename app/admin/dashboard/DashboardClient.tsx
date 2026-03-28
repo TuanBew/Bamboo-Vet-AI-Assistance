@@ -27,6 +27,7 @@ import { SparklineChart } from '@/components/admin/SparklineChart'
 import { MapView } from '@/components/admin/MapView'
 import type { MapPin } from '@/components/admin/MapView'
 import { DashboardSkeleton } from './DashboardSkeleton'
+import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -184,19 +185,19 @@ export function DashboardClient({
     const { drug_groups, animal_types, query_types } = data.category_stats
     return [
       {
-        rowLabel: `Ti trong nhap hang thang ${monthLabel}`,
+        rowLabel: `${VI.dashboard.importShareMonth} ${monthLabel}`,
         donuts: [
-          { label: 'Theo nhom thuoc', data: drug_groups.filter((d) => d.count > 0) },
-          { label: 'Theo loai dong vat', data: animal_types.filter((d) => d.count > 0) },
-          { label: 'Theo loai truy van', data: query_types.filter((d) => d.count > 0) },
+          { label: VI.dashboard.byDrugGroup, data: drug_groups.filter((d) => d.count > 0) },
+          { label: VI.dashboard.byAnimalType, data: animal_types.filter((d) => d.count > 0) },
+          { label: VI.dashboard.byQueryType, data: query_types.filter((d) => d.count > 0) },
         ],
       },
       {
-        rowLabel: `Ti trong ban hang thang ${monthLabel}`,
+        rowLabel: `${VI.dashboard.salesShareMonth} ${monthLabel}`,
         donuts: [
-          { label: 'Theo nhom thuoc', data: drug_groups.filter((d) => d.count > 0) },
-          { label: 'Theo loai dong vat', data: animal_types.filter((d) => d.count > 0) },
-          { label: 'Theo loai truy van', data: query_types.filter((d) => d.count > 0) },
+          { label: VI.dashboard.byDrugGroup, data: drug_groups.filter((d) => d.count > 0) },
+          { label: VI.dashboard.byAnimalType, data: animal_types.filter((d) => d.count > 0) },
+          { label: VI.dashboard.byQueryType, data: query_types.filter((d) => d.count > 0) },
         ],
       },
     ]
@@ -239,7 +240,7 @@ export function DashboardClient({
         latitude: c.latitude,
         longitude: c.longitude,
         label: c.clinic_name,
-        popupContent: `Truy van: ${c.total_queries}`,
+        popupContent: `${VI.dashboard.queryPrefix}: ${c.total_queries}`,
         color: getColorForQueries(c.total_queries),
       })),
     [data.clinic_map],
@@ -292,12 +293,12 @@ export function DashboardClient({
       />
 
       {/* Section 1: Tong quan */}
-      <SectionHeader title="Tong quan">
+      <SectionHeader title={VI.dashboard.overview}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Yearly grouped BarChart */}
           <div className="bg-gray-800 rounded-xl p-4">
             <h3 className="text-sm font-medium text-gray-300 mb-3">
-              Tong hop theo nam
+              {VI.dashboard.yearlyAggregate}
             </h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={yearlyBarData}>
@@ -306,8 +307,8 @@ export function DashboardClient({
                 <YAxis tick={AXIS_TICK} />
                 <Tooltip contentStyle={TOOLTIP_STYLE} />
                 <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 12 }} />
-                <Bar dataKey="queries" name="Nhap hang" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="sessions" name="Ban hang" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="queries" name={VI.dashboard.importLabel} fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="sessions" name={VI.dashboard.salesLabel} fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -315,7 +316,7 @@ export function DashboardClient({
           {/* Forecast ComposedChart */}
           <div className="bg-gray-800 rounded-xl p-4">
             <h3 className="text-sm font-medium text-gray-300 mb-3">
-              Xu huong &amp; du bao
+              {VI.dashboard.trendForecast}
             </h3>
             <ResponsiveContainer width="100%" height={250}>
               <ComposedChart data={forecastChartData}>
@@ -347,11 +348,11 @@ export function DashboardClient({
       </SectionHeader>
 
       {/* Section 2: Chi so tap trung */}
-      <SectionHeader title={`Chi so tap trung thang ${monthLabel}`}>
+      <SectionHeader title={`${VI.dashboard.focusMetrics} tháng ${monthLabel}`}>
         {/* Daily volume line chart */}
         <div className="bg-gray-800 rounded-xl p-4 mb-4">
           <h3 className="text-sm font-medium text-gray-300 mb-3">
-            Luong truy van theo ngay
+            {VI.dashboard.dailyQueryVolume}
           </h3>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={data.daily_volume}>
@@ -374,27 +375,27 @@ export function DashboardClient({
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
           <KpiCard
             value={data.kpis.total_queries.toLocaleString()}
-            label="Tong truy van"
+            label={VI.dashboard.totalQueryKpi}
             bgColor="bg-gray-800"
           />
           <KpiCard
             value={data.kpis.total_sessions.toLocaleString()}
-            label="Phien chat"
+            label={VI.dashboard.chatSessions}
             bgColor="bg-gray-800"
           />
           <KpiCard
             value={data.kpis.total_users.toLocaleString()}
-            label="Nguoi dung"
+            label={VI.dashboard.users}
             bgColor="bg-gray-800"
           />
           <KpiCard
             value={data.kpis.total_documents.toLocaleString()}
-            label="Tai lieu KB"
+            label={VI.dashboard.kbDocuments}
             bgColor="bg-gray-800"
           />
           <KpiCard
             value={data.kpis.total_staff.toLocaleString()}
-            label="Nhan vien"
+            label={VI.dashboard.staffLabel}
             bgColor="bg-gray-800"
           />
         </div>
@@ -433,7 +434,7 @@ export function DashboardClient({
                     </PieChart>
                   ) : (
                     <div className="w-[200px] h-[200px] flex items-center justify-center">
-                      <p className="text-xs text-gray-500">Khong co du lieu</p>
+                      <p className="text-xs text-gray-500">{VI.dashboard.noData}</p>
                     </div>
                   )}
                 </div>
@@ -448,19 +449,19 @@ export function DashboardClient({
             <p className="text-2xl font-bold text-white">
               {data.kpis.total_queries.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-400 uppercase mt-1">Tong nhap hang</p>
+            <p className="text-xs text-gray-400 uppercase mt-1">{VI.dashboard.totalImport}</p>
           </div>
           <div className="bg-gray-800 rounded-xl p-4 text-center">
             <p className="text-2xl font-bold text-white">
               {data.kpis.total_sessions.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-400 uppercase mt-1">Tong ban hang</p>
+            <p className="text-xs text-gray-400 uppercase mt-1">{VI.dashboard.totalSales}</p>
           </div>
           <div className="bg-gray-800 rounded-xl p-4 text-center">
             <p className="text-2xl font-bold text-white">
               {data.kpis.total_users} / {data.kpis.total_documents}
             </p>
-            <p className="text-xs text-gray-400 uppercase mt-1">SL ban / KM</p>
+            <p className="text-xs text-gray-400 uppercase mt-1">{VI.dashboard.salesPerPromo}</p>
           </div>
           <div className="bg-gray-800 rounded-xl p-4 text-center">
             <p className="text-2xl font-bold text-white">
@@ -468,24 +469,24 @@ export function DashboardClient({
                 ? Math.round(data.kpis.total_queries / data.kpis.total_sessions)
                 : 0}
             </p>
-            <p className="text-xs text-gray-400 uppercase mt-1">Trung binh / don</p>
+            <p className="text-xs text-gray-400 uppercase mt-1">{VI.dashboard.avgPerOrder}</p>
           </div>
         </div>
       </SectionHeader>
 
       {/* Section 3: Nhan vien */}
-      <SectionHeader title={`Nhan vien thang ${monthLabel}`}>
+      <SectionHeader title={`${VI.dashboard.staffMonth} ${monthLabel}`}>
         <div className="bg-gray-800 rounded-xl overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-400 uppercase">
               <tr className="border-b border-gray-700">
-                <th className="px-4 py-3">Ten nhan vien</th>
-                <th className="px-4 py-3">Doanh so theo ngay</th>
-                <th className="px-4 py-3">TOTAL</th>
-                <th className="px-4 py-3">Don hang</th>
-                <th className="px-4 py-3">Trung binh</th>
-                <th className="px-4 py-3">Nhom thuoc</th>
-                <th className="px-4 py-3">Ngay &gt;1tv</th>
+                <th className="px-4 py-3">{VI.dashboard.staffName}</th>
+                <th className="px-4 py-3">{VI.dashboard.dailySales}</th>
+                <th className="px-4 py-3">{VI.dashboard.total}</th>
+                <th className="px-4 py-3">{VI.dashboard.orders}</th>
+                <th className="px-4 py-3">{VI.dashboard.average}</th>
+                <th className="px-4 py-3">{VI.dashboard.drugGroup}</th>
+                <th className="px-4 py-3">{VI.dashboard.daysOver1m}</th>
               </tr>
             </thead>
             <tbody>
@@ -561,7 +562,7 @@ export function DashboardClient({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
           <div className="bg-gray-800 rounded-xl p-4">
             <h3 className="text-sm font-medium text-gray-300 mb-3">
-              Theo tinh/thanh
+              {VI.dashboard.byProvince}
             </h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={usersByProvince} layout="vertical">
@@ -580,7 +581,7 @@ export function DashboardClient({
           </div>
           <div className="bg-gray-800 rounded-xl p-4">
             <h3 className="text-sm font-medium text-gray-300 mb-3">
-              Theo loai co so
+              {VI.dashboard.byClinicType}
             </h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={usersByClinicType} layout="vertical">
@@ -601,13 +602,13 @@ export function DashboardClient({
       </SectionHeader>
 
       {/* Section 4: Khach hang (Phong kham) */}
-      <SectionHeader title={`Khach hang thang ${monthLabel}`}>
+      <SectionHeader title={`${VI.dashboard.customerMonth} ${monthLabel}`}>
         <MapView pins={mapPins} center={[16.0, 106.0]} zoom={6} />
 
         {/* Top 10 clinics horizontal bar chart */}
         <div className="bg-gray-800 rounded-xl p-4 mt-4">
           <h3 className="text-sm font-medium text-gray-300 mb-3">
-            Top 10 phong kham
+            {VI.dashboard.top10Clinics}
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data.top_clinics} layout="vertical">

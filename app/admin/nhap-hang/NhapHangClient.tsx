@@ -26,6 +26,7 @@ import { SectionHeader } from '@/components/admin/SectionHeader'
 import { KpiCard } from '@/components/admin/KpiCard'
 import { NhapHangSkeleton } from './NhapHangSkeleton'
 import { Search, Package, ShoppingCart, Gift, FileText, Layers, DollarSign } from 'lucide-react'
+import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -73,6 +74,7 @@ export function NhapHangClient({
 
   const handleSearch = async () => {
     setLoading(true)
+    setSelectedOrder(null)
     try {
       const params = new URLSearchParams()
       if (filters.npp) params.set('npp', filters.npp)
@@ -103,7 +105,7 @@ export function NhapHangClient({
           value={filters.npp}
           onChange={(e) => setFilters(f => ({ ...f, npp: e.target.value }))}
         >
-          <option value="">Tat ca NPP</option>
+          <option value="">{VI.nhapHang.allNpp}</option>
           {data.suppliers.map(s => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
@@ -116,7 +118,7 @@ export function NhapHangClient({
             onChange={(e) => setFilters(f => ({ ...f, month: parseInt(e.target.value) }))}
           >
             {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-              <option key={m} value={m}>Thang {m}</option>
+              <option key={m} value={m}>{VI.filter.month} {m}</option>
             ))}
           </select>
 
@@ -136,7 +138,7 @@ export function NhapHangClient({
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
         >
           <Search className="h-4 w-4" />
-          Tim kiem
+          {VI.nhapHang.search}
         </button>
       </div>
 
@@ -144,42 +146,42 @@ export function NhapHangClient({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiCard
           value={formatVND(data.kpis.total_revenue)}
-          label="Doanh so (0%) / Chi tieu ()"
+          label={VI.nhapHang.revenueTarget}
           icon={<DollarSign className="h-5 w-5" />}
           bgColor="bg-blue-500"
           textColor="text-white"
         />
         <KpiCard
           value={formatVND(data.kpis.total_quantity)}
-          label="So luong nhap"
+          label={VI.nhapHang.importQty}
           icon={<ShoppingCart className="h-5 w-5" />}
           bgColor="bg-yellow-500"
           textColor="text-white"
         />
         <KpiCard
           value={formatVND(data.kpis.total_promo_qty)}
-          label="SL Khuyen mai"
+          label={VI.nhapHang.promoQty}
           icon={<Gift className="h-5 w-5" />}
           bgColor="bg-cyan-500"
           textColor="text-white"
         />
         <KpiCard
           value={data.kpis.total_orders}
-          label="Don nhap"
+          label={VI.nhapHang.importOrders}
           icon={<FileText className="h-5 w-5" />}
           bgColor="bg-red-400"
           textColor="text-white"
         />
         <KpiCard
           value={data.kpis.total_skus}
-          label="SKU nhap"
+          label={VI.nhapHang.skuImport}
           icon={<Layers className="h-5 w-5" />}
           bgColor="bg-teal-500"
           textColor="text-white"
         />
         <KpiCard
           value={formatVND(data.kpis.avg_per_order)}
-          label="TB / don nhap"
+          label={VI.nhapHang.avgPerImport}
           icon={<Package className="h-5 w-5" />}
           bgColor="bg-purple-500"
           textColor="text-white"
@@ -188,16 +190,16 @@ export function NhapHangClient({
 
       {/* Charts section 1: AreaChart + BarChart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <SectionHeader title={`Doanh so nhap thang ${monthLabel}`}>
+        <SectionHeader title={`${VI.nhapHang.importRevenueMonth} ${monthLabel}`}>
           <div className="bg-gray-800 rounded-lg p-4">
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={data.daily_revenue}>
                 <CartesianGrid stroke="#374151" strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={AXIS_TICK} />
-                <YAxis tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
+                <YAxis tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} width={110} />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
-                  formatter={(value) => [formatVND(Number(value)), 'Doanh so']}
+                  formatter={(value) => [formatVND(Number(value)), VI.nhapHang.salesAmount]}
                 />
                 <Area
                   type="monotone"
@@ -205,7 +207,7 @@ export function NhapHangClient({
                   stroke="#06b6d4"
                   fill="#06b6d4"
                   fillOpacity={0.3}
-                  name="Doanh so"
+                  name={VI.nhapHang.salesAmount}
                 />
                 <Legend />
               </AreaChart>
@@ -213,7 +215,7 @@ export function NhapHangClient({
           </div>
         </SectionHeader>
 
-        <SectionHeader title={`So luong nhap thang ${monthLabel}`}>
+        <SectionHeader title={`${VI.nhapHang.importQtyMonth} ${monthLabel}`}>
           <div className="bg-gray-800 rounded-lg p-4">
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={data.daily_quantity}>
@@ -221,8 +223,8 @@ export function NhapHangClient({
                 <XAxis dataKey="day" tick={AXIS_TICK} />
                 <YAxis tick={AXIS_TICK} />
                 <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Bar dataKey="quantity" fill="#3b82f6" name="SL nhap" />
-                <Bar dataKey="promo_qty" fill="#10b981" name="SL KM" />
+                <Bar dataKey="quantity" fill="#3b82f6" name={VI.nhapHang.salesQty} />
+                <Bar dataKey="promo_qty" fill="#10b981" name={VI.nhapHang.promoQtyShort} />
                 <Legend />
               </BarChart>
             </ResponsiveContainer>
@@ -232,14 +234,14 @@ export function NhapHangClient({
 
       {/* Row 3: Orders table + Top 10 products */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <SectionHeader title={`Cac don da nhap trong thang ${monthLabel}`}>
+        <SectionHeader title={`${VI.nhapHang.ordersInMonth} ${monthLabel}`}>
           <div className="bg-gray-800 rounded-lg p-4 overflow-x-auto">
             <table className="w-full text-sm text-gray-100">
               <thead>
                 <tr className="border-b border-gray-700">
-                  <th className="text-left py-2 px-3">Ma don</th>
-                  <th className="text-left py-2 px-3">Ngay nhap</th>
-                  <th className="text-right py-2 px-3">Thanh tien</th>
+                  <th className="text-left py-2 px-3">{VI.nhapHang.orderCode}</th>
+                  <th className="text-left py-2 px-3">{VI.nhapHang.importDate}</th>
+                  <th className="text-right py-2 px-3">{VI.nhapHang.totalAmount}</th>
                 </tr>
               </thead>
               <tbody>
@@ -257,7 +259,7 @@ export function NhapHangClient({
                 {data.orders.length === 0 && (
                   <tr>
                     <td colSpan={3} className="py-4 text-center text-gray-500">
-                      Khong co don nhap trong thang nay
+                      {VI.nhapHang.noOrdersInMonth}
                     </td>
                   </tr>
                 )}
@@ -266,7 +268,7 @@ export function NhapHangClient({
           </div>
         </SectionHeader>
 
-        <SectionHeader title={`Top 10 san pham nhap thang ${monthLabel}`}>
+        <SectionHeader title={`${VI.nhapHang.top10ImportMonth} ${monthLabel}`}>
           <div className="bg-gray-800 rounded-lg p-4">
             <ResponsiveContainer width="100%" height={Math.max(250, data.top_products.length * 30)}>
               <BarChart
@@ -285,9 +287,9 @@ export function NhapHangClient({
                 />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
-                  formatter={(value) => [formatVND(Number(value)), 'Doanh so']}
+                  formatter={(value) => [formatVND(Number(value)), VI.nhapHang.salesAmount]}
                 />
-                <Bar dataKey="total_revenue" fill="#06b6d4" name="Doanh so">
+                <Bar dataKey="total_revenue" fill="#06b6d4" name={VI.nhapHang.salesAmount}>
                   <LabelList
                     dataKey="total_revenue"
                     position="right"
@@ -304,8 +306,13 @@ export function NhapHangClient({
 
       {/* Charts section 2: Donut charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <SectionHeader title={`Nganh hang thang ${monthLabel}`}>
+        <SectionHeader title={`${VI.nhapHang.industryMonth} ${monthLabel}`}>
           <div className="bg-gray-800 rounded-lg p-4">
+            {data.by_industry.filter(d => d.revenue > 0).length === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-gray-500 text-sm">
+                {VI.nhapHang.noDataInMonth}
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
@@ -325,7 +332,7 @@ export function NhapHangClient({
                 </Pie>
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
-                  formatter={(value) => [formatVND(Number(value)), 'Doanh so']}
+                  formatter={(value) => [formatVND(Number(value)), VI.nhapHang.salesAmount]}
                 />
                 <Legend
                   layout="vertical"
@@ -335,11 +342,17 @@ export function NhapHangClient({
                 />
               </PieChart>
             </ResponsiveContainer>
+            )}
           </div>
         </SectionHeader>
 
-        <SectionHeader title={`Nhom san pham thang ${monthLabel}`}>
+        <SectionHeader title={`${VI.nhapHang.productGroupMonth} ${monthLabel}`}>
           <div className="bg-gray-800 rounded-lg p-4">
+            {data.by_product_group.filter(d => d.revenue > 0).length === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-gray-500 text-sm">
+                {VI.nhapHang.noDataInMonth}
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
@@ -359,7 +372,7 @@ export function NhapHangClient({
                 </Pie>
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
-                  formatter={(value) => [formatVND(Number(value)), 'Doanh so']}
+                  formatter={(value) => [formatVND(Number(value)), VI.nhapHang.salesAmount]}
                 />
                 <Legend
                   layout="vertical"
@@ -369,19 +382,25 @@ export function NhapHangClient({
                 />
               </PieChart>
             </ResponsiveContainer>
+            )}
           </div>
         </SectionHeader>
       </div>
 
       {/* Charts section 3: Radar chart (full width) */}
-      <SectionHeader title={`Thuong hieu thang ${monthLabel}`}>
+      <SectionHeader title={`${VI.nhapHang.brandMonth} ${monthLabel}`}>
         <div className="bg-gray-800 rounded-lg p-4">
+          {data.by_brand.length === 0 ? (
+            <div className="h-[350px] flex items-center justify-center text-gray-500 text-sm">
+              Khong co du lieu trong thang nay
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height={350}>
             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data.by_brand}>
               <PolarGrid stroke="#374151" />
               <PolarAngleAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 11 }} />
               <Radar
-                name="Doanh so"
+                name={VI.nhapHang.salesAmount}
                 dataKey="revenue"
                 stroke="#06b6d4"
                 fill="#06b6d4"
@@ -389,11 +408,12 @@ export function NhapHangClient({
               />
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
-                formatter={(value) => [formatVND(Number(value)), 'Doanh so']}
+                formatter={(value) => [formatVND(Number(value)), VI.nhapHang.salesAmount]}
               />
               <Legend />
             </RadarChart>
           </ResponsiveContainer>
+          )}
         </div>
       </SectionHeader>
 
@@ -407,7 +427,7 @@ export function NhapHangClient({
           <div className="w-[500px] max-w-full bg-gray-800 p-6 overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-100">
-                Chi tiet don {selectedOrder}
+                {VI.nhapHang.orderDetail} {selectedOrder}
               </h3>
               <button
                 onClick={() => setSelectedOrder(null)}
@@ -420,11 +440,11 @@ export function NhapHangClient({
             <table className="w-full text-sm text-gray-100">
               <thead>
                 <tr className="border-b border-gray-700">
-                  <th className="text-left py-2 px-2">Ten SP</th>
-                  <th className="text-right py-2 px-2">SL</th>
-                  <th className="text-right py-2 px-2">SL KM</th>
-                  <th className="text-right py-2 px-2">Don gia</th>
-                  <th className="text-right py-2 px-2">Thanh tien</th>
+                  <th className="text-left py-2 px-2">{VI.nhapHang.productName}</th>
+                  <th className="text-right py-2 px-2">{VI.nhapHang.qty}</th>
+                  <th className="text-right py-2 px-2">{VI.nhapHang.promoQtyShort}</th>
+                  <th className="text-right py-2 px-2">{VI.nhapHang.unitPrice}</th>
+                  <th className="text-right py-2 px-2">{VI.nhapHang.totalAmount}</th>
                 </tr>
               </thead>
               <tbody>
@@ -445,7 +465,7 @@ export function NhapHangClient({
                 onClick={() => setSelectedOrder(null)}
                 className="bg-gray-700 hover:bg-gray-600 text-gray-100 px-4 py-2 rounded-lg text-sm"
               >
-                Dong
+                {VI.nhapHang.close}
               </button>
             </div>
           </div>
