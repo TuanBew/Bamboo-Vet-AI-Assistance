@@ -1,7 +1,7 @@
 /**
- * ~760 purchase order line items covering all 62 products.
+ * Purchase order line items covering all 90 products.
  *
- * Each order has 5-15 items (varies by order index).
+ * Each order has 3-10 items (varies by order index).
  * Products rotate to ensure every product appears at least once.
  * ~30% of items have promo_qty > 0 (1-3 units).
  * Unit prices match the product catalog.
@@ -19,7 +19,7 @@ function generateItems() {
     unit_price: number
   }> = []
 
-  const productCount = PRODUCTS.length // 62
+  const productCount = PRODUCTS.length
   let globalProductPointer = 0 // Rotates through all products
 
   // Build price lookup
@@ -30,7 +30,7 @@ function generateItems() {
 
   for (let oi = 0; oi < PURCHASE_ORDERS.length; oi++) {
     const order = PURCHASE_ORDERS[oi]
-    const itemCount = 5 + (oi % 11) // 5-15 items per order
+    const itemCount = 3 + (oi % 8) // 3-10 items per order
     const orderItems = new Set<string>() // Avoid duplicate products within same order
 
     for (let ii = 0; ii < itemCount; ii++) {
@@ -66,7 +66,7 @@ function generateItems() {
     globalProductPointer = (globalProductPointer + itemCount) % productCount
   }
 
-  // Ensure all 62 products appear at least once — add missing ones to the last few orders
+  // Ensure all products appear at least once -- add missing ones to the last few orders
   const missingProducts = PRODUCTS.filter(p => !usedProducts.has(p.product_code))
   if (missingProducts.length > 0) {
     const lastOrders = PURCHASE_ORDERS.slice(-missingProducts.length)

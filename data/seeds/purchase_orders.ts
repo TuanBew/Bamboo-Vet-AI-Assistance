@@ -1,8 +1,8 @@
 /**
- * ~95 purchase orders spanning Jan 2024 – Mar 2026 (27 months).
+ * ~140 purchase orders spanning Jan 2024 - Mar 2026 (27 months).
  *
- * Order codes: CTT000001 through CTT000095 (sequential).
- * Supplier distribution: NPP001 ~40%, NPP003 ~40%, remainder split among NPP002/004/005.
+ * Order codes: CTT000001 through CTT000140+ (sequential).
+ * Supplier distribution includes all 10 suppliers (NPP001-NPP010).
  * total_amount and total_promo_qty are computed from items at seed time.
  */
 
@@ -15,21 +15,28 @@ function generateOrders() {
     total_promo_qty: number
   }> = []
 
-  // Monthly volume: 2 early 2024, growing to 4-5 in 2026
+  // Monthly volume: 2024 early = 3, late 2024 = 4, 2025 = 5-6, 2026 = 7-8
   function ordersPerMonth(year: number, month: number): number {
-    if (year === 2024 && month <= 6) return 2
-    if (year === 2024) return 3
-    if (year === 2025 && month <= 6) return 3
-    if (year === 2025) return 4
-    return 4 + (month <= 2 ? 1 : 0) // 4-5 in 2026
+    if (year === 2024 && month <= 4) return 3
+    if (year === 2024 && month <= 8) return 4
+    if (year === 2024) return 4
+    if (year === 2025 && month <= 3) return 5
+    if (year === 2025 && month <= 6) return 5
+    if (year === 2025 && month <= 9) return 6
+    if (year === 2025) return 6
+    // 2026
+    if (month === 1) return 8
+    if (month === 2) return 8
+    return 7
   }
 
-  // Supplier assignment: deterministic using order index
+  // Supplier assignment: deterministic rotation across all 10 suppliers
   const supplierPattern = [
     'NPP001', 'NPP003', 'NPP001', 'NPP003',
-    'NPP001', 'NPP003', 'NPP002', 'NPP001',
-    'NPP003', 'NPP004', 'NPP001', 'NPP003',
-    'NPP005', 'NPP001', 'NPP003',
+    'NPP002', 'NPP006', 'NPP001', 'NPP008',
+    'NPP003', 'NPP004', 'NPP007', 'NPP003',
+    'NPP005', 'NPP009', 'NPP001', 'NPP010',
+    'NPP003', 'NPP006', 'NPP002', 'NPP008',
   ]
 
   let orderIndex = 0

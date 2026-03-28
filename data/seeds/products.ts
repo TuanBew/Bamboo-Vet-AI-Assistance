@@ -85,4 +85,42 @@ export const PRODUCTS = [
 
   // --- Thuốc bổ ---
   { product_code: 'KATOVIL', product_name: 'KATOVIL', product_group: 'Nhóm sản phẩm bổ trợ, bổ sung dinh dưỡng', classification: 'Thuốc bổ', packaging: 'Lọ 100 ml', manufacturer: 'VILSAN', unit_price: 280000 },
+
+  // --- Kháng sinh mở rộng (antibiotics - new) ---
+  { product_code: 'AMOX-500', product_name: 'Amoxicillin 500', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Kháng sinh', packaging: 'Gói 1kg', manufacturer: 'Hanvet', unit_price: 320000 },
+  { product_code: 'ENRO-100', product_name: 'Enrofloxacin 100', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Kháng sinh', packaging: 'Chai 1 lít', manufacturer: 'Navetco', unit_price: 450000 },
+  { product_code: 'FLOR-300', product_name: 'Florfenicol 300', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Kháng sinh', packaging: 'Lọ 100 ml', manufacturer: 'Vimedimex', unit_price: 580000 },
+  { product_code: 'GENTA-80', product_name: 'Gentamicin 80', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Kháng sinh', packaging: 'Lọ 100 ml', manufacturer: 'Hanvet', unit_price: 250000 },
+  { product_code: 'OXYTETRA-200', product_name: 'Oxytetracycline 200 LA', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Kháng sinh', packaging: 'Lọ 100 ml', manufacturer: 'Navetco', unit_price: 380000 },
+  { product_code: 'TILMI-300', product_name: 'Tilmicosin 300', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Kháng sinh', packaging: 'Chai 250 ml', manufacturer: 'Vimedimex', unit_price: 620000 },
+  { product_code: 'DOXYLIN-50', product_name: 'Doxycycline 50%', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Kháng sinh', packaging: 'Gói 1kg', manufacturer: 'Anova Feed', unit_price: 290000 },
+  { product_code: 'CEPHA-INJ', product_name: 'Cephalexin Injectable', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Kháng sinh', packaging: 'Lọ 100 ml', manufacturer: 'Vina Animal Health', unit_price: 720000 },
+
+  // --- Vitamin mở rộng (vitamins - new) ---
+  { product_code: 'VIT-AD3E-INJ', product_name: 'Vitamin AD3E Injectable', product_group: 'Nhóm sản phẩm bổ trợ, bổ sung dinh dưỡng', classification: 'Vitamin', packaging: 'Chai 100 ml', manufacturer: 'Vimedimex', unit_price: 180000 },
+  { product_code: 'BCOMPLEX-INJ', product_name: 'B-Complex Injectable', product_group: 'Nhóm sản phẩm bổ trợ, bổ sung dinh dưỡng', classification: 'Vitamin', packaging: 'Lọ 100 ml', manufacturer: 'Hanvet', unit_price: 150000 },
+  { product_code: 'VIT-C-POWDER', product_name: 'Vitamin C Powder 99%', product_group: 'Nhóm sản phẩm bổ trợ, bổ sung dinh dưỡng', classification: 'Vitamin', packaging: 'Gói 1kg', manufacturer: 'Navetco', unit_price: 120000 },
+  { product_code: 'VIT-E-SELEN', product_name: 'Vitamin E + Selenium', product_group: 'Nhóm sản phẩm bổ trợ, bổ sung dinh dưỡng', classification: 'Vitamin', packaging: 'Chai 1 lít', manufacturer: 'Anova Feed', unit_price: 280000 },
+  { product_code: 'MULTI-VIT-ORAL', product_name: 'Multivitamin Oral', product_group: 'Nhóm sản phẩm bổ trợ, bổ sung dinh dưỡng', classification: 'Vitamin', packaging: 'Chai 1 lít', manufacturer: 'Vina Animal Health', unit_price: 220000 },
+
+  // --- Vắc xin (vaccines - new) ---
+  { product_code: 'VAC-NEWCASTLE', product_name: 'Newcastle ND Vaccine', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Vắc xin', packaging: 'Lọ 500 liều', manufacturer: 'Navetco', unit_price: 85000 },
+  { product_code: 'VAC-FMD', product_name: 'Foot-and-Mouth Disease Vaccine', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Vắc xin', packaging: 'Lọ 50 liều', manufacturer: 'Navetco', unit_price: 450000 },
+  { product_code: 'VAC-PRRS', product_name: 'PRRS Vaccine (Live)', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Vắc xin', packaging: 'Lọ 25 liều', manufacturer: 'Hanvet', unit_price: 380000 },
+  { product_code: 'VAC-CSF', product_name: 'Classical Swine Fever Vaccine', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Vắc xin', packaging: 'Lọ 50 liều', manufacturer: 'Vimedimex', unit_price: 320000 },
+  { product_code: 'VAC-GUMBORO', product_name: 'Gumboro IBD Vaccine', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Vắc xin', packaging: 'Lọ 1000 liều', manufacturer: 'Navetco', unit_price: 95000 },
+  { product_code: 'VAC-RABIES', product_name: 'Rabies Vaccine', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Vắc xin', packaging: 'Lọ 10 liều', manufacturer: 'Navetco', unit_price: 150000 },
+  { product_code: 'VAC-AI-H5N1', product_name: 'Avian Influenza H5N1 Vaccine', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Vắc xin', packaging: 'Lọ 500 liều', manufacturer: 'Vimedimex', unit_price: 120000 },
+
+  // --- Hormone (hormones - new) ---
+  { product_code: 'OXY-10IU', product_name: 'Oxytocin 10IU', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Hormone', packaging: 'Lọ 50 ml', manufacturer: 'Vina Animal Health', unit_price: 95000 },
+  { product_code: 'PGF2A', product_name: 'PGF2alpha (Dinoprost)', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Hormone', packaging: 'Lọ 30 ml', manufacturer: 'Vimedimex', unit_price: 280000 },
+  { product_code: 'GNRH-BUSERELIN', product_name: 'GnRH Buserelin', product_group: 'Nhóm sản phẩm hỗ trợ phòng và điều trị', classification: 'Hormone', packaging: 'Lọ 10 ml', manufacturer: 'Hanvet', unit_price: 350000 },
+
+  // --- Kháng ký sinh trùng mở rộng (antiparasitics - new) ---
+  { product_code: 'IVER-1PCT', product_name: 'Ivermectin 1% Injectable', product_group: 'Nhóm sản phẩm điều trị ký sinh trùng, cầu trùng', classification: 'Kháng ký sinh trùng', packaging: 'Lọ 100 ml', manufacturer: 'Vina Animal Health', unit_price: 280000 },
+  { product_code: 'ALBEN-600', product_name: 'Albendazole 600', product_group: 'Nhóm sản phẩm điều trị ký sinh trùng, cầu trùng', classification: 'Kháng ký sinh trùng', packaging: 'Hộp 100 viên', manufacturer: 'Navetco', unit_price: 180000 },
+  { product_code: 'FENBENDA-10', product_name: 'Fenbendazole 10%', product_group: 'Nhóm sản phẩm điều trị ký sinh trùng, cầu trùng', classification: 'Kháng ký sinh trùng', packaging: 'Gói 1kg', manufacturer: 'Anova Feed', unit_price: 250000 },
+  { product_code: 'PRAZI-TABS', product_name: 'Praziquantel Tablets', product_group: 'Nhóm sản phẩm điều trị ký sinh trùng, cầu trùng', classification: 'Kháng ký sinh trùng', packaging: 'Hộp 100 viên', manufacturer: 'Hanvet', unit_price: 320000 },
+  { product_code: 'TRICLABEN', product_name: 'Triclabendazole 5%', product_group: 'Nhóm sản phẩm điều trị ký sinh trùng, cầu trùng', classification: 'Kháng ký sinh trùng', packaging: 'Chai 500 ml', manufacturer: 'Vina Animal Health', unit_price: 420000 },
 ]

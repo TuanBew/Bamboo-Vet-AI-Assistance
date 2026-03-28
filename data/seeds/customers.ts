@@ -1,10 +1,12 @@
 /**
- * ~200 customer rows with type distribution:
- * TH (Tap hoa): 56 (28%), GSO (Bach hoa): 68 (34%), PHA (Nha thuoc): 28 (14%),
- * SPS (Me & Be): 24 (12%), BTS (My pham): 18 (9%),
- * OTHER (Khac): 2 (~1%), PLT (Phu lieu toc): 2 (~1%), WMO (Cho): 2 (~1%)
+ * ~450 customer rows with type distribution:
+ * TH (Tap hoa): 126 (28%), GSO (Bach hoa): 153 (34%), PHA (Nha thuoc): 63 (14%),
+ * SPS (Me & Be): 54 (12%), BTS (My pham): 40 (9%),
+ * OTHER (Khac): 5 (~1%), PLT (Phu lieu toc): 5 (~1%), WMO (Cho): 4 (~1%)
  *
- * Total: 200 customers
+ * Total: 450 customers
+ * HCMC ~25%, Ha Noi ~15%, Da Nang ~8%, long tail for others
+ * 70% geo-located
  */
 
 interface Customer {
@@ -18,11 +20,26 @@ interface Customer {
   is_geo_located: boolean
 }
 
-const PROVINCES = [
-  'Ha Noi', 'Ho Chi Minh', 'Da Nang', 'Hai Phong', 'Can Tho',
-  'Binh Duong', 'Dong Nai', 'Bac Ninh', 'Quang Ninh', 'Nghe An',
-  'Thanh Hoa', 'Khanh Hoa', 'Lam Dong', 'Thua Thien Hue', 'Long An',
+// Province weights for geographic clustering: HCMC ~25%, Ha Noi ~15%, Da Nang ~8%
+const PROVINCE_WEIGHTS: Array<{ name: string; weight: number }> = [
+  { name: 'Ho Chi Minh', weight: 25 },
+  { name: 'Ha Noi', weight: 15 },
+  { name: 'Da Nang', weight: 8 },
+  { name: 'Hai Phong', weight: 6 },
+  { name: 'Can Tho', weight: 6 },
+  { name: 'Binh Duong', weight: 6 },
+  { name: 'Dong Nai', weight: 5 },
+  { name: 'Bac Ninh', weight: 4 },
+  { name: 'Quang Ninh', weight: 4 },
+  { name: 'Nghe An', weight: 4 },
+  { name: 'Thanh Hoa', weight: 4 },
+  { name: 'Khanh Hoa', weight: 4 },
+  { name: 'Lam Dong', weight: 3 },
+  { name: 'Thua Thien Hue', weight: 3 },
+  { name: 'Long An', weight: 3 },
 ]
+
+const PROVINCES = PROVINCE_WEIGHTS.map(p => p.name)
 
 const DISTRICTS_BY_PROVINCE: Record<string, string[]> = {
   'Ha Noi': ['Ba Dinh', 'Hoan Kiem', 'Dong Da', 'Cau Giay', 'Thanh Xuan', 'Ha Dong', 'Long Bien', 'Nam Tu Liem'],
@@ -74,14 +91,14 @@ function detHash(seed: number): number {
 
 function generateCustomers(): Customer[] {
   const typeDistribution: Array<{ type: string; count: number }> = [
-    { type: 'TH', count: 56 },
-    { type: 'GSO', count: 68 },
-    { type: 'PHA', count: 28 },
-    { type: 'SPS', count: 24 },
-    { type: 'BTS', count: 18 },
-    { type: 'OTHER', count: 2 },
-    { type: 'PLT', count: 2 },
-    { type: 'WMO', count: 2 },
+    { type: 'TH', count: 126 },   // 28%
+    { type: 'GSO', count: 153 },  // 34%
+    { type: 'PHA', count: 63 },   // 14%
+    { type: 'SPS', count: 54 },   // 12%
+    { type: 'BTS', count: 40 },   // 9%
+    { type: 'OTHER', count: 5 },  // ~1%
+    { type: 'PLT', count: 5 },    // ~1%
+    { type: 'WMO', count: 4 },    // ~1%
   ]
 
   const customers: Customer[] = []
@@ -94,8 +111,18 @@ function generateCustomers(): Customer[] {
       const lastName = LAST_NAMES[(globalIdx * 7 + 3) % LAST_NAMES.length]
       const name = `${TYPE_LABELS[type]} ${firstName} ${lastName}`
 
-      const provinceIdx = globalIdx % PROVINCES.length
-      const province = PROVINCES[provinceIdx]
+      // Weighted province selection using deterministic hash
+      const provHash = detHash(globalIdx * 10 + 7)
+      let cumWeight = 0
+      const totalWeight = PROVINCE_WEIGHTS.reduce((s, p) => s + p.weight, 0)
+      let province = PROVINCES[0]
+      for (const pw of PROVINCE_WEIGHTS) {
+        cumWeight += pw.weight
+        if (provHash < cumWeight / totalWeight) {
+          province = pw.name
+          break
+        }
+      }
       const districts = DISTRICTS_BY_PROVINCE[province]
       const district = districts[(globalIdx * 3 + 1) % districts.length]
 
@@ -111,7 +138,7 @@ function generateCustomers(): Customer[] {
         district,
         is_active: h1 < 0.85,    // ~85% active
         is_mapped: h2 < 0.60,    // ~60% mapped
-        is_geo_located: h3 < 0.45, // ~45% geo-located
+        is_geo_located: h3 < 0.70, // ~70% geo-located
       })
 
       globalIdx++
