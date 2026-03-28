@@ -1,52 +1,9 @@
 import { createServiceClient } from '@/lib/supabase/server'
+import type { CheckUsersFilters, CheckUsersData } from './check-users.types'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface CheckUsersFilters {
-  search: string
-  province: string
-  user_type: string
-  page: number
-  page_size: number
-}
-
-export interface CheckUsersData {
-  map_pins: Array<{
-    user_id: string
-    full_name: string
-    user_type: string
-    clinic_type: string
-    latitude: number
-    longitude: number
-  }>
-  users: {
-    data: Array<{
-      user_id: string
-      user_code: string
-      full_name: string
-      email: string
-      address: string
-      district: string
-      province: string
-      clinic_type: string
-      clinic_image: string | null
-      created_at: string
-      is_geo_located: boolean
-      latitude: number | null
-      longitude: number | null
-    }>
-    total: number
-    page: number
-    page_size: number
-  }
-  monthly_pivot: Array<{
-    user_id: string
-    full_name: string
-    months: Record<string, number>
-  }>
-}
+// Re-export types and constants for backward compatibility with server consumers
+export type { CheckUsersFilters, CheckUsersData } from './check-users.types'
+export { USER_TYPE_COLORS } from './check-users.types'
 
 // Clinic type display labels
 const CLINIC_TYPE_LABELS: Record<string, string> = {
@@ -54,14 +11,6 @@ const CLINIC_TYPE_LABELS: Record<string, string> = {
   nha_thuoc: 'Nha thuoc',
   cua_hang: 'Cua hang',
   trai_nuoi: 'Trai nuoi',
-}
-
-// User type color coding for map pins
-export const USER_TYPE_COLORS: Record<string, string> = {
-  nhan_vien: '#3b82f6',  // blue
-  quan_ly: '#22c55e',    // green
-  bac_si: '#ef4444',     // red
-  duoc_si: '#f97316',    // orange
 }
 
 // ---------------------------------------------------------------------------

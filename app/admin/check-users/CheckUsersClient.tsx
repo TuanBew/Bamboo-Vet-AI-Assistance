@@ -14,8 +14,8 @@ import {
 import type {
   CheckUsersData,
   CheckUsersFilters,
-} from '@/lib/admin/services/check-users'
-import { USER_TYPE_COLORS } from '@/lib/admin/services/check-users'
+} from '@/lib/admin/services/check-users.types'
+import { USER_TYPE_COLORS } from '@/lib/admin/services/check-users.types'
 import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
