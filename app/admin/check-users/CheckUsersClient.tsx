@@ -16,6 +16,7 @@ import type {
   CheckUsersFilters,
 } from '@/lib/admin/services/check-users'
 import { USER_TYPE_COLORS } from '@/lib/admin/services/check-users'
+import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,7 +36,7 @@ type UserRow = CheckUsersData['users']['data'][number] & {
 // ---------------------------------------------------------------------------
 
 const PROVINCE_OPTIONS = [
-  { value: '', label: 'Tat ca tinh' },
+  { value: '', label: VI.checkUsers.allProvinces },
   { value: 'Ha Noi', label: 'Ha Noi' },
   { value: 'TP. Ho Chi Minh', label: 'TP. Ho Chi Minh' },
   { value: 'Da Nang', label: 'Da Nang' },
@@ -51,11 +52,11 @@ const PROVINCE_OPTIONS = [
 ]
 
 const USER_TYPE_OPTIONS = [
-  { value: '', label: 'Tat ca loai' },
-  { value: 'nhan_vien', label: 'Nhan vien' },
-  { value: 'quan_ly', label: 'Quan ly' },
-  { value: 'bac_si', label: 'Bac si' },
-  { value: 'duoc_si', label: 'Duoc si' },
+  { value: '', label: VI.checkUsers.allTypes },
+  { value: 'nhan_vien', label: VI.checkUsers.nhanVien },
+  { value: 'quan_ly', label: VI.checkUsers.quanLy },
+  { value: 'bac_si', label: VI.checkUsers.bacSi },
+  { value: 'duoc_si', label: VI.checkUsers.duocSi },
 ]
 
 // ---------------------------------------------------------------------------
@@ -172,23 +173,23 @@ export function CheckUsersClient({
 
   const userColumns = useMemo<DataTableColumn<UserRow>[]>(
     () => [
-      { key: 'user_code', label: 'Ma KH', sortable: true },
+      { key: 'user_code', label: VI.checkUsers.userCode, sortable: true },
       {
         key: 'full_name',
-        label: 'Ten KH',
+        label: VI.checkUsers.fullName,
         sortable: true,
         render: (_v, row) => (
           <span className="text-cyan-400">{row.full_name}</span>
         ),
       },
-      { key: 'email', label: 'Email' },
-      { key: 'address', label: 'Dia chi' },
-      { key: 'district', label: 'Quan/Huyen' },
-      { key: 'province', label: 'Tinh' },
-      { key: 'clinic_type', label: 'Loai co so' },
+      { key: 'email', label: VI.checkUsers.email },
+      { key: 'address', label: VI.checkUsers.address },
+      { key: 'district', label: VI.checkUsers.district },
+      { key: 'province', label: VI.checkUsers.province },
+      { key: 'clinic_type', label: VI.checkUsers.clinicType },
       {
         key: 'clinic_image',
-        label: 'Anh co so',
+        label: VI.checkUsers.clinicImage,
         sortable: false,
         render: () => (
           <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center">
@@ -198,7 +199,7 @@ export function CheckUsersClient({
       },
       {
         key: 'created_at',
-        label: 'Ngay tao',
+        label: VI.checkUsers.createdAt,
         sortable: true,
         render: (v) => {
           const d = v as string
@@ -209,30 +210,30 @@ export function CheckUsersClient({
       },
       {
         key: 'is_geo_located' as keyof UserRow,
-        label: 'Dinh vi',
+        label: VI.checkUsers.geoLocated,
         render: (v) => {
           const located = v as boolean
           return located ? (
             <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
-              Da dinh vi
+              {VI.checkUsers.located}
             </span>
           ) : (
             <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-gray-600/40 text-gray-400">
-              Chua dinh vi
+              {VI.checkUsers.notLocated}
             </span>
           )
         },
       },
       {
         key: 'view_history',
-        label: 'Lich su',
+        label: VI.checkUsers.history,
         sortable: false,
         render: (_v, row) => (
           <button
             onClick={() => handleViewHistory(row.user_id, row.full_name)}
             className="text-teal-400 hover:text-teal-300 text-xs underline whitespace-nowrap"
           >
-            Xem lich su
+            {VI.checkUsers.viewHistory}
           </button>
         ),
       },
@@ -282,7 +283,7 @@ export function CheckUsersClient({
     <div className="space-y-6">
       {/* Page title + breadcrumb */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Check Nguoi dung</h1>
+        <h1 className="text-2xl font-bold text-white">{VI.checkUsers.pageTitle}</h1>
         <div className="text-sm text-gray-400">
           Home / <span className="text-gray-200">Checkusers</span>
         </div>
@@ -324,7 +325,7 @@ export function CheckUsersClient({
           onChange={(e) =>
             setFilters((f) => ({ ...f, search: e.target.value }))
           }
-          placeholder="Tim kiem theo ten..."
+          placeholder={VI.checkUsers.searchByName}
           className="flex-1 bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
         />
 
@@ -338,7 +339,7 @@ export function CheckUsersClient({
       </div>
 
       {/* Section 1: Map */}
-      <SectionHeader title="Vi tri nguoi dung" defaultOpen={true}>
+      <SectionHeader title={VI.checkUsers.userLocation} defaultOpen={true}>
         <MapView
           pins={mapPins}
           className="h-[350px]"
@@ -348,7 +349,7 @@ export function CheckUsersClient({
       </SectionHeader>
 
       {/* Section 2: User DataTable */}
-      <SectionHeader title="Danh sach nguoi dung" defaultOpen={true}>
+      <SectionHeader title={VI.checkUsers.userList} defaultOpen={true}>
         <DataTable<UserRow>
           data={userRows}
           columns={userColumns}
@@ -360,7 +361,7 @@ export function CheckUsersClient({
             print: true,
           }}
           showSearch
-          searchPlaceholder="Tim kiem..."
+          searchPlaceholder={VI.checkUsers.searchPlaceholder}
           totalCount={data.users.total}
           currentPage={data.users.page}
           onPageChange={handlePageChange}
@@ -369,13 +370,13 @@ export function CheckUsersClient({
       </SectionHeader>
 
       {/* Section 3: Monthly Pivot */}
-      <SectionHeader title="Thong ke hang thang" defaultOpen={true}>
+      <SectionHeader title={VI.checkUsers.monthlyStats} defaultOpen={true}>
         <ColorPivotTable
           rows={pivotRows}
           columns={allMonths}
-          dimColumnLabels={[{ key: 'full_name', label: 'Ten nguoi dung', sticky: true }]}
+          dimColumnLabels={[{ key: 'full_name', label: VI.checkUsers.userName, sticky: true }]}
           exportConfig={{ excel: true, copy: true }}
-          searchPlaceholder="Tim kiem nguoi dung"
+          searchPlaceholder={VI.checkUsers.searchUser}
           showPageSizeDropdown
         />
       </SectionHeader>
@@ -396,7 +397,7 @@ export function CheckUsersClient({
       {loading && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-lg px-6 py-3 text-white text-sm">
-            Dang tai du lieu...
+            {VI.checkUsers.loadingData}
           </div>
         </div>
       )}

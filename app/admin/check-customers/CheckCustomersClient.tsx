@@ -10,6 +10,7 @@ import type {
   CheckCustomersData,
   CheckCustomersFilters,
 } from '@/lib/admin/services/check-customers'
+import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,7 +35,7 @@ type PivotRow = Record<string, unknown>
 // ---------------------------------------------------------------------------
 
 const NPP_OPTIONS = [
-  { value: '', label: 'Tat ca NPP' },
+  { value: '', label: VI.nhapHang.allNpp },
   { value: 'NPP001', label: 'NPP KIEN PHUC' },
   { value: 'NPP002', label: 'NPP DAI PHAT' },
   { value: 'NPP003', label: 'NPP THANH CONG' },
@@ -116,10 +117,10 @@ export function CheckCustomersClient({
 
   const customerColumns = useMemo<DataTableColumn<CustomerRow>[]>(
     () => [
-      { key: 'customer_code', label: 'Ma', sortable: true },
+      { key: 'customer_code', label: VI.checkCustomers.code, sortable: true },
       {
         key: 'customer_name',
-        label: 'Ten KH',
+        label: VI.checkCustomers.customerName,
         sortable: true,
         render: (_v, row) => (
           <span className="text-cyan-400 hover:underline cursor-pointer">
@@ -127,22 +128,22 @@ export function CheckCustomersClient({
           </span>
         ),
       },
-      { key: 'address', label: 'Dia chi' },
-      { key: 'street', label: 'Duong' },
-      { key: 'ward', label: 'Phuong/Xa' },
-      { key: 'district', label: 'Quan/Huyen' },
-      { key: 'province', label: 'Tinh' },
-      { key: 'customer_type', label: 'Loai cua hieu' },
+      { key: 'address', label: VI.checkCustomers.address },
+      { key: 'street', label: VI.checkCustomers.street },
+      { key: 'ward', label: VI.checkCustomers.ward },
+      { key: 'district', label: VI.checkCustomers.district },
+      { key: 'province', label: VI.checkCustomers.province },
+      { key: 'customer_type', label: VI.checkCustomers.storeType },
       {
         key: 'image_url',
-        label: 'Anh cua hieu',
+        label: VI.checkCustomers.storeImage,
         sortable: false,
         render: (v) => {
           const url = v as string | null
           return url ? (
             <img
               src={url}
-              alt="Anh cua hieu"
+              alt={VI.checkCustomers.storeImage}
               className="w-8 h-8 rounded object-cover"
             />
           ) : (
@@ -154,7 +155,7 @@ export function CheckCustomersClient({
       },
       {
         key: 'created_at',
-        label: 'Ngay tao',
+        label: VI.checkCustomers.createdAt,
         sortable: true,
         render: (v) => {
           const d = v as string
@@ -165,23 +166,23 @@ export function CheckCustomersClient({
       },
       {
         key: 'is_geo_located' as keyof CustomerRow,
-        label: 'Dinh vi',
+        label: VI.checkCustomers.geoLocated,
         render: (v) => {
           const located = v as boolean
           return located ? (
             <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
-              Da dinh vi
+              {VI.checkCustomers.located}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-600/40 text-gray-400">
-              Chua dinh vi
+              {VI.checkCustomers.notLocated}
             </span>
           )
         },
       },
       {
         key: 'check_location',
-        label: 'Check Location',
+        label: VI.checkCustomers.checkLocation,
         sortable: false,
         render: (_v, row) => {
           const hasCoords = row.latitude != null && row.longitude != null
@@ -198,7 +199,7 @@ export function CheckCustomersClient({
               className="text-cyan-400 hover:text-cyan-300 text-xs underline flex items-center gap-1"
             >
               <MapPinIcon className="w-3 h-3" />
-              Da dinh vi
+              {VI.checkCustomers.located}
             </button>
           )
         },
@@ -272,12 +273,12 @@ export function CheckCustomersClient({
 
   const displayColumns = useMemo<DataTableColumn<Record<string, unknown>>[]>(
     () => [
-      { key: 'program_name', label: 'Chuong trinh' },
-      { key: 'staff_name', label: 'Nhan vien' },
-      { key: 'time_period', label: 'Thoi gian' },
+      { key: 'program_name', label: VI.checkCustomers.programName },
+      { key: 'staff_name', label: VI.checkCustomers.staffName },
+      { key: 'time_period', label: VI.checkCustomers.timePeriod },
       {
         key: 'registration_image_url',
-        label: 'Anh dang ky',
+        label: VI.checkCustomers.regImage,
         sortable: false,
         render: (v) => {
           const url = v as string | null
@@ -292,7 +293,7 @@ export function CheckCustomersClient({
       },
       {
         key: 'execution_image_url',
-        label: 'Anh thuc hien',
+        label: VI.checkCustomers.execImage,
         sortable: false,
         render: (v) => {
           const url = v as string | null
@@ -335,7 +336,7 @@ export function CheckCustomersClient({
     <div className="space-y-6">
       {/* Page title + breadcrumb */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Check Khach hang</h1>
+        <h1 className="text-2xl font-bold text-white">{VI.checkCustomers.title}</h1>
         <div className="text-sm text-gray-400">
           Home / <span className="text-gray-200">Checkcus</span>
         </div>
@@ -367,7 +368,7 @@ export function CheckCustomersClient({
 
       {/* Section 1: Map */}
       <div id="map-section">
-        <SectionHeader title="Vi tri khach hang thang">
+        <SectionHeader title={VI.checkCustomers.customerLocationMonth}>
           <MapView
             pins={mapPins}
             className="h-[350px]"
@@ -380,7 +381,7 @@ export function CheckCustomersClient({
 
       {/* Section 2: Customer DataTable */}
       <SectionHeader
-        title="Danh sach khach hang"
+        title={VI.checkCustomers.customerList}
         className="[&_button]:bg-amber-600/20 [&_span]:text-amber-400"
       >
         <DataTable<CustomerRow>
@@ -407,7 +408,7 @@ export function CheckCustomersClient({
 
       {/* Section 3: Revenue Pivot (Doanh so) */}
       <SectionHeader
-        title="Doanh so"
+        title={VI.checkCustomers.revenue}
         className="[&_button]:bg-amber-600/20 [&_span]:text-amber-400"
       >
         <DataTable<PivotRow>
@@ -427,12 +428,12 @@ export function CheckCustomersClient({
 
       {/* Section 4: Display Programs (Tinh hinh trung bay) */}
       <SectionHeader
-        title="Tinh hinh trung bay"
+        title={VI.checkCustomers.displayStatus}
         className="[&_button]:bg-green-600/20 [&_span]:text-green-400"
       >
         {data.display_programs.length === 0 ? (
           <div className="rounded-lg border border-gray-700 bg-gray-800 p-8 text-center text-sm text-gray-400">
-            Chua co du lieu trung bay
+            {VI.checkCustomers.noDisplayData}
           </div>
         ) : (
           <DataTable<Record<string, unknown>>
@@ -446,7 +447,7 @@ export function CheckCustomersClient({
       {loading && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-lg px-6 py-3 text-white text-sm">
-            Dang tai du lieu...
+            {VI.checkCustomers.loadingData}
           </div>
         </div>
       )}

@@ -10,6 +10,7 @@ import { SectionHeader } from '@/components/admin/SectionHeader'
 import { ColorPivotTable } from '@/components/admin/ColorPivotTable'
 import { ClinicDetailModal } from '@/components/admin/ClinicDetailModal'
 import { Search } from 'lucide-react'
+import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -48,11 +49,11 @@ const CLINIC_TYPES: Array<{ value: string; label: string }> = [
 const MONTH_COLUMNS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
 const DIM_COLUMN_LABELS = [
-  { key: 'region', label: 'Mien', sticky: true },
-  { key: 'zone', label: 'Vung', sticky: true },
-  { key: 'province', label: 'Tinh', sticky: true },
-  { key: 'facility_code', label: 'Ma', sticky: true },
-  { key: 'clinic_name', label: 'Ten', sticky: true },
+  { key: 'region', label: VI.checkClinics.region, sticky: true },
+  { key: 'zone', label: VI.checkClinics.zone, sticky: true },
+  { key: 'province', label: VI.checkClinics.province, sticky: true },
+  { key: 'facility_code', label: VI.checkClinics.code, sticky: true },
+  { key: 'clinic_name', label: VI.checkClinics.name, sticky: true },
 ]
 
 // ---------------------------------------------------------------------------
@@ -156,7 +157,7 @@ export function CheckClinicsClient({
   return (
     <div className="space-y-6">
       {/* Page title */}
-      <h1 className="text-xl font-bold text-white">Check Phong kham</h1>
+      <h1 className="text-xl font-bold text-white">{VI.checkClinics.title}</h1>
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3">
@@ -179,8 +180,8 @@ export function CheckClinicsClient({
           onChange={e => updateFilter('metric', e.target.value)}
           className={selectClass}
         >
-          <option value="query_count">So truy van</option>
-          <option value="session_count">So phien</option>
+          <option value="query_count">{VI.checkClinics.queryCount}</option>
+          <option value="session_count">{VI.checkClinics.sessionCount}</option>
         </select>
 
         {/* Clinic type */}
@@ -189,7 +190,7 @@ export function CheckClinicsClient({
           onChange={e => updateFilter('clinic_type', e.target.value)}
           className={selectClass}
         >
-          <option value="">Tat ca loai co so</option>
+          <option value="">{VI.checkClinics.allClinicTypes}</option>
           {CLINIC_TYPES.map(ct => (
             <option key={ct.value} value={ct.value}>
               {ct.label}
@@ -203,7 +204,7 @@ export function CheckClinicsClient({
           onChange={e => updateFilter('province', e.target.value)}
           className={selectClass}
         >
-          <option value="">Tat ca tinh</option>
+          <option value="">{VI.checkClinics.allProvinces}</option>
           {PROVINCES.map(p => (
             <option key={p} value={p}>
               {p}
@@ -214,7 +215,7 @@ export function CheckClinicsClient({
         {/* Search input */}
         <input
           type="text"
-          placeholder="Tim kiem phong kham"
+          placeholder={VI.checkClinics.searchClinic}
           value={filters.search}
           onChange={e => updateFilter('search', e.target.value)}
           className="bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
@@ -234,12 +235,12 @@ export function CheckClinicsClient({
       {loading && (
         <div className="flex items-center gap-2 text-teal-400">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-400" />
-          <span className="text-sm">Dang tai...</span>
+          <span className="text-sm">{VI.checkClinics.loading}</span>
         </div>
       )}
 
       {/* Thong ke phong kham pivot section */}
-      <SectionHeader title={`Thong ke phong kham nam ${filters.year}`} defaultOpen={true}>
+      <SectionHeader title={`${VI.checkClinics.clinicStatsYear} ${filters.year}`} defaultOpen={true}>
         <ColorPivotTable
           rows={pivotRows}
           columns={MONTH_COLUMNS}
@@ -248,8 +249,8 @@ export function CheckClinicsClient({
           showColumnVisibility={true}
           showPageSizeDropdown={true}
           exportConfig={{ copy: true, excel: true }}
-          searchPlaceholder="Tim kiem phong kham"
-          columnHeaderPrefix="Thang "
+          searchPlaceholder={VI.checkClinics.searchClinic}
+          columnHeaderPrefix={`${VI.filter.month} `}
         />
       </SectionHeader>
 

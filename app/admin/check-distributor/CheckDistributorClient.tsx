@@ -10,6 +10,7 @@ import { SectionHeader } from '@/components/admin/SectionHeader'
 import { ColorPivotTable } from '@/components/admin/ColorPivotTable'
 import { DistributorDetailModal } from '@/components/admin/DistributorDetailModal'
 import { Search } from 'lucide-react'
+import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -118,11 +119,11 @@ export function CheckDistributorClient({
   const monthColumns = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
   const dimColumnLabels = [
-    { key: 'region', label: 'Mien', sticky: true },
-    { key: 'zone', label: 'Vung', sticky: true },
-    { key: 'province', label: 'Tinh', sticky: true },
-    { key: 'distributor_code', label: 'Ma NPP', sticky: true },
-    { key: 'distributor_name', label: 'Ten NPP', sticky: true },
+    { key: 'region', label: VI.checkDistributor.region, sticky: true },
+    { key: 'zone', label: VI.checkDistributor.zone, sticky: true },
+    { key: 'province', label: VI.checkDistributor.province, sticky: true },
+    { key: 'distributor_code', label: VI.checkDistributor.nppCode, sticky: true },
+    { key: 'distributor_name', label: VI.checkDistributor.nppName, sticky: true },
   ]
 
   // ---------------------------------------------------------------------------
@@ -139,7 +140,7 @@ export function CheckDistributorClient({
   return (
     <div className="space-y-6">
       {/* Page title */}
-      <h1 className="text-xl font-bold text-white">Check Distributor</h1>
+      <h1 className="text-xl font-bold text-white">{VI.checkDistributor.title}</h1>
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3">
@@ -162,8 +163,8 @@ export function CheckDistributorClient({
           onChange={e => updateFilter('metric', e.target.value)}
           className={selectClass}
         >
-          <option value="revenue">Doanh so</option>
-          <option value="retail_revenue">Doanh so le</option>
+          <option value="revenue">{VI.checkDistributor.salesAmount}</option>
+          <option value="retail_revenue">{VI.checkDistributor.retailRevenue}</option>
         </select>
 
         {/* Systemtype */}
@@ -244,12 +245,12 @@ export function CheckDistributorClient({
       {loading && (
         <div className="flex items-center gap-2 text-teal-400">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-400" />
-          <span className="text-sm">Dang tai...</span>
+          <span className="text-sm">{VI.checkDistributor.loading}</span>
         </div>
       )}
 
       {/* Doanh so nam pivot section */}
-      <SectionHeader title={`Doanh so nam ${filters.year}`}>
+      <SectionHeader title={`${VI.checkDistributor.revenueYear} ${filters.year}`}>
         <ColorPivotTable
           rows={pivotRows}
           columns={monthColumns}
@@ -258,8 +259,8 @@ export function CheckDistributorClient({
           showColumnVisibility={true}
           showPageSizeDropdown={true}
           exportConfig={{ copy: true, excel: true, csv: true, pdf: true, print: true }}
-          searchPlaceholder="Tim kiem"
-          columnHeaderPrefix="Thang "
+          searchPlaceholder={VI.checkDistributor.search}
+          columnHeaderPrefix={VI.checkDistributor.monthPrefix}
         />
       </SectionHeader>
 
