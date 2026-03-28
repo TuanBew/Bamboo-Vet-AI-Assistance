@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { addVietnameseFont } from '@/lib/pdf/vietnamese-font'
 import {
   useReactTable,
   getCoreRowModel,
@@ -179,9 +180,33 @@ export function DataTable<T extends Record<string, unknown>>({
     URL.revokeObjectURL(url)
   }, [data, columns])
 
-  const handlePdf = useCallback(() => {
-    console.log('PDF export requires jspdf — available in Phase 5')
-  }, [])
+  const handlePdf = useCallback(async () => {
+    const jsPDFModule = await import('jspdf')
+    const jsPDF = jsPDFModule.default
+    await import('jspdf-autotable')
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+    addVietnameseFont(doc)
+
+    const headers = columns.map(c => c.label)
+    const body = data.map(row =>
+      columns.map(c => {
+        const val = row[c.key]
+        return val == null ? '' : String(val)
+      })
+    )
+
+    ;(doc as unknown as Record<string, Function>).autoTable({
+      head: [headers],
+      body,
+      startY: 15,
+      styles: { fontSize: 7, cellPadding: 2, font: 'Roboto' },
+      headStyles: { fillColor: [31, 41, 55], textColor: [255, 255, 255] },
+      theme: 'grid',
+    })
+
+    doc.save('export.pdf')
+  }, [data, columns])
 
   const handlePrint = useCallback(() => {
     window.print()

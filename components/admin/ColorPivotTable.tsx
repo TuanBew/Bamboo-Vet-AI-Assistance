@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { addVietnameseFont } from '@/lib/pdf/vietnamese-font'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -193,6 +194,7 @@ export function ColorPivotTable({
     await import('jspdf-autotable')
 
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+    addVietnameseFont(doc)
 
     // Build header row
     const headers = [
@@ -214,7 +216,7 @@ export function ColorPivotTable({
       head: [headers],
       body,
       startY: 15,
-      styles: { fontSize: 7, cellPadding: 2 },
+      styles: { fontSize: 7, cellPadding: 2, font: 'Roboto' },
       headStyles: { fillColor: [31, 41, 55], textColor: [255, 255, 255] },
       theme: 'grid',
     })
