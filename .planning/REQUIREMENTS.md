@@ -118,6 +118,7 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 - [ ] **POL-03**: Service role client (`createServiceClient()`) is only used in server-side code — no client bundle exposure verified via build analysis
 - [ ] **POL-04**: Content Security Policy in `next.config.js` updated to allow Leaflet tile server (OpenStreetMap: `https://*.tile.openstreetmap.org`)
 - [ ] **POL-05**: jsPDF export for Check Users page handles Vietnamese diacritics correctly (custom font embedding or fallback strategy documented)
+- [ ] **POL-06**: All hardcoded Vietnamese UI strings in admin components and pages are extracted into a centralized `lib/i18n/vietnamese.ts` dictionary with correct diacritics; all shared components (AdminSidebar, AdminTopBar, DataTable, ColorPivotTable, FilterBar) and all 8 page client components import from this dictionary
 
 ---
 
@@ -151,7 +152,7 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ## Traceability
 
-*Updated: 2026-03-18 — roadmap created, all 61 requirements mapped.*
+*Updated: 2026-03-28 — POL-06 added for i18n dictionary extraction.*
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -214,12 +215,13 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | POL-03 | Phase 6 | Pending |
 | POL-04 | Phase 6 | Pending |
 | POL-05 | Phase 6 | Pending |
+| POL-06 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 55 total
-- Mapped to phases: 55
-- Unmapped: 0 ✓
+- v1 requirements: 56 total
+- Mapped to phases: 56
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 — traceability expanded to per-requirement rows after roadmap creation*
+*Last updated: 2026-03-28 — POL-06 added for i18n dictionary extraction*

@@ -76,7 +76,7 @@ Plans:
 - [ ] 03-05-PLAN.md — Gap closure: complete rebuild of /admin/nhap-hang as purchase order analytics page (DB tables, seed data, API, page UI)
 
 ### Phase 4: Tồn Kho page + Khách Hàng page
-**Goal**: `/admin/ton-kho` displays inventory stock analytics — 3 KPI cards, 6 charts in a 2�—3 grid, and a paginated DataTable — all filtered by date-based inventory snapshots; `/admin/khach-hang` displays business customer analytics — 3 charts, two KPI+breakdown sections, and a collapsible high-value stores section. Phase also includes new DB migration + seed data and teardown of wrong KB/Users implementation.
+**Goal**: `/admin/ton-kho` displays inventory stock analytics — 3 KPI cards, 6 charts in a 2×3 grid, and a paginated DataTable — all filtered by date-based inventory snapshots; `/admin/khach-hang` displays business customer analytics — 3 charts, two KPI+breakdown sections, and a collapsible high-value stores section. Phase also includes new DB migration + seed data and teardown of wrong KB/Users implementation.
 **Depends on**: Phase 3
 **Requirements**: TK-01, TK-02, TK-03, KH-01, KH-02, KH-03, KH-04, KH-05
 **Success Criteria** (what must be TRUE):
@@ -114,15 +114,16 @@ Plans:
 - [ ] 05-05-PLAN.md — Gap closure: Check Clinics page (service layer + 2 API routes + SSR page + client with ColorPivotTable, ClinicDetailModal) + ColorPivotTable PDF export fix
 
 ### Phase 6: Security & Polish
-**Goal**: All new npm packages are installed at correct versions (including jsPDF >=4.2.0 for CVE-2025-68428); the service role client is provably absent from the client bundle; CSP allows Leaflet tiles; print CSS hides the sidebar; Vietnamese diacritics in PDF export are handled with a documented and tested strategy.
+**Goal**: All new npm packages are installed at correct versions (including jsPDF >=4.2.0 for CVE-2025-68428); the service role client is provably absent from the client bundle; CSP allows Leaflet tiles; print CSS hides the sidebar; Vietnamese diacritics in PDF export are handled with a documented and tested strategy; all Vietnamese UI strings are centralized in an i18n dictionary.
 **Depends on**: Phase 5
-**Requirements**: POL-01, POL-02, POL-03, POL-04, POL-05
+**Requirements**: POL-01, POL-02, POL-03, POL-04, POL-05, POL-06
 **Success Criteria** (what must be TRUE):
   1. `package.json` lists `jspdf@^4.2.0` (not `^3.x`); `npm audit` reports no high/critical CVEs related to the admin dependencies; `recharts`, `react-leaflet`, `leaflet`, `@tanstack/react-table`, `xlsx`, and `tsx` are all present.
   2. Running `window.print()` from any admin data table page produces a printed view with only the table visible — the dark sidebar is hidden by `@media print` CSS rules.
   3. Running `next build` and inspecting the client bundle (via `ANALYZE=true` or build output) confirms `createServiceClient` and the Supabase service role key do not appear in any client chunk.
   4. The Content Security Policy in `next.config.js` includes `https://*.tile.openstreetmap.org` in `img-src` and `connect-src`; the Leaflet map loads tiles without CSP violations in the browser console.
   5. Exporting a PDF from the Check Users page produces a file where Vietnamese diacritics (e.g., "Nguyen Thi Hoa", "Ha Noi") are legible — either via embedded Unicode font or a documented fallback strategy with a known limitation noted in code comments.
+  6. All hardcoded Vietnamese UI strings in admin components and pages are extracted into `lib/i18n/vietnamese.ts`; all shared components and page clients import from this centralized dictionary with correct diacritics.
 **Plans:** 7 plans
 
 Plans:
