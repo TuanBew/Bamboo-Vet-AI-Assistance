@@ -104,11 +104,11 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 6 of 6 (Security Hardening & Polish)
-Plan: 1 of 7 in current phase (completed)
+Plan: 3 of 7 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-28 — Completed 06-01 package verification, CSP update, print CSS
+Last activity: 2026-03-28 — Completed 06-03 Vietnamese i18n dictionary + shared component refactor
 
-Progress: [████████░░] 78%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -149,6 +149,7 @@ Progress: [████████░░] 78%
 | Phase 05 P05 | 5 | 2 tasks | 7 files |
 | Phase 06 P01 | 2 | 2 tasks | 4 files |
 | Phase 06 P02 | 3 | 2 tasks | 3 files |
+| Phase 06 P03 | 8 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -212,6 +213,8 @@ Recent decisions affecting current work:
 - [Phase 06]: xlsx audit vulnerabilities (4 high) accepted as no-fix-available; admin-only usage limits attack surface
 - [Phase 06]: CSP includes explicit tile.openstreetmap.org in both img-src and connect-src per CONTEXT.md locked decision
 - [Phase 06]: Roboto Regular TTF v2.138 pre-embedded as base64 static export for Vietnamese PDF diacritics
+- [Phase 06]: Removed `as const` from NAV_SECTIONS, added NavSection/NavItem types for dynamic VI.* values
+- [Phase 06]: VI namespace pattern: import { VI } from '@/lib/i18n/vietnamese' for all admin Vietnamese strings
 
 ### Pending Todos
 
@@ -225,6 +228,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T14:20:25.925Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-03-28T14:24:00Z
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None

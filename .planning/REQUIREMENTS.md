@@ -118,7 +118,7 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 - [ ] **POL-03**: Service role client (`createServiceClient()`) is only used in server-side code — no client bundle exposure verified via build analysis
 - [x] **POL-04**: Content Security Policy in `next.config.js` updated to allow Leaflet tile server (OpenStreetMap: `https://*.tile.openstreetmap.org`)
 - [x] **POL-05**: jsPDF export for Check Users page handles Vietnamese diacritics correctly (custom font embedding or fallback strategy documented)
-- [ ] **POL-06**: All hardcoded Vietnamese UI strings in admin components and pages are extracted into a centralized `lib/i18n/vietnamese.ts` dictionary with correct diacritics; all shared components (AdminSidebar, AdminTopBar, DataTable, ColorPivotTable, FilterBar) and all 8 page client components import from this dictionary
+- [x] **POL-06**: All hardcoded Vietnamese UI strings in admin components and pages are extracted into a centralized `lib/i18n/vietnamese.ts` dictionary with correct diacritics; all shared components (AdminSidebar, AdminTopBar, DataTable, ColorPivotTable, FilterBar) and all 8 page client components import from this dictionary
 
 ---
 
@@ -215,7 +215,7 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 | POL-03 | Phase 6 | Pending |
 | POL-04 | Phase 6 | Complete |
 | POL-05 | Phase 6 | Complete |
-| POL-06 | Phase 6 | Pending |
+| POL-06 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 56 total
