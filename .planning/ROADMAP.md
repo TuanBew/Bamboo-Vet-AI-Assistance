@@ -76,7 +76,7 @@ Plans:
 - [ ] 03-05-PLAN.md — Gap closure: complete rebuild of /admin/nhap-hang as purchase order analytics page (DB tables, seed data, API, page UI)
 
 ### Phase 4: Tồn Kho page + Khách Hàng page
-**Goal**: `/admin/ton-kho` displays inventory stock analytics — 3 KPI cards, 6 charts in a 2×3 grid, and a paginated DataTable — all filtered by date-based inventory snapshots; `/admin/khach-hang` displays business customer analytics — 3 charts, two KPI+breakdown sections, and a collapsible high-value stores section. Phase also includes new DB migration + seed data and teardown of wrong KB/Users implementation.
+**Goal**: `/admin/ton-kho` displays inventory stock analytics — 3 KPI cards, 6 charts in a 2�—3 grid, and a paginated DataTable — all filtered by date-based inventory snapshots; `/admin/khach-hang` displays business customer analytics — 3 charts, two KPI+breakdown sections, and a collapsible high-value stores section. Phase also includes new DB migration + seed data and teardown of wrong KB/Users implementation.
 **Depends on**: Phase 3
 **Requirements**: TK-01, TK-02, TK-03, KH-01, KH-02, KH-03, KH-04, KH-05
 **Success Criteria** (what must be TRUE):
@@ -123,9 +123,16 @@ Plans:
   3. Running `next build` and inspecting the client bundle (via `ANALYZE=true` or build output) confirms `createServiceClient` and the Supabase service role key do not appear in any client chunk.
   4. The Content Security Policy in `next.config.js` includes `https://*.tile.openstreetmap.org` in `img-src` and `connect-src`; the Leaflet map loads tiles without CSP violations in the browser console.
   5. Exporting a PDF from the Check Users page produces a file where Vietnamese diacritics (e.g., "Nguyen Thi Hoa", "Ha Noi") are legible — either via embedded Unicode font or a documented fallback strategy with a known limitation noted in code comments.
-**Plans:** 0 plans
+**Plans:** 7 plans
 
-Plans: (to be generated)
+Plans:
+- [ ] 06-01-PLAN.md — Install tsx devDep + print CSS (globals.css + layout IDs) + CSP connect-src update
+- [ ] 06-02-PLAN.md — Vietnamese font module (Roboto TTF base64) + DataTable/ColorPivotTable PDF handler fix
+- [ ] 06-03-PLAN.md — i18n dictionary (lib/i18n/vietnamese.ts) + shared admin component refactor
+- [ ] 06-04-PLAN.md — i18n refactor for all 8 page client components
+- [ ] 06-05-PLAN.md — Seed data generators: profiles, conversations, messages, chat_analytics, query_events
+- [ ] 06-06-PLAN.md — Seed data generators: customers, purchases, suppliers, products, orders + seed runner rewrite
+- [ ] 06-07-PLAN.md — Build verification (POL-03 bundle security) + human checkpoint
 
 ## Progress
 
@@ -139,4 +146,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
 | 4. Tồn Kho + Khách Hàng | 3/3 | Complete   | 2026-03-20 |
 | 5. Check Customers + Check Distributor | 3/5 | In Progress|  |
-| 6. Security & Polish | 0/TBD | Not started | - |
+| 6. Security & Polish | 0/7 | Not started | - |
