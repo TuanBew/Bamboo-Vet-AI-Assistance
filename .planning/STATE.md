@@ -104,11 +104,11 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 6 of 6 (Security Hardening & Polish)
-Plan: 3 of 7 in current phase (completed)
+Plan: 5 of 7 in current phase (completed)
 Status: Executing
-Last activity: 2026-03-28 — Completed 06-03 Vietnamese i18n dictionary + shared component refactor
+Last activity: 2026-03-28 — Completed 06-05 seed data expansion generators (132 profiles, 10K conversations, 52K messages)
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 96%
 
 ## Performance Metrics
 
@@ -210,6 +210,9 @@ Recent decisions affecting current work:
 - [Phase 05]: UserHistoryDrawer uses single-panel view switching (list vs thread) with back-arrow navigation
 - [Phase 05]: Clinic aggregation sums user metrics via clinic_id join rather than direct clinic-level queries
 - [Phase 05]: jsPDF + jspdf-autotable for real PDF export replacing console.log stub in ColorPivotTable
+- [Phase 06]: Seed generator growth curve scaled 2x from plan spec to reach 10K-12K conversation target
+- [Phase 06]: Query events generator matches actual DB schema (clinic_id, drug_category, response_time_ms) not plan's assumed columns
+- [Phase 06]: Chat analytics generator created despite no DB table -- serves as classification layer
 - [Phase 06]: xlsx audit vulnerabilities (4 high) accepted as no-fix-available; admin-only usage limits attack surface
 - [Phase 06]: CSP includes explicit tile.openstreetmap.org in both img-src and connect-src per CONTEXT.md locked decision
 - [Phase 06]: Roboto Regular TTF v2.138 pre-embedded as base64 static export for Vietnamese PDF diacritics
@@ -228,6 +231,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T14:24:00Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-03-28T14:24:54Z
+Stopped at: Completed 06-05-PLAN.md
 Resume file: None

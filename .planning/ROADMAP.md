@@ -124,7 +124,7 @@ Plans:
   4. The Content Security Policy in `next.config.js` includes `https://*.tile.openstreetmap.org` in `img-src` and `connect-src`; the Leaflet map loads tiles without CSP violations in the browser console.
   5. Exporting a PDF from the Check Users page produces a file where Vietnamese diacritics (e.g., "Nguyen Thi Hoa", "Ha Noi") are legible — either via embedded Unicode font or a documented fallback strategy with a known limitation noted in code comments.
   6. All hardcoded Vietnamese UI strings in admin components and pages are extracted into `lib/i18n/vietnamese.ts`; all shared components and page clients import from this centralized dictionary with correct diacritics.
-**Plans:** 7 plans
+**Plans:** 4/7 plans executed
 
 Plans:
 - [ ] 06-01-PLAN.md — Install tsx devDep + print CSS (globals.css + layout IDs) + CSP connect-src update
@@ -147,4 +147,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
 | 4. Tồn Kho + Khách Hàng | 3/3 | Complete   | 2026-03-20 |
 | 5. Check Customers + Check Distributor | 3/5 | In Progress|  |
-| 6. Security & Polish | 0/7 | Not started | - |
+| 6. Security & Polish | 4/7 | In Progress|  |
