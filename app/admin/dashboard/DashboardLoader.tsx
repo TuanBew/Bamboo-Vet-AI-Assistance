@@ -7,10 +7,5 @@ export async function DashboardLoader({
   filters: DashboardFilters
 }) {
   const data = await getDashboardData(filters)
-  return (
-    <DashboardClient
-      initialData={data}
-      initialFilters={filters}
-    />
-  )
+  return <DashboardClient initialData={data} initialFilters={filters} />
 }
