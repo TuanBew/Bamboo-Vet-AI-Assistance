@@ -18,6 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Tồn Kho page + Khách Hàng page** - Build inventory stock analytics page and business customer analytics page (complete rebuild from prior wrong scope) (completed 2026-03-20)
 - [ ] **Phase 5: Check Customers page + Check Distributor page** - Build data-explorer pages with Leaflet map, pivot tables, color-coded cells, and daily detail modal
 - [ ] **Phase 6: Security & Polish** - Install dependencies, harden CSP, verify service role boundary, print CSS, and Vietnamese PDF strategy
+- [ ] **Phase 7: Performance Optimization** - Fix middleware latency (getSession + JWT claim), add Suspense streaming to admin pages
 
 ## Phase Details
 
@@ -135,10 +136,28 @@ Plans:
 - [ ] 06-06-PLAN.md — Seed data generators: customers, purchases, suppliers, products, orders + seed runner rewrite
 - [ ] 06-07-PLAN.md — Build verification (POL-03 bundle security) + human checkpoint
 
+### Phase 7: Performance Optimization
+**Goal**: All pages load fast -- middleware makes zero network calls (getSession instead of getUser, JWT is_admin claim instead of DB query), and heavy SSR admin pages use Suspense streaming to render skeletons immediately while data loads in the background.
+**Depends on**: Phase 6
+**Requirements**: Performance requirements captured in CONTEXT.md (Fix 1-4)
+**Success Criteria** (what must be TRUE):
+  1. `lib/supabase/middleware.ts` uses `getSession()` (not `getUser()`) and reads `is_admin` from `session.user.app_metadata.is_admin` JWT claim -- zero network calls in middleware.
+  2. Middleware does not import `createServiceClient` or query the `profiles` table -- all DB queries eliminated from middleware.
+  3. `/app` (chatbot) routes only check session existence in middleware -- no is_admin check, no profile fetch.
+  4. Admin pages (dashboard, nhap-hang, ton-kho, khach-hang) use Suspense streaming with async Loader components -- skeleton renders immediately, data streams in.
+  5. SQL migration `20260329_010_custom_access_token_hook.sql` creates a Postgres function that injects `is_admin` into the JWT `app_metadata`, registered via Supabase Dashboard Authentication Hooks.
+  6. `next build` passes with zero TypeScript errors.
+**Plans:** 3 plans
+
+Plans:
+- [ ] 07-05-PLAN.md — Middleware rewrite (getSession + JWT claim) + SQL migration for custom_access_token_hook
+- [ ] 07-06-PLAN.md — Suspense streaming for 4 admin pages (dashboard, nhap-hang, ton-kho, khach-hang)
+- [ ] 07-07-PLAN.md — Build verification + human checkpoint (page load speed + auth)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -148,3 +167,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 4. Tồn Kho + Khách Hàng | 3/3 | Complete   | 2026-03-20 |
 | 5. Check Customers + Check Distributor | 3/5 | In Progress|  |
 | 6. Security & Polish | 5/7 | In Progress|  |
+| 7. Performance Optimization | 0/3 | Not Started |  |
