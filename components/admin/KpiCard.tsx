@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface KpiCardProps {
@@ -9,7 +10,7 @@ export interface KpiCardProps {
   className?: string
 }
 
-export function KpiCard({
+export const KpiCard = memo(function KpiCard({
   value,
   label,
   icon,
@@ -31,4 +32,4 @@ export function KpiCard({
       <span className="text-sm opacity-80">{label}</span>
     </div>
   )
-}
+})
