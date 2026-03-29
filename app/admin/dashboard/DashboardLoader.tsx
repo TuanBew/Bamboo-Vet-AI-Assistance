@@ -1,10 +1,10 @@
-import { getDashboardData } from '@/lib/admin/services/dashboard'
+import { getDashboardData, type DashboardFilters } from '@/lib/admin/services/dashboard'
 import { DashboardClient } from './DashboardClient'
 
 export async function DashboardLoader({
   filters,
 }: {
-  filters: { month: string; province: string; clinic_type: string }
+  filters: DashboardFilters
 }) {
   const data = await getDashboardData(filters)
   return (
