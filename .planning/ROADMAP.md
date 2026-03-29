@@ -173,7 +173,7 @@ Plans:
 
 **Context**: `.planning/phases/08-dashboard-sales-rebuild/08-CONTEXT.md`
 
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 
 Plans:
 - [ ] 08-01-PLAN.md — Migration 011 (staff_id + supplier_id FK) + seed script staff_id assignment + delete check-users/check-clinics files + update AdminSidebar + VI dictionary update
@@ -195,6 +195,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Check Customers + Check Distributor | 5/5 | Complete |  |
 | 6. Security & Polish | 7/7 | Complete |  |
 | 7. Performance Optimization | 4/4 | Complete |  |
-| 8. Dashboard Sales Rebuild | 0/4 | Not Started |  |
+| 8. Dashboard Sales Rebuild | 2/4 | In Progress|  |
 
 *Phase 3 dashboard (DASH-01--DASH-06) built for wrong domain (chatbot analytics). Phase 8 corrects this.

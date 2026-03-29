@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-03-29T11:59:04.038Z"
-last_activity: 2026-03-29 — Completed 07-03 API query optimization (server-side pagination, ETag/Cache-Control headers)
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-03-29T12:07:12Z"
+last_activity: 2026-03-29 — Completed 08-02 dashboard service layer + API route rewrite for sales domain
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 35
-  completed_plans: 30
+  completed_plans: 31
 ---
 
 ---
@@ -219,6 +219,7 @@ Progress: [██████████] 97%
 | Phase 07 P05 | 4 | 2 tasks | 2 files |
 | Phase 07 P06 | 4 | 2 tasks | 10 files |
 | Phase 08 P01 | 4 | 2 tasks | 13 files |
+| Phase 08 P02 | 6 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -301,6 +302,8 @@ Recent decisions affecting current work:
 - [Phase 07]: is_admin read from JWT app_metadata claim instead of profiles DB query
 - [Phase 07]: Suspense streaming pattern: page.tsx parses searchParams, wraps async Loader in Suspense with Skeleton fallback
 - [Phase 08]: Kept legacy chatbot dashboard VI keys with deprecation comment to avoid breaking DashboardClient.tsx
+- [Phase 08]: Used classification column for nganh_hang filter (actual DB schema) instead of plan's industry column name
+- [Phase 08]: DashboardClient.tsx type errors accepted -- old client references chatbot types, will be rewritten in Plan 03+
 
 ### Pending Todos
 
@@ -314,6 +317,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T11:59:04.032Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-03-29T12:07:12Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
