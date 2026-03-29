@@ -126,7 +126,7 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 > **Domain correction**: DASH-01–DASH-06 above were built for chatbot analytics (wrong domain). These requirements below (DASH2-*) supersede them. The admin dashboard is a **sales/distribution management** system, not a chatbot analytics system.
 
-- [ ] **DASH2-01**: Migration 011 adds `staff_id` (nullable UUID FK → `distributor_staff.id`) to `customer_purchases`; seed script updated to assign staff_id deterministically by supplier; `/admin/check-users` and `/admin/check-clinics` routes and API files deleted; `AdminSidebar` links updated to remove them
+- [x] **DASH2-01**: Migration 011 adds `staff_id` (nullable UUID FK → `distributor_staff.id`) to `customer_purchases`; seed script updated to assign staff_id deterministically by supplier; `/admin/check-users` and `/admin/check-clinics` routes and API files deleted; `AdminSidebar` links updated to remove them
 - [ ] **DASH2-02**: `lib/admin/services/dashboard.ts` completely rewritten — queries `purchase_orders`, `purchase_order_items`, `customer_purchases`, `customers`, `distributor_staff`, `products`, `suppliers`; returns `npp_list`, `filter_options` (ngành hàng, thương hiệu, kênh), `ai_insights` (rule-based bullets), `yearly_series`, `monthly_series` (with forecast), `daily_banhang`, `metrics_box`, `pie_data`, `kpi_row`, `staff_list`, `customer_section`, `top10`
 - [ ] **DASH2-03**: Filter bar has NPP dropdown + month picker + ngành hàng + thương hiệu + kênh dropdowns; all populated from real data; Search button triggers refetch (same pattern as nhap-hang page)
 - [ ] ~~**DASH2-04**~~: ~~AI Phân Tích panel~~ — **removed from scope** (not needed)
