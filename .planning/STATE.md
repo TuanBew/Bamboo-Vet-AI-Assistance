@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07-04-PLAN.md (checkpoint — awaiting user verification)
-last_updated: "2026-03-29T03:15:17.795Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-03-29T03:15:38.468Z"
 last_activity: 2026-03-29 — Completed 07-03 API query optimization (server-side pagination, ETag/Cache-Control headers)
 progress:
   total_phases: 6
@@ -277,6 +277,7 @@ Recent decisions affecting current work:
 - [Phase 07]: jsonWithCache() utility: weak ETag (W/) with MD5, Cache-Control private max-age=3600 stale-while-revalidate=1800
 - [Phase 07]: check-users uses Supabase .range() with { count: 'exact' } for server-side pagination instead of fetch-all-then-slice
 - [Phase 07]: check-clinics scopes profile/monthly queries to current page's clinic IDs via .in() filter
+- [Phase 07]: Generic DataTable wrapped via memo(Inner) as typeof Inner to preserve generic type parameters
 
 ### Pending Todos
 
@@ -290,6 +291,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T03:15:00Z
-Stopped at: Completed 07-04-PLAN.md (checkpoint — awaiting user verification)
+Last session: 2026-03-29T03:15:38.454Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
