@@ -12,7 +12,7 @@ Product B adds an internal Vietnamese-only admin SaaS dashboard at `/admin/*` to
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Database Migrations & Seed Data** - Create schema, materialized views, indexes, RLS, trigger, and idempotent seed scripts
+- [x] **Phase 1: Database Migrations & Seed Data** - Create schema, materialized views, indexes, RLS, trigger, and idempotent seed scripts (completed 2026-03-29)
 - [x] **Phase 2: Admin Shell & Role-Based Routing** - Wire middleware guard, auth utilities, dark layout shell, and all shared admin components (completed 2026-03-18)
 - [x] **Phase 3: Admin Dashboard page + Nhap Hang page** - Build primary landing page with KPIs/charts/map and Nhap hang purchase order analytics page (completed 2026-03-19)
 - [x] **Phase 4: Tồn Kho page + Khách Hàng page** - Build inventory stock analytics page and business customer analytics page (complete rebuild from prior wrong scope) (completed 2026-03-20)
@@ -32,12 +32,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `mv_monthly_queries`, `mv_daily_queries`, and `mv_category_stats` each have a `UNIQUE INDEX` and support `REFRESH CONCURRENTLY`; `mv_dashboard_kpis` refreshes with plain `REFRESH` and contains exactly one row.
   4. Querying `profiles` returns 82 rows (80 non-admin + 2 admin); `conversations` has ~4,000 rows; `messages` has ~20,000 rows; `kb_documents` has 120 rows.
   5. Running the seed script a second time (idempotency check) produces no duplicate rows and no errors.
-**Plans:** 1/3 plans executed
+**Plans:** 4/4 plans executed
 
 Plans:
-- [ ] 01-01-PLAN.md — Migration SQL files (6 migrations) + refresh-views.ts
-- [ ] 01-02-PLAN.md — Seed data markdown files (clinics, profiles, conversations, query_events, kb_documents)
-- [ ] 01-03-PLAN.md — Seed script (scripts/seed.ts) + manual verification
+- [x] 01-01-PLAN.md — Migration SQL files (6 migrations) + refresh-views.ts
+- [x] 01-02-PLAN.md — Seed data markdown files (clinics, profiles, conversations, query_events, kb_documents)
+- [x] 01-03-PLAN.md — Seed script (scripts/seed.ts) + manual verification
+- [x] 01-04-PLAN.md — Comprehensive sales seed data (2024-2026) — 90 products, 450 customers, 73K snapshots, 2.2K purchases
 
 ### Phase 2: Admin Shell & Role-Based Routing
 **Goal**: Every `/admin/*` route is protected — unauthenticated and non-admin users are redirected to `/login`; admins logging in via `/app` are automatically forwarded to `/admin/dashboard`; the dark sidebar shell renders on all admin pages; all seven shared admin components exist and render without errors.
