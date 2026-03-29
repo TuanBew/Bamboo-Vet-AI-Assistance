@@ -3,14 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-03-29T03:12:49.069Z"
-last_activity: 2026-03-29 — Completed 07-01 SSE stream stability fix (timeouts, abort handling, reader.cancel)
+stopped_at: Completed 07-04-PLAN.md (checkpoint — awaiting user verification)
+last_updated: "2026-03-29T03:15:00Z"
+last_activity: 2026-03-29 — Completed 07-04 performance testing & verification (automated audit 15 pass / 0 fail)
 progress:
-  total_phases: 6
-  completed_phases: 5
-  total_plans: 27
-  completed_plans: 26
+  total_phases: 7
+  completed_phases: 6
+  total_plans: 31
+  completed_plans: 30
+  percent: 97
 ---
 
 ---
@@ -135,9 +136,9 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 7 of 7 (Performance Optimization)
-Plan: 1 of 4 in current phase (completed)
+Plan: 4 of 4 in current phase (checkpoint — awaiting user verification)
 Status: Executing
-Last activity: 2026-03-29 — Completed 07-01 SSE stream stability fix (timeouts, abort handling, reader.cancel)
+Last activity: 2026-03-29 — Completed 07-03 API query optimization (server-side pagination, ETag/Cache-Control headers)
 
 Progress: [██████████] 97%
 
@@ -256,6 +257,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Seed runner uses static imports and batchInsert helper with configurable chunk sizes
 - [Phase 06]: Added ~110 new VI dictionary keys covering all page-level labels for 8 admin pages
 - [Phase 07]: 60s global + 15s per-chunk timeouts for SSE stream; reader.cancel() on all exit paths
+- [Phase 07]: jsonWithCache() utility: weak ETag (W/) with MD5, Cache-Control private max-age=3600 stale-while-revalidate=1800
+- [Phase 07]: check-users uses Supabase .range() with { count: 'exact' } for server-side pagination instead of fetch-all-then-slice
+- [Phase 07]: check-clinics scopes profile/monthly queries to current page's clinic IDs via .in() filter
 
 ### Pending Todos
 
@@ -269,6 +273,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T03:12:49.057Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-03-29T03:15:00Z
+Stopped at: Completed 07-04-PLAN.md (checkpoint — awaiting user verification)
 Resume file: None
