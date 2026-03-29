@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin/auth'
 import { getCheckClinicsData } from '@/lib/admin/services/check-clinics'
+import { jsonWithCache } from '@/lib/admin/cache-headers'
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin()
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const data = await getCheckClinicsData({ year, metric, clinic_type, province, search, page, page_size })
-    return NextResponse.json(data)
+    return jsonWithCache(request, data)
   } catch (error) {
     console.error('Check clinics API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
