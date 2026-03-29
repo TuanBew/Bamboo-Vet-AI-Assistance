@@ -81,56 +81,140 @@ export async function POST(request: Request) {
   // (no-op cookies) and must not be called after the response has started streaming.
   const svc = verifiedConversationId ? createServiceClient() : null
 
+  // Stream timeout: 60 seconds max for the entire SSE relay
+  const STREAM_TIMEOUT_MS = 60_000
+  // Per-chunk read timeout: 15 seconds max waiting for next chunk
+  const CHUNK_TIMEOUT_MS = 15_000
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const reader = ragflowStream.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
+      let closed = false
+
+      // Helper: safely close the controller exactly once
+      const safeClose = () => {
+        if (!closed) {
+          closed = true
+          try { controller.close() } catch { /* already closed */ }
+        }
+      }
+
+      // Helper: safely enqueue — returns false if stream is already closed
+      const safeEnqueue = (chunk: Uint8Array): boolean => {
+        if (closed) return false
+        try {
+          controller.enqueue(chunk)
+          return true
+        } catch {
+          // Client disconnected or stream closed
+          closed = true
+          return false
+        }
+      }
+
+      // Global timeout for the entire stream
+      const streamTimeout = setTimeout(() => {
+        console.warn('[chat] Stream timeout reached (60s), cancelling reader')
+        reader.cancel('stream_timeout').catch(() => {})
+      }, STREAM_TIMEOUT_MS)
+
+      // Listen for client disconnect via request abort signal
+      const onAbort = () => {
+        console.info('[chat] Client disconnected, cancelling reader')
+        reader.cancel('client_disconnect').catch(() => {})
+      }
+      request.signal.addEventListener('abort', onAbort, { once: true })
 
       try {
         while (true) {
-          const { done, value } = await reader.read()
+          // Per-chunk timeout: race reader.read() against a timeout
+          const chunkTimeout = new Promise<{ done: true; value: undefined }>(
+            (_, reject) => setTimeout(() => reject(new Error('chunk_timeout')), CHUNK_TIMEOUT_MS)
+          )
+
+          let done: boolean
+          let value: Uint8Array | undefined
+          try {
+            const result = await Promise.race([reader.read(), chunkTimeout])
+            done = result.done
+            value = result.value
+          } catch (err) {
+            // Chunk timeout or read error — cancel reader and stop
+            const reason = err instanceof Error ? err.message : 'read_error'
+            console.warn(`[chat] Reader error: ${reason}, closing stream`)
+            await reader.cancel(reason).catch(() => {})
+            break
+          }
+
           if (done) break
 
+          // Check if client already disconnected
+          if (request.signal.aborted) {
+            await reader.cancel('client_disconnect').catch(() => {})
+            break
+          }
+
           // Forward raw chunk to browser
-          controller.enqueue(value)
+          if (value && !safeEnqueue(value)) {
+            // Client gone — cancel upstream reader
+            await reader.cancel('enqueue_failed').catch(() => {})
+            break
+          }
 
           // Also accumulate decoded text for DB save
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop() ?? ''
-          for (const line of lines) {
-            const token = parseSseLine(line)
-            if (token) fullText += token
+          if (value) {
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() ?? ''
+            for (const line of lines) {
+              const token = parseSseLine(line)
+              if (token) fullText += token
+            }
           }
         }
+      } catch (err) {
+        // Catch-all for unexpected errors in the streaming loop
+        console.error('[chat] Unexpected streaming error:', err)
+        await reader.cancel('unexpected_error').catch(() => {})
       } finally {
-        controller.close()
+        clearTimeout(streamTimeout)
+        request.signal.removeEventListener('abort', onAbort)
+
+        // Always cancel + release the reader to prevent connection leaks
+        await reader.cancel('cleanup').catch(() => {})
         reader.releaseLock()
 
-        // 7. Save to DB if authenticated
+        safeClose()
+
+        // 7. Save to DB if authenticated (fire-and-forget, don't block cleanup)
         if (svc && user && verifiedConversationId && fullText) {
           const userMessage = sanitizedMessages[sanitizedMessages.length - 1]
 
-          const { error: msgError } = await svc.from('messages').insert([
-            { conversation_id: verifiedConversationId, role: 'user',      content: userMessage.content },
-            { conversation_id: verifiedConversationId, role: 'assistant', content: fullText },
-          ])
-          if (msgError) console.error('[chat] Failed to save messages:', msgError)
+          try {
+            const { error: msgError } = await svc.from('messages').insert([
+              { conversation_id: verifiedConversationId, role: 'user',      content: userMessage.content },
+              { conversation_id: verifiedConversationId, role: 'assistant', content: fullText },
+            ])
+            if (msgError) console.error('[chat] Failed to save messages:', msgError)
 
-          // Set title from first user message if not yet set
-          const { data: conv } = await svc
-            .from('conversations')
-            .select('title')
-            .eq('id', verifiedConversationId)
-            .single()
-
-          if (conv?.title === 'New conversation') {
-            const { error: convError } = await svc
+            // Set title from first user message if not yet set
+            const { data: conv } = await svc
               .from('conversations')
-              .update({ title: userMessage.content.slice(0, 50) })
+              .select('title')
               .eq('id', verifiedConversationId)
-            if (convError) console.error('[chat] Failed to update conversation title:', convError)
+              .single()
+
+            if (conv?.title === 'New conversation') {
+              const { error: convError } = await svc
+                .from('conversations')
+                .update({ title: userMessage.content.slice(0, 50) })
+                .eq('id', verifiedConversationId)
+              if (convError) console.error('[chat] Failed to update conversation title:', convError)
+            }
+          } catch (dbErr) {
+            console.error('[chat] DB save error:', dbErr)
           }
         }
       }
