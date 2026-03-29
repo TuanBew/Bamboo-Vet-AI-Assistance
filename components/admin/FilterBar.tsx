@@ -1,5 +1,6 @@
 'use client'
 
+import { memo, useMemo } from 'react'
 import { VI } from '@/lib/i18n/vietnamese'
 
 export interface FilterBarProps {
@@ -28,7 +29,7 @@ export interface FilterBarProps {
 const selectClasses =
   'bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500'
 
-export function FilterBar({
+export const FilterBar = memo(function FilterBar({
   provinces = [],
   districts = [],
   clinicTypes = [],
@@ -51,7 +52,7 @@ export function FilterBar({
   showSearch = false,
 }: FilterBarProps) {
   const currentYear = new Date().getFullYear()
-  const years = [currentYear - 2, currentYear - 1, currentYear]
+  const years = useMemo(() => [currentYear - 2, currentYear - 1, currentYear], [currentYear])
 
   return (
     <div>
@@ -146,4 +147,4 @@ export function FilterBar({
       )}
     </div>
   )
-}
+})
