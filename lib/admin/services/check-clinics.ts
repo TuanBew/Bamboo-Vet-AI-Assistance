@@ -72,7 +72,7 @@ export async function getCheckClinicsData(
 ): Promise<CheckClinicsData> {
   const db = createServiceClient()
 
-  // 1. Query clinics table
+  // 1. Query clinics with server-side pagination via LIMIT/OFFSET
   let clinicQuery = db
     .from('clinics')
     .select('id, name, code, type, province', { count: 'exact' })
@@ -88,19 +88,24 @@ export async function getCheckClinicsData(
     clinicQuery = clinicQuery.eq('province', filters.province)
   }
 
+  // Apply server-side pagination
+  const rangeStart = (filters.page - 1) * filters.page_size
+  const rangeEnd = rangeStart + filters.page_size - 1
+  clinicQuery = clinicQuery.range(rangeStart, rangeEnd)
+
   const { data: clinicRows, count: clinicCount } = await clinicQuery
 
-  const allClinics = clinicRows ?? []
-  const clinicIds = allClinics.map(c => c.id as string)
+  const pagedClinics = clinicRows ?? []
+  const clinicIds = pagedClinics.map(c => c.id as string)
 
-  // 2. Query profiles where is_admin = false to get user_id -> clinic_id mapping
+  // 2. Only fetch profiles belonging to the current page's clinics (not all profiles)
   let profileData: Array<{ id: string; clinic_id: string }> = []
   if (clinicIds.length > 0) {
     const { data: profileRows } = await db
       .from('profiles')
       .select('id, clinic_id')
       .eq('is_admin', false)
-      .not('clinic_id', 'is', null)
+      .in('clinic_id', clinicIds)
 
     profileData = (profileRows ?? []).map(r => ({
       id: r.id as string,
@@ -117,14 +122,15 @@ export async function getCheckClinicsData(
     clinicUsersMap.get(p.clinic_id)!.push(p.id)
   }
 
-  // 3. Query mv_monthly_queries for the specified year
-  const allUserIds = profileData.map(p => p.id)
+  // 3. Only fetch monthly data for users in current page's clinics
+  const relevantUserIds = profileData.map(p => p.id)
   let monthlyData: Array<{ user_id: string; month: number; query_count: number; session_count: number }> = []
-  if (allUserIds.length > 0) {
+  if (relevantUserIds.length > 0) {
     const { data: monthlyRows } = await db
       .from('mv_monthly_queries')
       .select('user_id, month, query_count, session_count')
       .eq('year', filters.year)
+      .in('user_id', relevantUserIds)
 
     monthlyData = (monthlyRows ?? []).map(r => ({
       user_id: r.user_id as string,
@@ -146,10 +152,10 @@ export async function getCheckClinicsData(
     })
   }
 
-  // 4. Aggregate: for each clinic, sum metric across all users
+  // 4. Aggregate: for each clinic, sum metric across its users
   const metricKey = filters.metric === 'session_count' ? 'session_count' : 'query_count'
 
-  const clinicData = allClinics.map(c => {
+  const clinicData = pagedClinics.map(c => {
     const clinicId = c.id as string
     const userIds = clinicUsersMap.get(clinicId) ?? []
     const monthly_data: Record<string, number> = {}
@@ -183,15 +189,10 @@ export async function getCheckClinicsData(
     }
   })
 
-  // 5. Apply pagination (slice in JS since dataset is small)
-  const total = clinicCount ?? allClinics.length
-  const start = (filters.page - 1) * filters.page_size
-  const paginatedData = clinicData.slice(start, start + filters.page_size)
-
   return {
     clinics: {
-      data: paginatedData,
-      total,
+      data: clinicData,
+      total: clinicCount ?? 0,
       page: filters.page,
       page_size: filters.page_size,
     },
