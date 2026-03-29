@@ -2,9 +2,9 @@
 
 ## Overview
 
-Product B adds an internal Vietnamese-only admin SaaS dashboard at `/admin/*` to the existing Bamboo Vet Next.js monorepo. The admin is a **sales and distribution management system** for a Vietnamese veterinary product NPP (Nhà Phân Phối) — tracking nhập hàng (imports), bán hàng (sales), nhân viên (staff performance), khách hàng (customer analytics), and tồn kho (inventory). It is NOT a chatbot analytics system. Product A (the AI chatbot at `/`, `/app`, `/chat`) remains separate and untouched.
+Product B adds an internal Vietnamese-only admin SaaS dashboard at `/admin/*` to the existing Bamboo Vet Next.js monorepo. The admin is a **sales and distribution management system** for a Vietnamese veterinary product NPP (Nha Phan Phoi) — tracking nhap hang (imports), ban hang (sales), nhan vien (staff performance), khach hang (customer analytics), and ton kho (inventory). It is NOT a chatbot analytics system. Product A (the AI chatbot at `/`, `/app`, `/chat`) remains separate and untouched.
 
-> **⚠️ Domain correction (2026-03-29):** Phase 8 corrects the dashboard from chatbot analytics to sales/distribution management. REQUIREMENTS.md DASH-01–DASH-06 are superseded by DASH2-01–DASH2-07.
+> **Warning Domain correction (2026-03-29):** Phase 8 corrects the dashboard from chatbot analytics to sales/distribution management. REQUIREMENTS.md DASH-01--DASH-06 are superseded by DASH2-01--DASH2-07.
 
 ## Phases
 
@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Database Migrations & Seed Data** - Create schema, materialized views, indexes, RLS, trigger, and idempotent seed scripts (completed 2026-03-29)
 - [x] **Phase 2: Admin Shell & Role-Based Routing** - Wire middleware guard, auth utilities, dark layout shell, and all shared admin components (completed 2026-03-18)
 - [x] **Phase 3: Admin Dashboard page + Nhap Hang page** - Build primary landing page with KPIs/charts/map and Nhap hang purchase order analytics page (completed 2026-03-19)
-- [x] **Phase 4: Tồn Kho page + Khách Hàng page** - Build inventory stock analytics page and business customer analytics page (complete rebuild from prior wrong scope) (completed 2026-03-20)
+- [x] **Phase 4: Ton Kho page + Khach Hang page** - Build inventory stock analytics page and business customer analytics page (complete rebuild from prior wrong scope) (completed 2026-03-20)
 - [ ] **Phase 5: Check Customers page + Check Distributor page** - Build data-explorer pages with Leaflet map, pivot tables, color-coded cells, and daily detail modal
 - [ ] **Phase 6: Security & Polish** - Install dependencies, harden CSP, verify service role boundary, print CSS, and Vietnamese PDF strategy
 - [ ] **Phase 7: Performance Optimization** - Fix middleware latency (getSession + JWT claim), add Suspense streaming to admin pages
@@ -80,16 +80,16 @@ Plans:
 - [ ] 03-04-PLAN.md — Gap closure: fix mv_category_stats column mismatches (drug_group->drug_category, query_count->count, user_id removal)
 - [ ] 03-05-PLAN.md — Gap closure: complete rebuild of /admin/nhap-hang as purchase order analytics page (DB tables, seed data, API, page UI)
 
-### Phase 4: Tồn Kho page + Khách Hàng page
-**Goal**: `/admin/ton-kho` displays inventory stock analytics — 3 KPI cards, 6 charts in a 2×3 grid, and a paginated DataTable — all filtered by date-based inventory snapshots; `/admin/khach-hang` displays business customer analytics — 3 charts, two KPI+breakdown sections, and a collapsible high-value stores section. Phase also includes new DB migration + seed data and teardown of wrong KB/Users implementation.
+### Phase 4: Ton Kho page + Khach Hang page
+**Goal**: `/admin/ton-kho` displays inventory stock analytics — 3 KPI cards, 6 charts in a 2x3 grid, and a paginated DataTable — all filtered by date-based inventory snapshots; `/admin/khach-hang` displays business customer analytics — 3 charts, two KPI+breakdown sections, and a collapsible high-value stores section. Phase also includes new DB migration + seed data and teardown of wrong KB/Users implementation.
 **Depends on**: Phase 3
 **Requirements**: TK-01, TK-02, TK-03, KH-01, KH-02, KH-03, KH-04, KH-05
 **Success Criteria** (what must be TRUE):
-  1. Migration `20260320_008` creates `inventory_snapshots`, `customers`, `customer_purchases` tables; seed script populates ~806 snapshot rows, ~200 customers, ~500–800 purchase rows; old KB/Users files are deleted; `AdminSidebar.tsx` links point to `/admin/ton-kho` and `/admin/khach-hang`.
-  2. `/admin/ton-kho` renders 3 KPI cards (Tổng giá trị tồn, Tổng số lượng, Số SKU/Tổng SKU), 6 charts (4 horizontal BarCharts + 2 Donut PieCharts), and a DataTable with Copy + Excel export — all reflecting data for the selected snapshot date.
+  1. Migration `20260320_008` creates `inventory_snapshots`, `customers`, `customer_purchases` tables; seed script populates ~806 snapshot rows, ~200 customers, ~500-800 purchase rows; old KB/Users files are deleted; `AdminSidebar.tsx` links point to `/admin/ton-kho` and `/admin/khach-hang`.
+  2. `/admin/ton-kho` renders 3 KPI cards (Tong gia tri ton, Tong so luong, So SKU/Tong SKU), 6 charts (4 horizontal BarCharts + 2 Donut PieCharts), and a DataTable with Copy + Excel export — all reflecting data for the selected snapshot date.
   3. `/admin/khach-hang` renders 3 chart panels (LineChart new customers per month, BarChart by province, horizontal BarChart by district) with non-zero data for the selected NPP filter.
-  4. "Tất cả khách hàng" section shows 4 KPI tiles + breakdown table for all 8 customer types (TH/GSO/PHA/SPS/BTS/OTHER/PLT/WMO) with correct Số lượng and %.
-  5. "Khách hàng đang mua hàng" section shows 4 KPI tiles + breakdown table with % theo Tổng KH + % theo KH còn hoạt động; "Số lượng cửa hiệu >300K" section is collapsible with graceful empty state.
+  4. "Tat ca khach hang" section shows 4 KPI tiles + breakdown table for all 8 customer types (TH/GSO/PHA/SPS/BTS/OTHER/PLT/WMO) with correct So luong and %.
+  5. "Khach hang dang mua hang" section shows 4 KPI tiles + breakdown table with % theo Tong KH + % theo KH con hoat dong; "So luong cua hieu >300K" section is collapsible with graceful empty state.
 **Plans:** 3/3 plans complete
 
 Plans:
@@ -159,25 +159,27 @@ Plans:
 - [ ] 07-07-PLAN.md — Build verification + human checkpoint (page load speed + auth)
 
 ### Phase 8: Dashboard Sales Rebuild
-**Goal**: `/admin/dashboard` is completely rebuilt as a sales/distribution management dashboard — the chatbot analytics version is deleted. All 6 sections match the reference design (`samples/1_dashboard.jpg`): filter bar (NPP/month/ngành hàng/thương hiệu/kênh), AI phân tích panel (rule-based insights), Tổng quan (nhập/bán by year + forecast), Chỉ số tập trung (daily chart + pie charts + KPIs), Nhân viên (staff table + stacked bars), Khách hàng (radar + map), Top 10 (customers + products). All data comes from real sales tables. Wrong-domain pages (`check-users`, `check-clinics`) are removed.
+**Goal**: `/admin/dashboard` is completely rebuilt as a sales/distribution management dashboard — the chatbot analytics version is deleted. 5 sections match the reference design (`samples/1_dashboard.jpg`): filter bar (NPP/month/nganh hang/thuong hieu/kenh), Tong quan (nhap/ban by year + forecast), Chi so tap trung (daily chart + pie charts + KPIs), Nhan vien (staff table + stacked bars), Khach hang (radar + map), Top 10 (customers + products). All data comes from real sales tables. Wrong-domain pages (`check-users`, `check-clinics`) are removed. AI phan tich panel is omitted (not needed).
 **Depends on**: Phase 7
-**Requirements**: DASH2-01, DASH2-02, DASH2-03, DASH2-04, DASH2-05, DASH2-06, DASH2-07
+**Requirements**: DASH2-01, DASH2-02, DASH2-03, DASH2-05, DASH2-06, DASH2-07
 **Success Criteria** (what must be TRUE):
-  1. `/admin/dashboard` loads with zero chatbot-related KPIs — no total_queries, total_sessions, drug_group mentions; all KPIs show nhập hàng, bán hàng, khách hàng, SKU, nhân viên data
-  2. Filter bar has NPP, month, ngành hàng, thương hiệu, kênh dropdowns — all populated from real product/supplier/customer data
-  3. "Tổng quan" shows grouped bar (nhập+bán by year) and area chart (monthly + 3-month forecast dotted line)
-  4. "Nhân viên" table shows sales staff performance — TOTAL, sparkline, orders, avg, customers, ngày>1tr — populated via Migration 011 staff_id assignments
-  5. "Top 10 Khách hàng" and "Top 10 Sản phẩm" render with non-zero bars from customer_purchases data
+  1. `/admin/dashboard` loads with zero chatbot-related KPIs — no total_queries, total_sessions, drug_group mentions; all KPIs show nhap hang, ban hang, khach hang, SKU, nhan vien data
+  2. Filter bar has NPP, month, nganh hang, thuong hieu, kenh dropdowns — all populated from real product/supplier/customer data
+  3. "Tong quan" shows grouped bar (nhap+ban by year) and area chart (monthly + 3-month forecast dotted line)
+  4. "Nhan vien" table shows sales staff performance — TOTAL, sparkline, orders, avg, customers, ngay>1tr — populated via Migration 011 staff_id assignments
+  5. "Top 10 Khach hang" and "Top 10 San pham" render with non-zero bars from customer_purchases data
   6. `/admin/check-users` and `/admin/check-clinics` return 404 or redirect (files deleted)
   7. `next build` passes with zero TypeScript errors
 
 **Context**: `.planning/phases/08-dashboard-sales-rebuild/08-CONTEXT.md`
 
+**Plans:** 4 plans
+
 Plans:
-- [ ] 08-01-PLAN.md — Migration 011 (staff_id FK on customer_purchases) + update seed script to assign staff_id + delete check-users/check-clinics files + update AdminSidebar
-- [ ] 08-02-PLAN.md — New dashboard service layer (lib/admin/services/dashboard.ts complete rewrite) + API route rewrite
-- [ ] 08-03-PLAN.md — DashboardClient rebuild: filter bar + AI phân tích panel + Tổng quan section + Chỉ số tập trung section (daily chart + pie charts + metrics box + KPI row)
-- [ ] 08-04-PLAN.md — DashboardClient: Nhân viên section (staff table + sparklines + stacked bars) + Khách hàng section (radar + count + map) + Top 10 section
+- [ ] 08-01-PLAN.md — Migration 011 (staff_id + supplier_id FK) + seed script staff_id assignment + delete check-users/check-clinics files + update AdminSidebar + VI dictionary update
+- [ ] 08-02-PLAN.md — Dashboard service layer complete rewrite (lib/admin/services/dashboard.ts) + API route rewrite with new filter params
+- [ ] 08-03-PLAN.md — DashboardClient rebuild: page.tsx/Loader/Skeleton + filter bar + Tong quan section + Chi so tap trung section (daily chart + metrics box + pie charts + KPI row)
+- [ ] 08-04-PLAN.md — DashboardClient: Nhan vien section (staff table + sparklines + stacked bars) + Khach hang section (radar + count + map) + Top 10 section + human verification checkpoint
 
 ## Progress
 
@@ -189,10 +191,10 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 1. Database Migrations & Seed Data | 4/4 | Complete   | 2026-03-29 |
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
 | 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete*  | 2026-03-19 |
-| 4. Tồn Kho + Khách Hàng | 3/3 | Complete   | 2026-03-20 |
+| 4. Ton Kho + Khach Hang | 3/3 | Complete   | 2026-03-20 |
 | 5. Check Customers + Check Distributor | 5/5 | Complete |  |
 | 6. Security & Polish | 7/7 | Complete |  |
 | 7. Performance Optimization | 4/4 | Complete |  |
 | 8. Dashboard Sales Rebuild | 0/4 | Not Started |  |
 
-*Phase 3 dashboard (DASH-01–DASH-06) built for wrong domain (chatbot analytics). Phase 8 corrects this.
+*Phase 3 dashboard (DASH-01--DASH-06) built for wrong domain (chatbot analytics). Phase 8 corrects this.
