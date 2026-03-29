@@ -22,13 +22,7 @@ export async function getCheckUsersData(
 ): Promise<CheckUsersData> {
   const db = createServiceClient()
 
-  // 1. Fetch all non-admin profiles (small dataset ~80 rows)
-  const { data: profileRows } = await db
-    .from('profiles')
-    .select('*')
-    .eq('is_admin', false)
-
-  // 2. Fetch all clinics for joining
+  // 1. Fetch all clinics for joining (small dataset ~15 rows, cached across queries)
   const { data: clinicRows } = await db
     .from('clinics')
     .select('id, name, code, type, address')
@@ -37,46 +31,51 @@ export async function getCheckUsersData(
     (clinicRows ?? []).map(c => [c.id as string, c])
   )
 
-  const allProfiles = profileRows ?? []
+  // 2. Map pins: fetch only geo-located non-admin profiles (server-side filter)
+  const { data: geoProfiles } = await db
+    .from('profiles')
+    .select('id, full_name, user_type, clinic_id, lat, lng')
+    .eq('is_admin', false)
+    .not('lat', 'is', null)
+    .not('lng', 'is', null)
 
-  // 3. Map pins: only geo-located profiles
-  const map_pins = allProfiles
-    .filter(p => p.lat != null && p.lng != null)
-    .map(p => {
-      const clinic = clinicMap.get(p.clinic_id as string)
-      return {
-        user_id: p.id as string,
-        full_name: (p.full_name as string) || '',
-        user_type: (p.user_type as string) || '',
-        clinic_type: CLINIC_TYPE_LABELS[(clinic?.type as string) || ''] || (clinic?.type as string) || '',
-        latitude: Number(p.lat),
-        longitude: Number(p.lng),
-      }
-    })
+  const map_pins = (geoProfiles ?? []).map(p => {
+    const clinic = clinicMap.get(p.clinic_id as string)
+    return {
+      user_id: p.id as string,
+      full_name: (p.full_name as string) || '',
+      user_type: (p.user_type as string) || '',
+      clinic_type: CLINIC_TYPE_LABELS[(clinic?.type as string) || ''] || (clinic?.type as string) || '',
+      latitude: Number(p.lat),
+      longitude: Number(p.lng),
+    }
+  })
 
-  // 4. Paginated users with search/filter (in JS since we need profile+clinic join)
-  let filteredProfiles = allProfiles
+  // 3. Paginated users with server-side LIMIT/OFFSET and filters
+  let userQuery = db
+    .from('profiles')
+    .select('id, full_name, email, district, province, clinic_id, lat, lng, created_at, user_type', { count: 'exact' })
+    .eq('is_admin', false)
+    .order('created_at', { ascending: false })
 
   if (filters.search) {
-    const searchLower = filters.search.toLowerCase()
-    filteredProfiles = filteredProfiles.filter(p =>
-      ((p.full_name as string) || '').toLowerCase().includes(searchLower)
-    )
+    userQuery = userQuery.ilike('full_name', `%${filters.search}%`)
   }
-
   if (filters.province) {
-    filteredProfiles = filteredProfiles.filter(p => p.province === filters.province)
+    userQuery = userQuery.eq('province', filters.province)
   }
-
   if (filters.user_type) {
-    filteredProfiles = filteredProfiles.filter(p => p.user_type === filters.user_type)
+    userQuery = userQuery.eq('user_type', filters.user_type)
   }
 
-  const total = filteredProfiles.length
   const rangeStart = (filters.page - 1) * filters.page_size
-  const pagedProfiles = filteredProfiles.slice(rangeStart, rangeStart + filters.page_size)
+  const rangeEnd = rangeStart + filters.page_size - 1
+  userQuery = userQuery.range(rangeStart, rangeEnd)
 
-  const usersData = pagedProfiles.map(p => {
+  const { data: pagedProfiles, count: totalCount } = await userQuery
+  const total = totalCount ?? 0
+
+  const usersData = (pagedProfiles ?? []).map(p => {
     const clinic = clinicMap.get(p.clinic_id as string)
     return {
       user_id: p.id as string,
@@ -95,15 +94,20 @@ export async function getCheckUsersData(
     }
   })
 
-  // 5. Monthly pivot from mv_monthly_queries
+  // 4. Monthly pivot from mv_monthly_queries
+  //    Fetch non-admin profile names for pivot lookup
+  const { data: allProfileNames } = await db
+    .from('profiles')
+    .select('id, full_name')
+    .eq('is_admin', false)
+
+  const profileNameMap = new Map(
+    (allProfileNames ?? []).map(p => [p.id as string, (p.full_name as string) || ''])
+  )
+
   const { data: pivotRows } = await db
     .from('mv_monthly_queries')
     .select('user_id, year, month, query_count')
-
-  // Build profile name lookup (non-admin only)
-  const profileNameMap = new Map(
-    allProfiles.map(p => [p.id as string, (p.full_name as string) || ''])
-  )
 
   // Group by user_id
   const userMonthMap = new Map<string, Record<string, number>>()
