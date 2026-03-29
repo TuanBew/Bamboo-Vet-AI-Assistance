@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
-import { getNhapHangData } from '@/lib/admin/services/nhap-hang'
-import { NhapHangClient } from './NhapHangClient'
+import { NhapHangLoader } from './NhapHangLoader'
 import { NhapHangSkeleton } from './NhapHangSkeleton'
 
 export default async function AdminNhapHangPage({
@@ -14,11 +13,9 @@ export default async function AdminNhapHangPage({
   const year = parseInt(params.year || String(now.getFullYear()))
   const month = parseInt(params.month || String(now.getMonth() + 1))
 
-  const data = await getNhapHangData({ npp, year, month })
-
   return (
     <Suspense fallback={<NhapHangSkeleton />}>
-      <NhapHangClient initialData={data} initialFilters={{ npp, year, month }} />
+      <NhapHangLoader filters={{ npp, year, month }} />
     </Suspense>
   )
 }

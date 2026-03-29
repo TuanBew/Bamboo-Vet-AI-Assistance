@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
-import { getDashboardData } from '@/lib/admin/services/dashboard'
-import { DashboardClient } from './DashboardClient'
+import { DashboardLoader } from './DashboardLoader'
 import { DashboardSkeleton } from './DashboardSkeleton'
 
 export default async function AdminDashboardPage({
@@ -13,14 +12,9 @@ export default async function AdminDashboardPage({
   const province = params.province || ''
   const clinic_type = params.clinic_type || ''
 
-  const data = await getDashboardData({ month, province, clinic_type })
-
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <DashboardClient
-        initialData={data}
-        initialFilters={{ month, province, clinic_type }}
-      />
+      <DashboardLoader filters={{ month, province, clinic_type }} />
     </Suspense>
   )
 }
