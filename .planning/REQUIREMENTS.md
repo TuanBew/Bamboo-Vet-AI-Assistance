@@ -122,11 +122,26 @@ All requirements are new (Product B). Product A (chatbot) is validated and untou
 
 ---
 
+### Dashboard Sales Rebuild (Phase 8)
+
+> **Domain correction**: DASH-01–DASH-06 above were built for chatbot analytics (wrong domain). These requirements below (DASH2-*) supersede them. The admin dashboard is a **sales/distribution management** system, not a chatbot analytics system.
+
+- [ ] **DASH2-01**: Migration 011 adds `staff_id` (nullable UUID FK → `distributor_staff.id`) to `customer_purchases`; seed script updated to assign staff_id deterministically by supplier; `/admin/check-users` and `/admin/check-clinics` routes and API files deleted; `AdminSidebar` links updated to remove them
+- [ ] **DASH2-02**: `lib/admin/services/dashboard.ts` completely rewritten — queries `purchase_orders`, `purchase_order_items`, `customer_purchases`, `customers`, `distributor_staff`, `products`, `suppliers`; returns `npp_list`, `filter_options` (ngành hàng, thương hiệu, kênh), `ai_insights` (rule-based bullets), `yearly_series`, `monthly_series` (with forecast), `daily_banhang`, `metrics_box`, `pie_data`, `kpi_row`, `staff_list`, `customer_section`, `top10`
+- [ ] **DASH2-03**: Filter bar has NPP dropdown + month picker + ngành hàng + thương hiệu + kênh dropdowns; all populated from real data; Search button triggers refetch (same pattern as nhap-hang page)
+- [ ] **DASH2-04**: "AI Phân Tích" panel shows 3–5 rule-based bullet points: YoY revenue comparison, current month vs same month last year, trend signal for nhập/bán hàng — all computed from purchase_orders + customer_purchases, no LLM
+- [ ] **DASH2-05**: "Tổng Quan" section: grouped bar chart (Nhập/Bán hàng by year) + composed area chart (monthly nhập/bán with 3-month dotted forecast line using `lib/admin/forecast.ts`)
+- [ ] **DASH2-06**: "Chỉ Số Tập Trung" section: daily doanh số line chart + "Chỉ số đo lường" metrics box (Nhập/Bán/KH/SKU/NV with progress bars) + 6 pie charts (tỉ trọng nhập hàng: ngành/nhóm/thương hiệu + tỉ trọng bán hàng: ngành/nhóm/thương hiệu) + 4-KPI summary row (Tổng nhập, Tổng bán, SL/KM, TB/đơn)
+- [ ] **DASH2-07**: "Nhân Viên" section: staff table (name, sparkline, TOTAL, orders, avg, customers, ngày>1tr) populated via staff_id; two stacked horizontal bar charts (tỉ trọng by nhóm + by thương hiệu per staff); "Khách Hàng" section: radar by customer_type + count chart + Leaflet map; "Top 10" section: Top 10 Khách hàng + Top 10 Sản phẩm horizontal bars
+
+---
+
 ## v2 Requirements
 
 ### Future Enhancements
 
-- **AI analysis panel** — LLM-generated insights from analytics data (e.g., "Query volume is 15% above last month's average" with natural language summary). Deferred; depends on Anthropic API integration in admin context — not in v1 scope.
+- **Check Route page** — Sales staff geographic route management. New page for the CHECKED section in sidebar.
+- **Check Display page** — Tình hình trưng bày (display_programs table already exists). New page for the CHECKED section.
 - **Audit logging** — Admin action log with timestamp, user, action type
 - **Real-time data** — Replace materialized view batch refresh with Supabase Realtime subscriptions
 - **Multi-tenant admin accounts** — Clinic-level admin users with scoped data access

@@ -2,7 +2,9 @@
 
 ## Overview
 
-Product B adds an internal Vietnamese-only admin SaaS dashboard at `/admin/*` to the existing Bamboo Vet Next.js monorepo. The build proceeds in strict dependency order: the database schema and seed data must exist before any UI query can run, auth infrastructure must be verified and hardened before any admin page is accessible, the shared shell and component library must be in place before pages are built, and then the six admin pages are delivered in two batches — the high-traffic dashboard and activity pages first, then knowledge base and user analytics, then the complex data-explorer views, with a final security and polish pass to close the milestone.
+Product B adds an internal Vietnamese-only admin SaaS dashboard at `/admin/*` to the existing Bamboo Vet Next.js monorepo. The admin is a **sales and distribution management system** for a Vietnamese veterinary product NPP (Nhà Phân Phối) — tracking nhập hàng (imports), bán hàng (sales), nhân viên (staff performance), khách hàng (customer analytics), and tồn kho (inventory). It is NOT a chatbot analytics system. Product A (the AI chatbot at `/`, `/app`, `/chat`) remains separate and untouched.
+
+> **⚠️ Domain correction (2026-03-29):** Phase 8 corrects the dashboard from chatbot analytics to sales/distribution management. REQUIREMENTS.md DASH-01–DASH-06 are superseded by DASH2-01–DASH2-07.
 
 ## Phases
 
@@ -19,6 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Check Customers page + Check Distributor page** - Build data-explorer pages with Leaflet map, pivot tables, color-coded cells, and daily detail modal
 - [ ] **Phase 6: Security & Polish** - Install dependencies, harden CSP, verify service role boundary, print CSS, and Vietnamese PDF strategy
 - [ ] **Phase 7: Performance Optimization** - Fix middleware latency (getSession + JWT claim), add Suspense streaming to admin pages
+- [ ] **Phase 8: Dashboard Sales Rebuild** - Completely rebuild /admin/dashboard as a sales/distribution management dashboard matching the reference design; remove chatbot analytics; add Migration 011 (staff_id FK); remove check-users and check-clinics pages
 
 ## Phase Details
 
@@ -155,17 +158,41 @@ Plans:
 - [ ] 07-06-PLAN.md — Suspense streaming for 4 admin pages (dashboard, nhap-hang, ton-kho, khach-hang)
 - [ ] 07-07-PLAN.md — Build verification + human checkpoint (page load speed + auth)
 
+### Phase 8: Dashboard Sales Rebuild
+**Goal**: `/admin/dashboard` is completely rebuilt as a sales/distribution management dashboard — the chatbot analytics version is deleted. All 6 sections match the reference design (`samples/1_dashboard.jpg`): filter bar (NPP/month/ngành hàng/thương hiệu/kênh), AI phân tích panel (rule-based insights), Tổng quan (nhập/bán by year + forecast), Chỉ số tập trung (daily chart + pie charts + KPIs), Nhân viên (staff table + stacked bars), Khách hàng (radar + map), Top 10 (customers + products). All data comes from real sales tables. Wrong-domain pages (`check-users`, `check-clinics`) are removed.
+**Depends on**: Phase 7
+**Requirements**: DASH2-01, DASH2-02, DASH2-03, DASH2-04, DASH2-05, DASH2-06, DASH2-07
+**Success Criteria** (what must be TRUE):
+  1. `/admin/dashboard` loads with zero chatbot-related KPIs — no total_queries, total_sessions, drug_group mentions; all KPIs show nhập hàng, bán hàng, khách hàng, SKU, nhân viên data
+  2. Filter bar has NPP, month, ngành hàng, thương hiệu, kênh dropdowns — all populated from real product/supplier/customer data
+  3. "Tổng quan" shows grouped bar (nhập+bán by year) and area chart (monthly + 3-month forecast dotted line)
+  4. "Nhân viên" table shows sales staff performance — TOTAL, sparkline, orders, avg, customers, ngày>1tr — populated via Migration 011 staff_id assignments
+  5. "Top 10 Khách hàng" and "Top 10 Sản phẩm" render with non-zero bars from customer_purchases data
+  6. `/admin/check-users` and `/admin/check-clinics` return 404 or redirect (files deleted)
+  7. `next build` passes with zero TypeScript errors
+
+**Context**: `.planning/phases/08-dashboard-sales-rebuild/08-CONTEXT.md`
+
+Plans:
+- [ ] 08-01-PLAN.md — Migration 011 (staff_id FK on customer_purchases) + update seed script to assign staff_id + delete check-users/check-clinics files + update AdminSidebar
+- [ ] 08-02-PLAN.md — New dashboard service layer (lib/admin/services/dashboard.ts complete rewrite) + API route rewrite
+- [ ] 08-03-PLAN.md — DashboardClient rebuild: filter bar + AI phân tích panel + Tổng quan section + Chỉ số tập trung section (daily chart + pie charts + metrics box + KPI row)
+- [ ] 08-04-PLAN.md — DashboardClient: Nhân viên section (staff table + sparklines + stacked bars) + Khách hàng section (radar + count + map) + Top 10 section
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Database Migrations & Seed Data | 1/3 | In Progress|  |
+| 1. Database Migrations & Seed Data | 4/4 | Complete   | 2026-03-29 |
 | 2. Admin Shell & Role-Based Routing | 4/4 | Complete   | 2026-03-18 |
-| 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete   | 2026-03-19 |
+| 3. Admin Dashboard + Nhap Hang     | 5/5 | Complete*  | 2026-03-19 |
 | 4. Tồn Kho + Khách Hàng | 3/3 | Complete   | 2026-03-20 |
-| 5. Check Customers + Check Distributor | 3/5 | In Progress|  |
-| 6. Security & Polish | 5/7 | In Progress|  |
-| 7. Performance Optimization | 0/3 | Not Started |  |
+| 5. Check Customers + Check Distributor | 5/5 | Complete |  |
+| 6. Security & Polish | 7/7 | Complete |  |
+| 7. Performance Optimization | 4/4 | Complete |  |
+| 8. Dashboard Sales Rebuild | 0/4 | Not Started |  |
+
+*Phase 3 dashboard (DASH-01–DASH-06) built for wrong domain (chatbot analytics). Phase 8 corrects this.

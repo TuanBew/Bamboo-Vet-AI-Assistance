@@ -2,11 +2,11 @@
 
 ## What This Is
 
-Bamboo Vet is a bilingual (Vietnamese/English) AI veterinary chatbot platform. Product A (the chatbot at `/`, `/app`, `/chat`) is fully built and in production. This project adds Product B — an internal Vietnamese-only admin SaaS dashboard at `/admin/*` — to the same Next.js 15 monorepo, giving Bamboo Vet operators full visibility into platform usage: queries by clinic/province/drug group, knowledge base health, user engagement, and geographic distribution.
+Bamboo Vet is a bilingual (Vietnamese/English) AI veterinary chatbot platform. Product A (the chatbot at `/`, `/app`, `/chat`) is fully built and in production. This project adds Product B — an internal Vietnamese-only admin SaaS dashboard at `/admin/*` — to the same Next.js 15 monorepo. Product B is a **sales and distribution management system** for a Vietnamese veterinary product NPP (Nhà Phân Phối), NOT a chatbot analytics system.
 
 ## Core Value
 
-Admins can see exactly who is using the platform, what they're asking, and where they're located — so they can manage knowledge base quality, monitor clinic engagement, and identify usage patterns across the Vietnamese veterinary market.
+NPP managers can track nhập hàng (product imports), bán hàng (sales performance), tồn kho (inventory levels), nhân viên (staff productivity), and khách hàng (customer analytics) — giving full visibility into their distribution business across all products (62 SKUs), staff, customers, and time periods (2024–2026).
 
 ## Requirements
 
