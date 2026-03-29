@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   BarChart,
   Bar,
@@ -186,11 +186,12 @@ export function TonKhoClient({
   const [loading, setLoading] = useState(false)
 
   // Derive unique nhom values from products for filter dropdown
-  const nhomOptions = Array.from(
-    new Set(data.value_by_nhom.map(v => v.name))
-  ).sort()
+  const nhomOptions = useMemo(
+    () => Array.from(new Set(data.value_by_nhom.map(v => v.name))).sort(),
+    [data.value_by_nhom]
+  )
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -205,10 +206,10 @@ export function TonKhoClient({
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters])
 
-  // DataTable columns
-  const columns: DataTableColumn<ProductRow>[] = [
+  // DataTable columns (memoized to prevent DataTable re-renders)
+  const columns = useMemo<DataTableColumn<ProductRow>[]>(() => [
     { key: 'product_code', label: VI.tonKho.productCode, sortable: true },
     { key: 'product_name', label: VI.tonKho.productName, sortable: true },
     { key: 'qty', label: VI.tonKho.quantity, sortable: true, render: (v) => formatVND(Number(v)) },
@@ -216,7 +217,7 @@ export function TonKhoClient({
     { key: 'last_import_date', label: VI.tonKho.latestImport, sortable: true },
     { key: 'unit_price', label: VI.tonKho.unitPrice, sortable: true, render: (v) => formatVND(Number(v)) },
     { key: 'total_value', label: VI.tonKho.totalAmount, sortable: true, render: (v) => formatVND(Number(v)) },
-  ]
+  ], [])
 
   return (
     <div className="space-y-6">

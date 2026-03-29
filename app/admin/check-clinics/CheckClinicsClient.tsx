@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import type {
   CheckClinicsData,
   CheckClinicsFilters,
@@ -130,18 +130,21 @@ export function CheckClinicsClient({
   // Pivot table data mapping
   // ---------------------------------------------------------------------------
 
-  const pivotRows = data.clinics.data.map(c => ({
-    id: c.facility_code,
-    label: c.clinic_name,
-    dimColumns: {
-      region: c.region,
-      zone: c.zone,
-      province: c.province,
-      facility_code: c.facility_code,
-      clinic_name: c.clinic_name,
-    },
-    values: c.monthly_data,
-  }))
+  const pivotRows = useMemo(
+    () => data.clinics.data.map(c => ({
+      id: c.facility_code,
+      label: c.clinic_name,
+      dimColumns: {
+        region: c.region,
+        zone: c.zone,
+        province: c.province,
+        facility_code: c.facility_code,
+        clinic_name: c.clinic_name,
+      },
+      values: c.monthly_data,
+    })),
+    [data.clinics.data]
+  )
 
   // ---------------------------------------------------------------------------
   // Filter select style

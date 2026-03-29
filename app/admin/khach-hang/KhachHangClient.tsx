@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import {
   LineChart,
   Line,
@@ -69,7 +69,7 @@ export function KhachHangClient({ initialData, initialFilters }: KhachHangClient
   const [npp, setNpp] = useState(initialFilters.npp)
   const [loading, setLoading] = useState(false)
 
-  const handleNppChange = async (newNpp: string) => {
+  const handleNppChange = useCallback(async (newNpp: string) => {
     setNpp(newNpp)
     setLoading(true)
     try {
@@ -83,7 +83,7 @@ export function KhachHangClient({ initialData, initialFilters }: KhachHangClient
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   return (
     <div className={`space-y-6 ${loading ? 'opacity-60 pointer-events-none' : ''}`}>

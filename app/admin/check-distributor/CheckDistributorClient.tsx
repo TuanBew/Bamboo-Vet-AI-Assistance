@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import type {
   CheckDistributorData,
   CheckDistributorFilters,
@@ -103,18 +103,21 @@ export function CheckDistributorClient({
   // Pivot table data mapping
   // ---------------------------------------------------------------------------
 
-  const pivotRows = data.distributors.data.map(d => ({
-    id: d.distributor_id,
-    label: d.distributor_name,
-    dimColumns: {
-      region: d.region,
-      zone: d.zone,
-      province: d.province,
-      distributor_code: d.distributor_code,
-      distributor_name: d.distributor_name,
-    },
-    values: d.monthly_data,
-  }))
+  const pivotRows = useMemo(
+    () => data.distributors.data.map(d => ({
+      id: d.distributor_id,
+      label: d.distributor_name,
+      dimColumns: {
+        region: d.region,
+        zone: d.zone,
+        province: d.province,
+        distributor_code: d.distributor_code,
+        distributor_name: d.distributor_name,
+      },
+      values: d.monthly_data,
+    })),
+    [data.distributors.data]
+  )
 
   const monthColumns = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
