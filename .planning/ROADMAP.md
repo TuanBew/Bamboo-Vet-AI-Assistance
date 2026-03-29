@@ -173,12 +173,12 @@ Plans:
 
 **Context**: `.planning/phases/08-dashboard-sales-rebuild/08-CONTEXT.md`
 
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 - [ ] 08-01-PLAN.md — Migration 011 (staff_id + supplier_id FK) + seed script staff_id assignment + delete check-users/check-clinics files + update AdminSidebar + VI dictionary update
 - [ ] 08-02-PLAN.md — Dashboard service layer complete rewrite (lib/admin/services/dashboard.ts) + API route rewrite with new filter params
-- [ ] 08-03-PLAN.md — DashboardClient rebuild: page.tsx/Loader/Skeleton + filter bar + Tong quan section + Chi so tap trung section (daily chart + metrics box + pie charts + KPI row)
+- [x] 08-03-PLAN.md — DashboardClient rebuild: page.tsx/Loader/Skeleton + filter bar + Tong quan section + Chi so tap trung section (daily chart + metrics box + pie charts + KPI row)
 - [ ] 08-04-PLAN.md — DashboardClient: Nhan vien section (staff table + sparklines + stacked bars) + Khach hang section (radar + count + map) + Top 10 section + human verification checkpoint
 
 ## Progress
@@ -195,6 +195,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Check Customers + Check Distributor | 5/5 | Complete |  |
 | 6. Security & Polish | 7/7 | Complete |  |
 | 7. Performance Optimization | 4/4 | Complete |  |
-| 8. Dashboard Sales Rebuild | 2/4 | In Progress|  |
+| 8. Dashboard Sales Rebuild | 3/4 | In Progress|  |
 
 *Phase 3 dashboard (DASH-01--DASH-06) built for wrong domain (chatbot analytics). Phase 8 corrects this.

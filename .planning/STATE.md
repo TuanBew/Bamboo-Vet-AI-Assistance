@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-03-29T12:07:12Z"
-last_activity: 2026-03-29 — Completed 08-02 dashboard service layer + API route rewrite for sales domain
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-03-29T12:12:28Z"
+last_activity: 2026-03-29 — Completed 08-03 DashboardClient rebuild (filter bar + Tong Quan + Chi So Tap Trung)
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 35
-  completed_plans: 31
+  completed_plans: 32
 ---
 
 ---
@@ -220,6 +220,7 @@ Progress: [██████████] 97%
 | Phase 07 P06 | 4 | 2 tasks | 10 files |
 | Phase 08 P01 | 4 | 2 tasks | 13 files |
 | Phase 08 P02 | 6 | 2 tasks | 4 files |
+| Phase 08 P03 | 2 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -304,6 +305,8 @@ Recent decisions affecting current work:
 - [Phase 08]: Kept legacy chatbot dashboard VI keys with deprecation comment to avoid breaking DashboardClient.tsx
 - [Phase 08]: Used classification column for nganh_hang filter (actual DB schema) instead of plan's industry column name
 - [Phase 08]: DashboardClient.tsx type errors accepted -- old client references chatbot types, will be rewritten in Plan 03+
+- [Phase 08]: DashboardClient filter bar uses inline selects + Search button (not FilterBar component or onChange auto-refetch)
+- [Phase 08]: Forecast chart shows both ban_hang and nhap_hang forecast lines with bridge point for dashed line continuity
 
 ### Pending Todos
 
@@ -317,6 +320,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T12:07:12Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-03-29T12:12:28Z
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
