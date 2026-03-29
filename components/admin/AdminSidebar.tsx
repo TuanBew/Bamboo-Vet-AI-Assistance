@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, Warehouse, Users,
-  Building2, UserCheck, Settings, MessageSquare, Hospital,
+  Building2, UserCheck, Settings,
   type LucideIcon,
 } from 'lucide-react'
 import { VI } from '@/lib/i18n/vietnamese'
@@ -35,8 +35,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/admin/check-customers', label: VI.nav.checkCustomers, icon: Building2 },
       { href: '/admin/check-distributor', label: VI.nav.checkDistributor, icon: UserCheck },
-      { href: '/admin/check-users', label: VI.nav.checkUsers, icon: MessageSquare },
-      { href: '/admin/check-clinics', label: VI.nav.checkClinics, icon: Hospital },
     ],
   },
   {
