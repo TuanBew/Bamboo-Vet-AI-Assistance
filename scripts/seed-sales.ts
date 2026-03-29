@@ -480,6 +480,68 @@ async function seedCustomerPurchases(
 }
 
 // ---------------------------------------------------------------------------
+// Step 6: Assign staff_id to customer_purchases (idempotent)
+// ---------------------------------------------------------------------------
+
+async function assignStaffIdToPurchases() {
+  console.log('\n[6/6] Assigning staff_id to customer_purchases...')
+
+  // 1. Fetch all distributor_staff rows
+  const { data: staffRows } = await supabase.from('distributor_staff').select('id, supplier_id')
+  if (!staffRows || staffRows.length === 0) {
+    console.log('  No distributor_staff rows found. Skipping staff_id assignment.')
+    return
+  }
+
+  // 2. Build Map of supplier_id -> staff_id[]
+  const staffBySupplier = new Map<string, string[]>()
+  for (const s of staffRows) {
+    const arr = staffBySupplier.get(s.supplier_id as string) ?? []
+    arr.push(s.id as string)
+    staffBySupplier.set(s.supplier_id as string, arr)
+  }
+
+  // 3. Fetch all customers to get customer_id -> supplier_id mapping
+  const { data: custRows } = await supabase.from('customers').select('id, supplier_id')
+  const custSupplierMap = new Map((custRows ?? []).map(c => [c.id as string, c.supplier_id as string]))
+
+  // 4. Fetch all customer_purchases that have staff_id IS NULL
+  const { data: purchRows } = await supabase
+    .from('customer_purchases')
+    .select('id, customer_id')
+    .is('staff_id', null)
+
+  if (!purchRows || purchRows.length === 0) {
+    console.log('  All customer_purchases already have staff_id. Skipping.')
+    return
+  }
+
+  // 5. Deterministically assign a staff_id using detHash
+  const updates: Array<{ id: string; staff_id: string | null }> = []
+  for (let i = 0; i < purchRows.length; i++) {
+    const p = purchRows[i]
+    const supplierId = custSupplierMap.get(p.customer_id as string) ?? ''
+    const staffList = staffBySupplier.get(supplierId) ?? []
+    const staffId = staffList.length > 0
+      ? staffList[Math.floor(detHash(i) * staffList.length)]
+      : null
+    if (staffId) updates.push({ id: p.id as string, staff_id: staffId })
+  }
+
+  // 6. Batch update using individual .update() calls
+  console.log(`  Assigning staff_id to ${updates.length} customer_purchases...`)
+  let assigned = 0
+  for (const u of updates) {
+    const { error } = await supabase
+      .from('customer_purchases')
+      .update({ staff_id: u.staff_id })
+      .eq('id', u.id)
+    if (!error) assigned++
+  }
+  console.log(`  Assigned staff_id to ${assigned} rows`)
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -550,6 +612,9 @@ async function main() {
     price: Number(p.unit_price),
   }))
   await seedCustomerPurchases(allCustomerIds, productList)
+
+  // Step 6: Assign staff_id to customer_purchases
+  await assignStaffIdToPurchases()
 
   // Final counts
   console.log('\n=== Final Counts ===')
