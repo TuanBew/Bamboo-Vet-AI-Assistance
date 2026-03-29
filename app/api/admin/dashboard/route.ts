@@ -7,12 +7,14 @@ export async function GET(request: NextRequest) {
   if (auth instanceof NextResponse) return auth
 
   const { searchParams } = new URL(request.url)
+  const npp = searchParams.get('npp') || ''
   const month = searchParams.get('month') || new Date().toISOString().slice(0, 7)
-  const province = searchParams.get('province') || ''
-  const clinic_type = searchParams.get('clinic_type') || ''
+  const nganhHang = searchParams.get('nganhHang') || ''
+  const thuongHieu = searchParams.get('thuongHieu') || ''
+  const kenh = searchParams.get('kenh') || 'le'
 
   try {
-    const data = await getDashboardData({ month, province, clinic_type })
+    const data = await getDashboardData({ npp, month, nganhHang, thuongHieu, kenh })
     return NextResponse.json(data)
   } catch (error) {
     console.error('Dashboard API error:', error)
