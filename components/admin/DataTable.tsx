@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, memo } from 'react'
 import { addVietnameseFont } from '@/lib/pdf/vietnamese-font'
 import { VI } from '@/lib/i18n/vietnamese'
 import {
@@ -73,7 +73,7 @@ function flattenForExport<T>(data: T[], columns: DataTableColumn<T>[]): Record<s
 // Component
 // ---------------------------------------------------------------------------
 
-export function DataTable<T extends Record<string, unknown>>({
+function DataTableInner<T extends Record<string, unknown>>({
   data,
   columns,
   exportConfig,
@@ -463,3 +463,6 @@ export function DataTable<T extends Record<string, unknown>>({
     </div>
   )
 }
+
+// Preserve generic type parameter through memo wrapper
+export const DataTable = memo(DataTableInner) as typeof DataTableInner
