@@ -1,5 +1,6 @@
-import { getKhachHangData } from '@/lib/admin/services/khach-hang'
-import { KhachHangClient } from './KhachHangClient'
+import { Suspense } from 'react'
+import { KhachHangLoader } from './KhachHangLoader'
+import { KhachHangSkeleton } from './KhachHangSkeleton'
 
 export default async function AdminKhachHangPage({
   searchParams,
@@ -8,6 +9,10 @@ export default async function AdminKhachHangPage({
 }) {
   const params = await searchParams
   const npp = params.npp || ''
-  const data = await getKhachHangData({ npp })
-  return <KhachHangClient initialData={data} initialFilters={{ npp }} />
+
+  return (
+    <Suspense fallback={<KhachHangSkeleton />}>
+      <KhachHangLoader filters={{ npp }} />
+    </Suspense>
+  )
 }

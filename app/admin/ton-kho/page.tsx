@@ -1,5 +1,6 @@
-import { getTonKhoData } from '@/lib/admin/services/ton-kho'
-import { TonKhoClient } from './TonKhoClient'
+import { Suspense } from 'react'
+import { TonKhoLoader } from './TonKhoLoader'
+import { TonKhoSkeleton } from './TonKhoSkeleton'
 
 export default async function AdminTonKhoPage({
   searchParams,
@@ -11,7 +12,9 @@ export default async function AdminTonKhoPage({
   const nhom = params.nhom || ''
   const search = params.search || ''
 
-  const data = await getTonKhoData({ snapshot_date, nhom, search })
-
-  return <TonKhoClient initialData={data} initialFilters={{ snapshot_date, nhom, search }} />
+  return (
+    <Suspense fallback={<TonKhoSkeleton />}>
+      <TonKhoLoader filters={{ snapshot_date, nhom, search }} />
+    </Suspense>
+  )
 }
