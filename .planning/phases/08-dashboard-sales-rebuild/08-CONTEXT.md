@@ -36,13 +36,7 @@ Match reference exactly:
 - All filters are applied server-side when fetching data
 
 ### Section 1 — AI Phân Tích Panel
-- Include: **rule-based computed insights** (no LLM, no Claude API)
-- Shows 3-5 bullet points computed from real data:
-  - YoY revenue comparison (this year-to-date vs same period last year, % change)
-  - Current month vs same month last year (nhập hàng + bán hàng)
-  - Trend signal: "Doanh số đang có xu hướng tăng/giảm" based on last 3-month slope
-  - Top performing staff or product for the month (if available)
-- Rendered as a collapsible panel with "Ai phân tích" header and info icon (ℹ)
+- **Omit entirely.** Do not implement the AI phân tích panel.
 
 ### Section 2 — Tổng Quan
 Two charts side by side:
