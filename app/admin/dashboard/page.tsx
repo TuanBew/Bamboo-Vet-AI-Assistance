@@ -13,7 +13,7 @@ export default async function AdminDashboardPage({
     month: params.month || new Date().toISOString().slice(0, 7),
     nganhHang: params.nganhHang || '',
     thuongHieu: params.thuongHieu || '',
-    kenh: params.kenh || 'le',   // default = Kenh le per spec
+    kenh: params.kenh || '',
   }
 
   return (

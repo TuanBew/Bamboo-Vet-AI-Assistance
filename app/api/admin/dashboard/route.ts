@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const month = searchParams.get('month') || new Date().toISOString().slice(0, 7)
   const nganhHang = searchParams.get('nganhHang') || ''
   const thuongHieu = searchParams.get('thuongHieu') || ''
-  const kenh = searchParams.get('kenh') || 'le'
+  const kenh = searchParams.get('kenh') || ''
 
   try {
     const data = await getDashboardData({ npp, month, nganhHang, thuongHieu, kenh })
