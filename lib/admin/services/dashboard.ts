@@ -607,9 +607,9 @@ export async function getDashboardData(
     .map(([type, ban_hang]) => ({ type, ban_hang }))
     .sort((a, b) => b.ban_hang - a.ban_hang)
 
-  // Customer count by type_name (all-time, unique customers)
+  // Customer count by type_name (month-scoped, unique customers)
   const typeCustomerMap = new Map<string, Set<string>>()
-  for (const row of allDoorRows) {
+  for (const row of monthDoorRows) {
     const type = row.type_name || 'Khac'
     if (!typeCustomerMap.has(type)) typeCustomerMap.set(type, new Set())
     typeCustomerMap.get(type)!.add(row.customer_key)
