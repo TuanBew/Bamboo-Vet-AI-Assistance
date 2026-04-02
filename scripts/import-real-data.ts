@@ -152,9 +152,9 @@ const ARSALESP_COL_MAP: Record<string, string> = {
 
 // ── Table family detection ────────────────────────────────────────────────────
 
-type TableFamily = 'door' | 'dpur' | 'inloc' | 'product' | 'arsalesp' | null
+type TableFamily = 'door' | 'dpur' | 'inloc' | 'product' | 'arsalesp'
 
-function getTableFamily(mysqlTable: string): TableFamily {
+function getTableFamily(mysqlTable: string): TableFamily | null {
   if (mysqlTable === '_door' || /^_door\d+$/.test(mysqlTable)) return 'door'
   if (mysqlTable === '_dpur' || /^_dpur\d+$/.test(mysqlTable)) return 'dpur'
   if (mysqlTable === '_inloc' || /^_inloc\d+$/.test(mysqlTable)) return 'inloc'
@@ -170,157 +170,145 @@ function getColMap(family: TableFamily): Record<string, string> {
     case 'inloc': return INLOC_COL_MAP
     case 'product': return PRODUCT_COL_MAP
     case 'arsalesp': return ARSALESP_COL_MAP
-    default: return {}
   }
 }
 
-// ── MySQL value parser ────────────────────────────────────────────────────────
+// ── MySQL row parser ──────────────────────────────────────────────────────────
 
 /**
- * Parse the VALUES portion of a MySQL INSERT line.
- * Handles multi-row VALUES: (row1), (row2), ...;
- * Returns array of raw string arrays per row.
+ * Parse a single VALUES row string like: ('val1', NULL, 42, 'val''s')
+ * Returns array of raw token strings.
  */
-function parseValuesSection(valuesStr: string): string[][] {
-  const rows: string[][] = []
+function parseRow(line: string): string[] | null {
+  // Find the opening paren (the line starts with the row, possibly leading whitespace)
   let i = 0
-  const len = valuesStr.length
+  const len = line.length
+
+  // skip to first '('
+  while (i < len && line[i] !== '(') i++
+  if (i >= len) return null
+  i++ // skip '('
+
+  const fields: string[] = []
+  let current = ''
+  let inString = false
+  let escaped = false
 
   while (i < len) {
-    // find opening paren
-    while (i < len && valuesStr[i] !== '(') i++
-    if (i >= len) break
-    i++ // skip '('
+    const ch = line[i]
 
-    const fields: string[] = []
-    let current = ''
-    let inString = false
-    let stringChar = ''
-    let escaped = false
+    if (escaped) {
+      current += ch
+      escaped = false
+      i++
+      continue
+    }
 
-    while (i < len) {
-      const ch = valuesStr[i]
-
-      if (escaped) {
-        current += ch
-        escaped = false
-        i++
-        continue
-      }
-
+    if (inString) {
       if (ch === '\\') {
         escaped = true
         current += ch
         i++
         continue
       }
-
-      if (inString) {
-        if (ch === stringChar) {
-          // check for doubled-quote escape ''
-          if (i + 1 < len && valuesStr[i + 1] === stringChar) {
-            current += ch
-            i += 2
-            continue
-          }
-          inString = false
-          current += ch
-          i++
+      if (ch === "'") {
+        // check for '' (doubled quote escape)
+        if (i + 1 < len && line[i + 1] === "'") {
+          current += "''"
+          i += 2
           continue
         }
+        // end of string
         current += ch
+        inString = false
         i++
         continue
       }
-
-      if (ch === "'" || ch === '"') {
-        inString = true
-        stringChar = ch
-        current += ch
-        i++
-        continue
-      }
-
-      if (ch === ',' ) {
-        fields.push(current.trim())
-        current = ''
-        i++
-        continue
-      }
-
-      if (ch === ')') {
-        fields.push(current.trim())
-        rows.push(fields)
-        i++
-        break
-      }
-
       current += ch
       i++
+      continue
     }
+
+    // Not in string
+    if (ch === "'") {
+      inString = true
+      current += ch
+      i++
+      continue
+    }
+
+    if (ch === ',') {
+      fields.push(current.trim())
+      current = ''
+      i++
+      continue
+    }
+
+    if (ch === ')') {
+      fields.push(current.trim())
+      return fields
+    }
+
+    current += ch
+    i++
   }
 
-  return rows
+  // If we reach end of string without finding closing ), partial parse
+  fields.push(current.trim())
+  return fields
 }
 
-/**
- * Convert a raw MySQL field string to a JS value suitable for Supabase.
- */
-function toJsValue(raw: string, pgCol: string): unknown {
-  if (raw === 'NULL') return null
+// ── Value conversion ──────────────────────────────────────────────────────────
 
-  // Unquoted numbers
-  if (/^-?\d+(\.\d+)?$/.test(raw)) {
-    // boolean columns
-    if (pgCol === 'shop_online' || pgCol === 'none_incentive' || pgCol === 'active' || pgCol === 'is_lot_date_manager') {
-      return raw === '1'
-    }
-    return Number(raw)
+// Only truly boolean PG columns (bool type). smallint and varchar cols stay as numbers/strings.
+const BOOL_COLS = new Set(['shop_online', 'active'])
+const DATE_COLS = new Set(['off_date', 'pur_date', 'inv_date', 'ship_date'])
+
+function toJsValue(raw: string, pgCol: string): unknown {
+  const trimmed = raw.trim()
+
+  if (trimmed === 'NULL') return null
+
+  // Unquoted number
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+    if (BOOL_COLS.has(pgCol)) return trimmed === '1'
+    return Number(trimmed)
   }
 
   // Quoted string
-  if ((raw.startsWith("'") && raw.endsWith("'"))) {
-    let unquoted = raw.slice(1, -1)
-    // Unescape MySQL escape sequences
-    unquoted = unquoted
-      .replace(/\\'/g, "'")
-      .replace(/\\"/g, '"')
+  if (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length >= 2) {
+    let s = trimmed.slice(1, -1)
+    // Unescape MySQL sequences
+    s = s
       .replace(/\\n/g, '\n')
       .replace(/\\r/g, '\r')
       .replace(/\\t/g, '\t')
+      .replace(/\\'/g, "'")
+      .replace(/\\"/g, '"')
       .replace(/\\\\/g, '\\')
       .replace(/''/g, "'")
 
     // Invalid date sentinel
-    if (unquoted === '0000-00-00' || unquoted === '0000-00-00 00:00:00') return null
+    if (s === '0000-00-00' || s === '0000-00-00 00:00:00') return null
 
-    // Boolean columns that arrived as string '0'/'1'
-    if (pgCol === 'shop_online' || pgCol === 'none_incentive' || pgCol === 'active' || pgCol === 'is_lot_date_manager') {
-      return unquoted === '1'
-    }
-
-    return unquoted
+    if (BOOL_COLS.has(pgCol)) return s === '1'
+    return s
   }
 
-  return raw
+  // Fallback: return as-is (shouldn't happen with clean MySQL dumps)
+  return trimmed === 'NULL' ? null : trimmed
 }
 
-// ── Batch upsert ──────────────────────────────────────────────────────────────
+// ── Batch insert ──────────────────────────────────────────────────────────────
 
-const DATE_COLS = new Set(['off_date', 'pur_date', 'inv_date', 'ship_date'])
-
-async function upsertBatch(
-  table: string,
-  family: TableFamily,
-  colMap: Record<string, string>,
+async function insertBatch(
+  table: TableFamily,
   mysqlCols: string[],
+  colMap: Record<string, string>,
   valueRows: string[][]
-): Promise<{ inserted: number; skipped: number; errors: string[] }> {
-  const errors: string[] = []
-  let skipped = 0
-  const pgCols = mysqlCols.map(c => colMap[c]).filter(Boolean)
-
+): Promise<{ inserted: number; skipped: number; errorMsg: string | null }> {
   const rows: Record<string, unknown>[] = []
+  let skipped = 0
 
   for (const rawFields of valueRows) {
     const row: Record<string, unknown> = {}
@@ -329,12 +317,11 @@ async function upsertBatch(
     for (let i = 0; i < mysqlCols.length; i++) {
       const mysqlCol = mysqlCols[i]
       const pgCol = colMap[mysqlCol]
-      if (!pgCol) continue // column not in our schema
+      if (!pgCol) continue
 
       const raw = rawFields[i] ?? 'NULL'
       const val = toJsValue(raw, pgCol)
 
-      // Skip rows with invalid/missing date in primary date columns
       if (DATE_COLS.has(pgCol) && val === null) {
         skipRow = true
         break
@@ -343,28 +330,31 @@ async function upsertBatch(
       row[pgCol] = val
     }
 
-    if (skipRow) {
-      skipped++
-      continue
-    }
-
+    if (skipRow) { skipped++; continue }
     rows.push(row)
   }
 
-  if (rows.length === 0) return { inserted: 0, skipped, errors }
+  if (rows.length === 0) return { inserted: 0, skipped, errorMsg: null }
 
-  // Use upsert with ignoreDuplicates for idempotency
-  // door table has serial id — no conflict key needed; use insert with onConflict ignore
   const { error } = await supabase
     .from(table)
-    .upsert(rows, { onConflict: '', ignoreDuplicates: true })
+    .insert(rows)
 
   if (error) {
-    errors.push(`${table}: ${error.message} (batch of ${rows.length})`)
-    return { inserted: 0, skipped, errors }
+    // If duplicate key / unique violation, try upsert
+    if (error.code === '23505' || error.message.includes('duplicate')) {
+      const { error: upsertError } = await supabase
+        .from(table)
+        .upsert(rows, { ignoreDuplicates: true })
+      if (upsertError) {
+        return { inserted: 0, skipped, errorMsg: upsertError.message }
+      }
+      return { inserted: rows.length, skipped, errorMsg: null }
+    }
+    return { inserted: 0, skipped, errorMsg: error.message }
   }
 
-  return { inserted: rows.length, skipped, errors }
+  return { inserted: rows.length, skipped, errorMsg: null }
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -391,48 +381,51 @@ async function main() {
   const fileStream = fs.createReadStream(SQL_DUMP, { encoding: 'utf8' })
   const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity })
 
-  // State machine: we accumulate multi-line INSERT statements
-  let currentFamily: TableFamily = null
+  let currentFamily: TableFamily | null = null
   let currentMysqlCols: string[] = []
   let colMap: Record<string, string> = {}
   let pendingRows: string[][] = []
-  let lineBuffer = ''
   let linesProcessed = 0
-  let batchCount = 0
+  let totalBatches = 0
 
-  const flushBatch = async () => {
-    if (pendingRows.length === 0 || !currentFamily) return
-    const table = currentFamily
-    const result = await upsertBatch(table, currentFamily, colMap, currentMysqlCols, pendingRows)
-    stats[table].inserted += result.inserted
-    stats[table].skipped += result.skipped
-    stats[table].errors.push(...result.errors)
-    batchCount++
-    if (batchCount % 20 === 0) {
-      process.stdout.write(`\r  [${table}] inserted=${stats[table].inserted} skipped=${stats[table].skipped} batches=${batchCount}   `)
+  // Regex to detect INSERT header lines:
+  // INSERT INTO `tablename` (`col1`, `col2`, ...) VALUES
+  const INSERT_HEADER_RE = /^INSERT INTO `([^`]+)` \(([^)]+)\) VALUES$/i
+
+  const flushBatch = async (force = false) => {
+    if (!currentFamily || pendingRows.length === 0) return
+    if (!force && pendingRows.length < BATCH_SIZE) return
+
+    // Take up to BATCH_SIZE rows
+    const toInsert = pendingRows.splice(0, BATCH_SIZE)
+    const result = await insertBatch(currentFamily, currentMysqlCols, colMap, toInsert)
+
+    stats[currentFamily].inserted += result.inserted
+    stats[currentFamily].skipped += result.skipped
+    if (result.errorMsg) {
+      stats[currentFamily].errors.push(result.errorMsg.substring(0, 200))
     }
-    pendingRows = []
+    totalBatches++
+
+    if (totalBatches % 10 === 0) {
+      const s = stats[currentFamily]
+      process.stdout.write(
+        `\r  [${currentFamily}] inserted=${s.inserted.toLocaleString()} skipped=${s.skipped} errors=${s.errors.length} batches=${totalBatches}   `
+      )
+    }
   }
 
-  // Regex to detect the INSERT line header: INSERT INTO `tablename` (`col1`, ...) VALUES
-  const INSERT_HEADER_RE = /^INSERT INTO `([^`]+)` \(([^)]+)\) VALUES$/i
-  // A values row line ends with either ); or ),
-  const ROW_LINE_RE = /^\(.*\)[,;]\s*$/
-
-  for await (const rawLine of rl) {
+  for await (const line of rl) {
     linesProcessed++
-    const line = rawLine.trim()
 
-    // Skip empty / comment lines
-    if (!line || line.startsWith('--') || line.startsWith('/*') || line.startsWith('*/') || line.startsWith('/*!')) {
-      continue
-    }
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('--') || trimmed.startsWith('/*')) continue
 
     // Detect INSERT header
-    const headerMatch = line.match(INSERT_HEADER_RE)
+    const headerMatch = trimmed.match(INSERT_HEADER_RE)
     if (headerMatch) {
-      // flush any pending rows from previous INSERT block
-      await flushBatch()
+      // Flush any remaining rows from previous block
+      await flushBatch(true)
 
       const mysqlTable = headerMatch[1]
       const family = getTableFamily(mysqlTable)
@@ -443,63 +436,42 @@ async function main() {
 
       currentFamily = family
       colMap = getColMap(family)
-      // Parse column names from header
       currentMysqlCols = headerMatch[2]
         .split(',')
         .map(c => c.trim().replace(/^`|`$/g, ''))
-
-      lineBuffer = ''
+      pendingRows = []
       continue
     }
 
-    // If we're inside an INSERT block, accumulate value lines
+    // If not inside an INSERT block, skip
     if (!currentFamily) continue
 
-    // Accumulate the line into buffer (handles multi-line rows)
-    lineBuffer += (lineBuffer ? ' ' : '') + line
+    // This line should be a row: starts with ( and ends with ), or );
+    if (!trimmed.startsWith('(')) continue
 
-    // Try to extract complete rows from the buffer
-    // A row is: (field,...) followed by , or );
-    while (true) {
-      const rowMatch = lineBuffer.match(/^(\((?:[^()']|'(?:[^'\\]|\\.)*')*\))[,;](.*)$/)
-      if (!rowMatch) break
+    const fields = parseRow(trimmed)
+    if (!fields) continue
 
-      const rowStr = rowMatch[1]
-      lineBuffer = rowMatch[2].trim()
+    pendingRows.push(fields)
 
-      const parsed = parseValuesSection(rowStr)
-      if (parsed.length > 0) {
-        pendingRows.push(...parsed)
-      }
+    // Flush when batch is full
+    while (pendingRows.length >= BATCH_SIZE) {
+      await flushBatch(false)
+    }
 
-      if (pendingRows.length >= BATCH_SIZE) {
-        const toFlush = pendingRows.splice(0, BATCH_SIZE)
-        const table = currentFamily!
-        const result = await upsertBatch(table, currentFamily, colMap, currentMysqlCols, toFlush)
-        stats[table].inserted += result.inserted
-        stats[table].skipped += result.skipped
-        stats[table].errors.push(...result.errors)
-        batchCount++
-        if (batchCount % 20 === 0) {
-          process.stdout.write(`\r  [${table}] inserted=${stats[table].inserted} skipped=${stats[table].skipped} batches=${batchCount}   `)
-        }
-      }
-
-      // If line ended with ; the INSERT block is done
-      if (rowMatch[0].includes(');')) {
-        await flushBatch()
-        currentFamily = null
-        lineBuffer = ''
-        break
-      }
+    // Detect end of INSERT block (line ends with );)
+    if (trimmed.endsWith(');')) {
+      await flushBatch(true)
+      currentFamily = null
     }
   }
 
-  // Flush any remaining rows
-  await flushBatch()
+  // Final flush
+  await flushBatch(true)
 
   console.log('\n\n=== Import Complete ===')
   console.log(`Total lines processed: ${linesProcessed.toLocaleString()}`)
+  console.log(`Total batches sent:    ${totalBatches.toLocaleString()}`)
   console.log()
 
   for (const [table, s] of Object.entries(stats)) {
@@ -512,28 +484,22 @@ async function main() {
     }
   }
 
-  // Sample verification queries
-  console.log('\n=== Sample Verification ===')
+  // Verification: count rows in Supabase
+  console.log('\n=== Supabase Row Counts ===')
   for (const table of ['door', 'dpur', 'inloc', 'product', 'arsalesp'] as const) {
-    const { data: sampleData, error } = await supabase
+    const { count, error } = await supabase
       .from(table)
-      .select('id')
-      .limit(1)
-    const count = sampleData !== null ? 'present' : 0
+      .select('*', { count: 'exact', head: true })
     if (error) {
       console.log(`  ${table}: ERROR - ${error.message}`)
     } else {
-      console.log(`  ${table}: ${count?.toLocaleString() ?? 0} total rows in Supabase`)
+      console.log(`  ${table}: ${(count ?? 0).toLocaleString()} rows`)
     }
   }
 
   const hasErrors = Object.values(stats).some(s => s.errors.length > 0)
-  if (hasErrors) {
-    console.log('\nStatus: DONE_WITH_CONCERNS')
-    process.exit(1)
-  } else {
-    console.log('\nStatus: DONE')
-  }
+  console.log(hasErrors ? '\nStatus: DONE_WITH_CONCERNS' : '\nStatus: DONE')
+  if (hasErrors) process.exit(1)
 }
 
 main().catch(err => {
