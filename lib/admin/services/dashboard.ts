@@ -6,11 +6,11 @@ import { computeForecast } from '@/lib/admin/forecast'
 // ---------------------------------------------------------------------------
 
 export interface DashboardFilters {
-  npp: string           // supplier_id or '' for all
+  npp: string           // ship_from_code or '' for all
   month: string         // "2026-03" format (year-month)
-  nganhHang: string     // classification value or '' for all
-  thuongHieu: string    // manufacturer value or '' for all
-  kenh: string          // '' | 'le' | 'si'
+  nganhHang: string     // category value or '' for all
+  thuongHieu: string    // brand value or '' for all
+  kenh: string          // v_chanel value or '' for all
 }
 
 export interface DashboardData {
@@ -98,8 +98,6 @@ export interface DashboardData {
 // Constants
 // ---------------------------------------------------------------------------
 
-const KENH_LE_TYPES = ['TH', 'GSO', 'PHA', 'SPS']
-const KENH_SI_TYPES = ['WMO', 'PLT', 'BTS', 'OTHER']
 const DAY_THRESHOLD = 1_000_000
 
 // ---------------------------------------------------------------------------
@@ -115,33 +113,67 @@ function lastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate()
 }
 
-interface CustomerRow {
-  id: string
-  customer_type: string
+/** Revenue formula: off_amt + off_tax_amt - off_dsc, only for non-promo rows */
+function calcRevenue(row: { off_amt: number; off_tax_amt: number; off_dsc: number }): number {
+  return row.off_amt + row.off_tax_amt - row.off_dsc
+}
+
+/** Purchase value formula: pr_amt + pr_tax_amt */
+function calcPurchaseValue(row: { pr_amt: number; pr_tax_amt: number }): number {
+  return row.pr_amt + row.pr_tax_amt
+}
+
+/** Returns true if row is a promotion (should NOT count in revenue) */
+function isPromo(programId: string | null | undefined): boolean {
+  return programId !== null && programId !== undefined && programId !== ''
+}
+
+const toNameValue = (map: Map<string, number>) =>
+  Array.from(map.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+
+// ---------------------------------------------------------------------------
+// Door row type (sales)
+// ---------------------------------------------------------------------------
+interface DoorRow {
+  saleperson_key: string
+  saleperson_name: string
+  customer_key: string
   customer_name: string
-  latitude: number | null
-  longitude: number | null
-  supplier_id: string | null
+  type_name: string
+  sku_code: string
+  sku_name: string
+  category: string
+  brand: string
+  product: string
+  off_date: string
+  off_qty: number
+  off_amt: number
+  off_dsc: number
+  off_tax_amt: number
+  program_id: string | null
+  lat: number | null
+  long: number | null
+  year: number
 }
 
-async function getFilteredCustomerIds(
-  db: ReturnType<typeof createServiceClient>,
-  filters: DashboardFilters
-): Promise<{ customerIds: string[]; allCustomers: CustomerRow[] }> {
-  let query = db.from('customers').select('id, customer_type, customer_name, latitude, longitude, supplier_id')
-  if (filters.npp) query = query.eq('supplier_id', filters.npp)
-  if (filters.kenh === 'le') query = query.in('customer_type', KENH_LE_TYPES)
-  else if (filters.kenh === 'si') query = query.in('customer_type', KENH_SI_TYPES)
-  const { data } = await query
-  const customers = (data ?? []) as CustomerRow[]
-  return { customerIds: customers.map(c => c.id), allCustomers: customers }
-}
-
-interface ProductInfo {
-  product_name: string
-  product_group: string
-  classification: string
-  manufacturer: string
+// ---------------------------------------------------------------------------
+// Dpur row type (purchases)
+// ---------------------------------------------------------------------------
+interface DpurRow {
+  pur_date: string
+  pr_qty: number
+  pr_amt: number
+  pr_tax_amt: number
+  trntyp: string
+  sku_code: string
+  sku_name: string
+  category: string
+  brand: string
+  product: string
+  site_code: string
+  year: number
 }
 
 // ---------------------------------------------------------------------------
@@ -156,258 +188,115 @@ export async function getDashboardData(
   const startOfMonth = `${year}-${String(month).padStart(2, '0')}-01`
   const endOfMonth = `${year}-${String(month).padStart(2, '0')}-${lastDayOfMonth(year, month)}`
   const daysInMonth = lastDayOfMonth(year, month)
-
-  // Previous year same month
   const prevYear = year - 1
   const prevStartOfMonth = `${prevYear}-${String(month).padStart(2, '0')}-01`
   const prevEndOfMonth = `${prevYear}-${String(month).padStart(2, '0')}-${lastDayOfMonth(prevYear, month)}`
 
-  // -- Parallel fetches --
-  const { customerIds, allCustomers } = await getFilteredCustomerIds(db, filters)
+  // -----------------------------------------------------------------------
+  // 1. Filter Options: NPP list, nganh_hang, thuong_hieu, kenh
+  // -----------------------------------------------------------------------
+  const [nppResult, nganhResult, thuongHieuResult] = await Promise.all([
+    db.from('door').select('ship_from_code, ship_from_name').not('ship_from_code', 'is', null),
+    db.from('door').select('category').not('category', 'is', null),
+    db.from('door').select('brand').not('brand', 'is', null),
+  ])
 
-  // Products map
-  const { data: productRows } = await db
-    .from('products')
-    .select('id, product_name, product_group, classification, manufacturer')
-  const productMap = new Map<string, ProductInfo>(
-    (productRows ?? []).map(p => [
-      p.id as string,
-      {
-        product_name: p.product_name as string,
-        product_group: p.product_group as string,
-        classification: (p.classification as string) || '',
-        manufacturer: (p.manufacturer as string) || '',
-      },
-    ])
+  // NPP list — deduplicated by ship_from_code
+  const nppMap = new Map<string, string>()
+  for (const row of (nppResult.data ?? []) as Array<{ ship_from_code: string; ship_from_name: string }>) {
+    if (row.ship_from_code && !nppMap.has(row.ship_from_code)) {
+      nppMap.set(row.ship_from_code, row.ship_from_name || row.ship_from_code)
+    }
+  }
+  const npp_list = Array.from(nppMap.entries())
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  // nganh_hang list
+  const nganhSet = new Set<string>()
+  for (const row of (nganhResult.data ?? []) as Array<{ category: string }>) {
+    if (row.category) nganhSet.add(row.category)
+  }
+  const nganh_hang = Array.from(nganhSet).sort()
+
+  // thuong_hieu list
+  const thuongHieuSet = new Set<string>()
+  for (const row of (thuongHieuResult.data ?? []) as Array<{ brand: string }>) {
+    if (row.brand) thuongHieuSet.add(row.brand)
+  }
+  const thuong_hieu = Array.from(thuongHieuSet).sort()
+
+  const filter_options = { nganh_hang, thuong_hieu }
+
+  // -----------------------------------------------------------------------
+  // 2. Fetch ALL door rows (for yearly/monthly series, not month-scoped)
+  //    Apply npp / nganhHang / thuongHieu / kenh filters via Supabase
+  // -----------------------------------------------------------------------
+
+  // Fetch ALL door rows (all time, for yearly/monthly series)
+  let doorQuery = db.from('door').select(
+    'saleperson_key,saleperson_name,customer_key,customer_name,type_name,sku_code,sku_name,category,brand,product,off_date,off_qty,off_amt,off_dsc,off_tax_amt,program_id,lat,long,year'
   )
+  if (filters.npp)        doorQuery = doorQuery.eq('ship_from_code', filters.npp)
+  if (filters.nganhHang)  doorQuery = doorQuery.eq('category', filters.nganhHang)
+  if (filters.thuongHieu) doorQuery = doorQuery.eq('brand', filters.thuongHieu)
+  if (filters.kenh)       doorQuery = doorQuery.eq('v_chanel', filters.kenh)
 
-  // NPP list
-  const { data: supplierRows } = await db
-    .from('suppliers')
-    .select('id, supplier_name')
-    .order('supplier_name')
-  const npp_list = (supplierRows ?? []).map(s => ({
-    id: s.id as string,
-    name: s.supplier_name as string,
-  }))
+  const { data: allDoorData } = await doorQuery
+  const allDoorRows = (allDoorData ?? []) as DoorRow[]
 
-  // Filter options
-  const nganh_hang_set = new Set<string>()
-  const thuong_hieu_set = new Set<string>()
-  for (const p of productMap.values()) {
-    if (p.classification) nganh_hang_set.add(p.classification)
-    if (p.manufacturer) thuong_hieu_set.add(p.manufacturer)
-  }
-  const filter_options = {
-    nganh_hang: Array.from(nganh_hang_set).sort(),
-    thuong_hieu: Array.from(thuong_hieu_set).sort(),
-  }
+  // Fetch ALL dpur rows (all time, for yearly/monthly series)
+  let dpurQuery = db.from('dpur').select(
+    'pur_date,pr_qty,pr_amt,pr_tax_amt,trntyp,sku_code,sku_name,category,brand,product,site_code,year'
+  )
+  if (filters.npp)        dpurQuery = dpurQuery.eq('site_code', filters.npp)
+  if (filters.nganhHang)  dpurQuery = dpurQuery.eq('category', filters.nganhHang)
+  if (filters.thuongHieu) dpurQuery = dpurQuery.eq('brand', filters.thuongHieu)
 
-  // -----------------------------------------------------------------------
-  // Customer purchases (ban_hang) for selected month
-  // -----------------------------------------------------------------------
-  let monthPurchases: Array<{
-    customer_id: string
-    product_id: string
-    purchase_date: string
-    qty: number
-    total_value: number
-    staff_id: string | null
-  }> = []
+  const { data: allDpurData } = await dpurQuery
+  const allDpurRows = (allDpurData ?? []) as DpurRow[]
 
-  if (customerIds.length > 0) {
-    const { data: cpRows } = await db
-      .from('customer_purchases')
-      .select('customer_id, product_id, purchase_date, qty, total_value, staff_id')
-      .gte('purchase_date', startOfMonth)
-      .lte('purchase_date', endOfMonth)
-      .in('customer_id', customerIds)
+  // Month-scoped subsets
+  const monthDoorRows = allDoorRows.filter(r => r.off_date >= startOfMonth && r.off_date <= endOfMonth)
+  const monthDpurRows = allDpurRows.filter(r => r.pur_date >= startOfMonth && r.pur_date <= endOfMonth)
 
-    monthPurchases = (cpRows ?? []).map(r => ({
-      customer_id: r.customer_id as string,
-      product_id: r.product_id as string,
-      purchase_date: r.purchase_date as string,
-      qty: Number(r.qty),
-      total_value: Number(r.total_value),
-      staff_id: (r.staff_id as string) || null,
-    }))
-  }
-
-  // JS-side filter by nganhHang / thuongHieu
-  if (filters.nganhHang) {
-    monthPurchases = monthPurchases.filter(p => {
-      const prod = productMap.get(p.product_id)
-      return prod && prod.classification === filters.nganhHang
-    })
-  }
-  if (filters.thuongHieu) {
-    monthPurchases = monthPurchases.filter(p => {
-      const prod = productMap.get(p.product_id)
-      return prod && prod.manufacturer === filters.thuongHieu
-    })
-  }
+  // Previous year month subsets
+  const prevDoorRows = allDoorRows.filter(r => r.off_date >= prevStartOfMonth && r.off_date <= prevEndOfMonth)
+  const prevDpurRows = allDpurRows.filter(r => r.pur_date >= prevStartOfMonth && r.pur_date <= prevEndOfMonth)
 
   // -----------------------------------------------------------------------
-  // All customer purchases (for yearly/monthly series) - no month filter
+  // 3. Total SKU count from product table
   // -----------------------------------------------------------------------
-  let allPurchases: Array<{
-    customer_id: string
-    product_id: string
-    purchase_date: string
-    qty: number
-    total_value: number
-  }> = []
-
-  if (customerIds.length > 0) {
-    const { data: allCpRows } = await db
-      .from('customer_purchases')
-      .select('customer_id, product_id, purchase_date, qty, total_value')
-      .in('customer_id', customerIds)
-
-    allPurchases = (allCpRows ?? []).map(r => ({
-      customer_id: r.customer_id as string,
-      product_id: r.product_id as string,
-      purchase_date: r.purchase_date as string,
-      qty: Number(r.qty),
-      total_value: Number(r.total_value),
-    }))
-  }
-
-  // JS-side filter by nganhHang / thuongHieu for series
-  if (filters.nganhHang) {
-    allPurchases = allPurchases.filter(p => {
-      const prod = productMap.get(p.product_id)
-      return prod && prod.classification === filters.nganhHang
-    })
-  }
-  if (filters.thuongHieu) {
-    allPurchases = allPurchases.filter(p => {
-      const prod = productMap.get(p.product_id)
-      return prod && prod.manufacturer === filters.thuongHieu
-    })
-  }
+  const { count: skuTotalCount } = await db
+    .from('product')
+    .select('sku_code', { count: 'exact', head: true })
+  const sku_total = skuTotalCount ?? 0
 
   // -----------------------------------------------------------------------
-  // Purchase orders (nhap_hang) for selected month
-  // -----------------------------------------------------------------------
-  let orderQuery = db
-    .from('purchase_orders')
-    .select('id, supplier_id, order_date, total_amount')
-    .gte('order_date', startOfMonth)
-    .lte('order_date', endOfMonth)
-  if (filters.npp) orderQuery = orderQuery.eq('supplier_id', filters.npp)
-  const { data: monthOrderRows } = await orderQuery
-  const monthOrders = monthOrderRows ?? []
-  const monthOrderIds = monthOrders.map(o => o.id as string)
-
-  let monthOrderItems: Array<{
-    order_id: string
-    product_id: string
-    quantity: number
-    promo_qty: number
-    unit_price: number
-    subtotal: number
-  }> = []
-
-  if (monthOrderIds.length > 0) {
-    const { data: itemRows } = await db
-      .from('purchase_order_items')
-      .select('order_id, product_id, quantity, promo_qty, unit_price, subtotal')
-      .in('order_id', monthOrderIds)
-    monthOrderItems = (itemRows ?? []).map(r => ({
-      order_id: r.order_id as string,
-      product_id: r.product_id as string,
-      quantity: Number(r.quantity),
-      promo_qty: Number(r.promo_qty),
-      unit_price: Number(r.unit_price),
-      subtotal: Number(r.subtotal),
-    }))
-  }
-
-  // JS-side filter nhap items by nganhHang / thuongHieu
-  if (filters.nganhHang) {
-    monthOrderItems = monthOrderItems.filter(i => {
-      const prod = productMap.get(i.product_id)
-      return prod && prod.classification === filters.nganhHang
-    })
-  }
-  if (filters.thuongHieu) {
-    monthOrderItems = monthOrderItems.filter(i => {
-      const prod = productMap.get(i.product_id)
-      return prod && prod.manufacturer === filters.thuongHieu
-    })
-  }
-
-  // -----------------------------------------------------------------------
-  // All purchase orders (for yearly/monthly series) - no month filter
-  // -----------------------------------------------------------------------
-  let allOrderQuery = db
-    .from('purchase_orders')
-    .select('id, supplier_id, order_date, total_amount')
-  if (filters.npp) allOrderQuery = allOrderQuery.eq('supplier_id', filters.npp)
-  const { data: allOrderRows } = await allOrderQuery
-  const allOrders = allOrderRows ?? []
-  const allOrderIds = allOrders.map(o => o.id as string)
-
-  let allOrderItems: Array<{
-    order_id: string
-    product_id: string
-    quantity: number
-    promo_qty: number
-    unit_price: number
-    subtotal: number
-  }> = []
-
-  if (allOrderIds.length > 0) {
-    const { data: allItemRows } = await db
-      .from('purchase_order_items')
-      .select('order_id, product_id, quantity, promo_qty, unit_price, subtotal')
-      .in('order_id', allOrderIds)
-    allOrderItems = (allItemRows ?? []).map(r => ({
-      order_id: r.order_id as string,
-      product_id: r.product_id as string,
-      quantity: Number(r.quantity),
-      promo_qty: Number(r.promo_qty),
-      unit_price: Number(r.unit_price),
-      subtotal: Number(r.subtotal),
-    }))
-  }
-
-  if (filters.nganhHang) {
-    allOrderItems = allOrderItems.filter(i => {
-      const prod = productMap.get(i.product_id)
-      return prod && prod.classification === filters.nganhHang
-    })
-  }
-  if (filters.thuongHieu) {
-    allOrderItems = allOrderItems.filter(i => {
-      const prod = productMap.get(i.product_id)
-      return prod && prod.manufacturer === filters.thuongHieu
-    })
-  }
-
-  // Build order_id -> order_date map for all orders
-  const orderDateMap = new Map(allOrders.map(o => [o.id as string, o.order_date as string]))
-
-  // -----------------------------------------------------------------------
-  // h. Yearly series
+  // 4. Yearly series (NOT month-scoped)
   // -----------------------------------------------------------------------
   const yearlyBanMap = new Map<number, number>()
   const yearlyNhapMap = new Map<number, number>()
 
-  for (const p of allPurchases) {
-    const y = new Date(p.purchase_date).getFullYear()
-    yearlyBanMap.set(y, (yearlyBanMap.get(y) ?? 0) + p.total_value)
+  for (const row of allDoorRows) {
+    if (isPromo(row.program_id)) continue
+    const y = row.year || new Date(row.off_date).getFullYear()
+    yearlyBanMap.set(y, (yearlyBanMap.get(y) ?? 0) + calcRevenue(row))
   }
-  for (const item of allOrderItems) {
-    const dateStr = orderDateMap.get(item.order_id)
-    if (!dateStr) continue
-    const y = new Date(dateStr).getFullYear()
-    yearlyNhapMap.set(y, (yearlyNhapMap.get(y) ?? 0) + item.subtotal)
+  for (const row of allDpurRows) {
+    const y = row.year || new Date(row.pur_date).getFullYear()
+    const val = calcPurchaseValue(row)
+    const current = yearlyNhapMap.get(y) ?? 0
+    if (row.trntyp === 'I') {
+      yearlyNhapMap.set(y, current + val)
+    } else if (row.trntyp === 'D') {
+      yearlyNhapMap.set(y, current - val)
+    }
   }
 
   const allYears = new Set([...yearlyBanMap.keys(), ...yearlyNhapMap.keys()])
-  for (let y = 2022; y <= 2026; y++) allYears.add(y)
+  const currentCalendarYear = new Date().getFullYear()
+  for (let y = currentCalendarYear - 3; y <= currentCalendarYear; y++) allYears.add(y)
   const yearly_series = Array.from(allYears)
     .sort()
     .map(y => ({
@@ -417,22 +306,27 @@ export async function getDashboardData(
     }))
 
   // -----------------------------------------------------------------------
-  // i. Monthly series + forecast
+  // 5. Monthly series + forecast (NOT month-scoped)
   // -----------------------------------------------------------------------
   const monthlyBanMap = new Map<string, number>()
   const monthlyNhapMap = new Map<string, number>()
 
-  for (const p of allPurchases) {
-    const d = new Date(p.purchase_date)
+  for (const row of allDoorRows) {
+    if (isPromo(row.program_id)) continue
+    const d = new Date(row.off_date)
     const key = `${d.getFullYear()}-${d.getMonth() + 1}`
-    monthlyBanMap.set(key, (monthlyBanMap.get(key) ?? 0) + p.total_value)
+    monthlyBanMap.set(key, (monthlyBanMap.get(key) ?? 0) + calcRevenue(row))
   }
-  for (const item of allOrderItems) {
-    const dateStr = orderDateMap.get(item.order_id)
-    if (!dateStr) continue
-    const d = new Date(dateStr)
+  for (const row of allDpurRows) {
+    const d = new Date(row.pur_date)
     const key = `${d.getFullYear()}-${d.getMonth() + 1}`
-    monthlyNhapMap.set(key, (monthlyNhapMap.get(key) ?? 0) + item.subtotal)
+    const current = monthlyNhapMap.get(key) ?? 0
+    const val = calcPurchaseValue(row)
+    if (row.trntyp === 'I') {
+      monthlyNhapMap.set(key, current + val)
+    } else if (row.trntyp === 'D') {
+      monthlyNhapMap.set(key, current - val)
+    }
   }
 
   const allMonthKeys = new Set([...monthlyBanMap.keys(), ...monthlyNhapMap.keys()])
@@ -443,7 +337,6 @@ export async function getDashboardData(
     })
     .sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month))
 
-  // Run forecast independently for ban and nhap
   const banForecast = computeForecast(
     monthlyArr.map(d => ({ year: d.year, month: d.month, query_count: d.ban_hang, session_count: 0 }))
   )
@@ -451,7 +344,6 @@ export async function getDashboardData(
     monthlyArr.map(d => ({ year: d.year, month: d.month, query_count: d.nhap_hang, session_count: 0 }))
   )
 
-  // Merge forecasts
   const monthlySeriesMap = new Map<string, { year: number; month: number; ban_hang: number; nhap_hang: number; is_forecast: boolean }>()
   for (const fp of banForecast) {
     const key = `${fp.year}-${fp.month}`
@@ -483,23 +375,25 @@ export async function getDashboardData(
     .sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month))
 
   // -----------------------------------------------------------------------
-  // j. Daily series for selected month
+  // 6. Daily series for selected month
   // -----------------------------------------------------------------------
   const dailyBanMap = new Map<number, number>()
   const dailyNhapMap = new Map<number, number>()
 
-  for (const p of monthPurchases) {
-    const day = new Date(p.purchase_date).getDate()
-    dailyBanMap.set(day, (dailyBanMap.get(day) ?? 0) + p.total_value)
+  for (const row of monthDoorRows) {
+    if (isPromo(row.program_id)) continue
+    const day = new Date(row.off_date).getDate()
+    dailyBanMap.set(day, (dailyBanMap.get(day) ?? 0) + calcRevenue(row))
   }
-
-  // Build month order_id -> order_date map for nhap daily
-  const monthOrderDateMap = new Map(monthOrders.map(o => [o.id as string, o.order_date as string]))
-  for (const item of monthOrderItems) {
-    const dateStr = monthOrderDateMap.get(item.order_id)
-    if (!dateStr) continue
-    const day = new Date(dateStr).getDate()
-    dailyNhapMap.set(day, (dailyNhapMap.get(day) ?? 0) + item.subtotal)
+  for (const row of monthDpurRows) {
+    const day = new Date(row.pur_date).getDate()
+    const current = dailyNhapMap.get(day) ?? 0
+    const val = calcPurchaseValue(row)
+    if (row.trntyp === 'I') {
+      dailyNhapMap.set(day, current + val)
+    } else if (row.trntyp === 'D') {
+      dailyNhapMap.set(day, current - val)
+    }
   }
 
   const daily_series: DashboardData['daily_series'] = []
@@ -512,69 +406,76 @@ export async function getDashboardData(
   }
 
   // -----------------------------------------------------------------------
-  // k. Metrics box
+  // 7. Metrics box (month-scoped)
   // -----------------------------------------------------------------------
-  const nhapHangMonth = monthOrderItems.reduce((s, i) => s + i.subtotal, 0)
-  const banHangMonth = monthPurchases.reduce((s, p) => s + p.total_value, 0)
-  const activeCustomerIds = new Set(monthPurchases.map(p => p.customer_id))
-  const soldProductIds = new Set(monthPurchases.map(p => p.product_id))
+  const banHangMonth = monthDoorRows
+    .filter(r => !isPromo(r.program_id))
+    .reduce((s, r) => s + calcRevenue(r), 0)
 
-  // Staff count for NPP
-  let nhanVienCount = 0
-  {
-    let staffQuery = db.from('distributor_staff').select('id', { count: 'exact', head: true })
-    if (filters.npp) staffQuery = staffQuery.eq('supplier_id', filters.npp)
-    const { count } = await staffQuery
-    nhanVienCount = count ?? 0
+  let nhapHangMonth = 0
+  for (const row of monthDpurRows) {
+    const val = calcPurchaseValue(row)
+    if (row.trntyp === 'I') nhapHangMonth += val
+    else if (row.trntyp === 'D') nhapHangMonth -= val
   }
+
+  const activeCustomerKeys = new Set(
+    monthDoorRows
+      .filter(r => !isPromo(r.program_id))
+      .map(r => r.customer_key)
+  )
+  const totalCustomerKeys = new Set(allDoorRows.map(r => r.customer_key))
+
+  const soldSkuCodes = new Set(
+    monthDoorRows.filter(r => !isPromo(r.program_id)).map(r => r.sku_code)
+  )
+
+  // Distinct saleperson_key in the selected month
+  const nhanVienInMonth = new Set(
+    monthDoorRows.filter(r => !isPromo(r.program_id)).map(r => r.saleperson_key)
+  )
 
   const metrics_box: DashboardData['metrics_box'] = {
     nhap_hang: nhapHangMonth,
     ban_hang: banHangMonth,
-    customers_active: activeCustomerIds.size,
-    customers_total: allCustomers.length,
-    sku_sold: soldProductIds.size,
-    sku_total: productMap.size,
-    nhan_vien: nhanVienCount,
+    customers_active: activeCustomerKeys.size,
+    customers_total: totalCustomerKeys.size,
+    sku_sold: soldSkuCodes.size,
+    sku_total: sku_total,
+    nhan_vien: nhanVienInMonth.size,
   }
 
   // -----------------------------------------------------------------------
-  // l. Pie charts
+  // 8. Pie charts (month-scoped)
   // -----------------------------------------------------------------------
   const pieNhapNganh = new Map<string, number>()
   const pieNhapNhom = new Map<string, number>()
   const pieNhapTH = new Map<string, number>()
 
-  for (const item of monthOrderItems) {
-    const prod = productMap.get(item.product_id)
-    if (!prod) continue
-    const nganh = prod.classification || 'Khac'
-    const nhom = prod.product_group || 'Khac'
-    const th = prod.manufacturer || 'Khac'
-    pieNhapNganh.set(nganh, (pieNhapNganh.get(nganh) ?? 0) + item.subtotal)
-    pieNhapNhom.set(nhom, (pieNhapNhom.get(nhom) ?? 0) + item.subtotal)
-    pieNhapTH.set(th, (pieNhapTH.get(th) ?? 0) + item.subtotal)
+  for (const row of monthDpurRows) {
+    const val = row.trntyp === 'I' ? calcPurchaseValue(row) : -calcPurchaseValue(row)
+    const nganh = row.category || 'Khac'
+    const nhom = row.product || 'Khac'
+    const th = row.brand || 'Khac'
+    pieNhapNganh.set(nganh, (pieNhapNganh.get(nganh) ?? 0) + val)
+    pieNhapNhom.set(nhom, (pieNhapNhom.get(nhom) ?? 0) + val)
+    pieNhapTH.set(th, (pieNhapTH.get(th) ?? 0) + val)
   }
 
   const pieBanNganh = new Map<string, number>()
   const pieBanNhom = new Map<string, number>()
   const pieBanTH = new Map<string, number>()
 
-  for (const p of monthPurchases) {
-    const prod = productMap.get(p.product_id)
-    if (!prod) continue
-    const nganh = prod.classification || 'Khac'
-    const nhom = prod.product_group || 'Khac'
-    const th = prod.manufacturer || 'Khac'
-    pieBanNganh.set(nganh, (pieBanNganh.get(nganh) ?? 0) + p.total_value)
-    pieBanNhom.set(nhom, (pieBanNhom.get(nhom) ?? 0) + p.total_value)
-    pieBanTH.set(th, (pieBanTH.get(th) ?? 0) + p.total_value)
+  for (const row of monthDoorRows) {
+    if (isPromo(row.program_id)) continue
+    const val = calcRevenue(row)
+    const nganh = row.category || 'Khac'
+    const nhom = row.product || 'Khac'
+    const th = row.brand || 'Khac'
+    pieBanNganh.set(nganh, (pieBanNganh.get(nganh) ?? 0) + val)
+    pieBanNhom.set(nhom, (pieBanNhom.get(nhom) ?? 0) + val)
+    pieBanTH.set(th, (pieBanTH.get(th) ?? 0) + val)
   }
-
-  const toNameValue = (map: Map<string, number>) =>
-    Array.from(map.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
 
   const pie_nhap: DashboardData['pie_nhap'] = {
     by_nganh: toNameValue(pieNhapNganh),
@@ -588,47 +489,37 @@ export async function getDashboardData(
   }
 
   // -----------------------------------------------------------------------
-  // m. KPI row
+  // 9. KPI row (month-scoped, with YoY comparison)
   // -----------------------------------------------------------------------
-  const slBan = monthPurchases.reduce((s, p) => s + p.qty, 0)
-  const slKm = monthOrderItems.reduce((s, i) => s + i.promo_qty, 0)
+  const slBan = monthDoorRows
+    .filter(r => !isPromo(r.program_id))
+    .reduce((s, r) => s + r.off_qty, 0)
 
-  // Distinct purchase transactions = distinct (customer_id, purchase_date) combos
-  const purchaseTransactions = new Set(
-    monthPurchases.map(p => `${p.customer_id}|${p.purchase_date}`)
+  // Promotional quantity sold (where program_id is set)
+  const slKm = monthDoorRows
+    .filter(r => isPromo(r.program_id))
+    .reduce((s, r) => s + r.off_qty, 0)
+
+  // Distinct (customer_key, off_date) combos as proxy for order count
+  const orderTransactions = new Set(
+    monthDoorRows
+      .filter(r => !isPromo(r.program_id))
+      .map(r => `${r.customer_key}|${r.off_date}`)
   )
-  const avgPerOrder = purchaseTransactions.size > 0
-    ? Math.round(banHangMonth / purchaseTransactions.size)
+  const avgPerOrder = orderTransactions.size > 0
+    ? Math.round(banHangMonth / orderTransactions.size)
     : 0
 
-  // Previous year same month
-  let prevYearBan = 0
+  // Previous year same month revenue
+  const prevYearBan = prevDoorRows
+    .filter(r => !isPromo(r.program_id))
+    .reduce((s, r) => s + calcRevenue(r), 0)
+
   let prevYearNhap = 0
-  if (customerIds.length > 0) {
-    const { data: prevCpRows } = await db
-      .from('customer_purchases')
-      .select('total_value')
-      .gte('purchase_date', prevStartOfMonth)
-      .lte('purchase_date', prevEndOfMonth)
-      .in('customer_id', customerIds)
-    prevYearBan = (prevCpRows ?? []).reduce((s, r) => s + Number(r.total_value), 0)
-  }
-  {
-    let prevOrderQuery = db
-      .from('purchase_orders')
-      .select('id')
-      .gte('order_date', prevStartOfMonth)
-      .lte('order_date', prevEndOfMonth)
-    if (filters.npp) prevOrderQuery = prevOrderQuery.eq('supplier_id', filters.npp)
-    const { data: prevOrderRows } = await prevOrderQuery
-    const prevOrderIds = (prevOrderRows ?? []).map(o => o.id as string)
-    if (prevOrderIds.length > 0) {
-      const { data: prevItemRows } = await db
-        .from('purchase_order_items')
-        .select('subtotal')
-        .in('order_id', prevOrderIds)
-      prevYearNhap = (prevItemRows ?? []).reduce((s, r) => s + Number(r.subtotal), 0)
-    }
+  for (const row of prevDpurRows) {
+    const val = calcPurchaseValue(row)
+    if (row.trntyp === 'I') prevYearNhap += val
+    else if (row.trntyp === 'D') prevYearNhap -= val
   }
 
   const kpi_row: DashboardData['kpi_row'] = {
@@ -642,140 +533,138 @@ export async function getDashboardData(
   }
 
   // -----------------------------------------------------------------------
-  // n. Staff list
+  // 10. Staff list (month-scoped, grouped by saleperson_key)
   // -----------------------------------------------------------------------
-  let staff_list: DashboardData['staff_list'] = []
-  {
-    let staffQuery = db.from('distributor_staff').select('id, staff_name, supplier_id')
-    if (filters.npp) staffQuery = staffQuery.eq('supplier_id', filters.npp)
-    const { data: staffRows } = await staffQuery
-    const staffMembers = staffRows ?? []
-
-    if (staffMembers.length > 0) {
-      const staffIds = staffMembers.map(s => s.id as string)
-
-      // Get purchases for these staff in selected month
-      let staffPurchaseQuery = db
-        .from('customer_purchases')
-        .select('customer_id, product_id, purchase_date, qty, total_value, staff_id')
-        .gte('purchase_date', startOfMonth)
-        .lte('purchase_date', endOfMonth)
-        .in('staff_id', staffIds)
-      const { data: staffPurchaseRows } = await staffPurchaseQuery
-
-      let staffPurchases = (staffPurchaseRows ?? []).map(r => ({
-        customer_id: r.customer_id as string,
-        product_id: r.product_id as string,
-        purchase_date: r.purchase_date as string,
-        qty: Number(r.qty),
-        total_value: Number(r.total_value),
-        staff_id: r.staff_id as string,
-      }))
-
-      // Apply product filters
-      if (filters.nganhHang) {
-        staffPurchases = staffPurchases.filter(p => {
-          const prod = productMap.get(p.product_id)
-          return prod && prod.classification === filters.nganhHang
-        })
-      }
-      if (filters.thuongHieu) {
-        staffPurchases = staffPurchases.filter(p => {
-          const prod = productMap.get(p.product_id)
-          return prod && prod.manufacturer === filters.thuongHieu
-        })
-      }
-
-      staff_list = staffMembers.map(staff => {
-        const sid = staff.id as string
-        const myPurchases = staffPurchases.filter(p => p.staff_id === sid)
-
-        const totalSales = myPurchases.reduce((s, p) => s + p.total_value, 0)
-        const transactions = new Set(myPurchases.map(p => `${p.customer_id}|${p.purchase_date}`))
-        const orderCount = transactions.size
-        const customerCount = new Set(myPurchases.map(p => p.customer_id)).size
-
-        // Daily sparkline
-        const dailyMap = new Map<number, number>()
-        for (const p of myPurchases) {
-          const day = new Date(p.purchase_date).getDate()
-          dailyMap.set(day, (dailyMap.get(day) ?? 0) + p.total_value)
-        }
-        const dailySparkline: number[] = []
-        let daysOver1m = 0
-        for (let d = 1; d <= daysInMonth; d++) {
-          const val = dailyMap.get(d) ?? 0
-          dailySparkline.push(val)
-          if (val > DAY_THRESHOLD) daysOver1m++
-        }
-
-        // by_nhom and by_thuong_hieu
-        const byNhom: Record<string, number> = {}
-        const byTH: Record<string, number> = {}
-        for (const p of myPurchases) {
-          const prod = productMap.get(p.product_id)
-          if (!prod) continue
-          const nhom = prod.product_group || 'Khac'
-          const th = prod.manufacturer || 'Khac'
-          byNhom[nhom] = (byNhom[nhom] ?? 0) + p.total_value
-          byTH[th] = (byTH[th] ?? 0) + p.total_value
-        }
-
-        return {
-          staff_id: sid,
-          staff_name: staff.staff_name as string,
-          total_sales: totalSales,
-          order_count: orderCount,
-          avg_per_order: orderCount > 0 ? Math.round(totalSales / orderCount) : 0,
-          customer_count: customerCount,
-          days_over_1m: daysOver1m,
-          daily_sparkline: dailySparkline,
-          by_nhom: byNhom,
-          by_thuong_hieu: byTH,
-        }
-      })
+  // Collect all unique sales people in the month
+  const staffKeyToName = new Map<string, string>()
+  for (const row of monthDoorRows) {
+    if (!staffKeyToName.has(row.saleperson_key)) {
+      staffKeyToName.set(row.saleperson_key, row.saleperson_name || row.saleperson_key)
     }
   }
 
+  const staff_list: DashboardData['staff_list'] = []
+  for (const [sid, sname] of staffKeyToName.entries()) {
+    const myRows = monthDoorRows.filter(r => r.saleperson_key === sid && !isPromo(r.program_id))
+
+    const totalSales = myRows.reduce((s, r) => s + calcRevenue(r), 0)
+    const transactions = new Set(myRows.map(r => `${r.customer_key}|${r.off_date}`))
+    const orderCount = transactions.size
+    const customerCount = new Set(myRows.map(r => r.customer_key)).size
+
+    // Daily sparkline
+    const dailyMap = new Map<number, number>()
+    for (const r of myRows) {
+      const day = new Date(r.off_date).getDate()
+      dailyMap.set(day, (dailyMap.get(day) ?? 0) + calcRevenue(r))
+    }
+    const dailySparkline: number[] = []
+    let daysOver1m = 0
+    for (let d = 1; d <= daysInMonth; d++) {
+      const val = dailyMap.get(d) ?? 0
+      dailySparkline.push(val)
+      if (val > DAY_THRESHOLD) daysOver1m++
+    }
+
+    // by_nhom (product group) and by_thuong_hieu (brand)
+    const byNhom: Record<string, number> = {}
+    const byTH: Record<string, number> = {}
+    for (const r of myRows) {
+      const nhom = r.product || 'Khac'
+      const th = r.brand || 'Khac'
+      byNhom[nhom] = (byNhom[nhom] ?? 0) + calcRevenue(r)
+      byTH[th] = (byTH[th] ?? 0) + calcRevenue(r)
+    }
+
+    staff_list.push({
+      staff_id: sid,
+      staff_name: sname,
+      total_sales: totalSales,
+      order_count: orderCount,
+      avg_per_order: orderCount > 0 ? Math.round(totalSales / orderCount) : 0,
+      customer_count: customerCount,
+      days_over_1m: daysOver1m,
+      daily_sparkline: dailySparkline,
+      by_nhom: byNhom,
+      by_thuong_hieu: byTH,
+    })
+  }
+
+  // Sort staff by total sales descending
+  staff_list.sort((a, b) => b.total_sales - a.total_sales)
+
   // -----------------------------------------------------------------------
-  // o. Customer section
+  // 11. Customer section (month-scoped)
   // -----------------------------------------------------------------------
-  // by_type_sales
+  // Revenue by type_name (store type)
   const typeSalesMap = new Map<string, number>()
-  for (const p of monthPurchases) {
-    const cust = allCustomers.find(c => c.id === p.customer_id)
-    if (!cust) continue
-    typeSalesMap.set(cust.customer_type, (typeSalesMap.get(cust.customer_type) ?? 0) + p.total_value)
+  for (const row of monthDoorRows) {
+    if (isPromo(row.program_id)) continue
+    const type = row.type_name || 'Khac'
+    typeSalesMap.set(type, (typeSalesMap.get(type) ?? 0) + calcRevenue(row))
   }
   const by_type_sales = Array.from(typeSalesMap.entries())
     .map(([type, ban_hang]) => ({ type, ban_hang }))
     .sort((a, b) => b.ban_hang - a.ban_hang)
 
-  // by_type_count
-  const typeCountMap = new Map<string, number>()
-  for (const c of allCustomers) {
-    typeCountMap.set(c.customer_type, (typeCountMap.get(c.customer_type) ?? 0) + 1)
+  // Customer count by type_name (all-time, unique customers)
+  const typeCustomerMap = new Map<string, Set<string>>()
+  for (const row of allDoorRows) {
+    const type = row.type_name || 'Khac'
+    if (!typeCustomerMap.has(type)) typeCustomerMap.set(type, new Set())
+    typeCustomerMap.get(type)!.add(row.customer_key)
   }
-  const by_type_count = Array.from(typeCountMap.entries())
-    .map(([type, count]) => ({ type, count }))
+  const by_type_count = Array.from(typeCustomerMap.entries())
+    .map(([type, keySet]) => ({ type, count: keySet.size }))
     .sort((a, b) => b.count - a.count)
 
-  // map_pins: customers with lat/lon
-  const customerMonthlyTotals = new Map<string, number>()
-  for (const p of monthPurchases) {
-    customerMonthlyTotals.set(p.customer_id, (customerMonthlyTotals.get(p.customer_id) ?? 0) + p.total_value)
+  // Map pins: customers with lat/long, value = revenue in selected month
+  const customerMonthlyTotals = new Map<string, { name: string; value: number; type: string; lat: number; long: number }>()
+  for (const row of monthDoorRows) {
+    if (isPromo(row.program_id)) continue
+    if (row.lat == null || row.long == null) continue
+    const key = row.customer_key
+    const existing = customerMonthlyTotals.get(key)
+    if (existing) {
+      existing.value += calcRevenue(row)
+    } else {
+      customerMonthlyTotals.set(key, {
+        name: row.customer_name,
+        value: calcRevenue(row),
+        type: row.type_name || 'Khac',
+        lat: Number(row.lat),
+        long: Number(row.long),
+      })
+    }
   }
 
-  const map_pins = allCustomers
-    .filter(c => c.latitude != null && c.longitude != null)
-    .map(c => ({
-      id: c.id,
-      latitude: Number(c.latitude),
-      longitude: Number(c.longitude),
-      label: c.customer_name,
-      popup: `${c.customer_name}: ${(customerMonthlyTotals.get(c.id) ?? 0).toLocaleString('vi-VN')} VND`,
-      customer_type: c.customer_type,
-    }))
+  // Also add customers with lat/long who have no sales this month (value = 0)
+  const seenCustomersInAllDoor = new Map<string, { name: string; type: string; lat: number; long: number }>()
+  for (const row of allDoorRows) {
+    if (row.lat == null || row.long == null) continue
+    if (!seenCustomersInAllDoor.has(row.customer_key)) {
+      seenCustomersInAllDoor.set(row.customer_key, {
+        name: row.customer_name,
+        type: row.type_name || 'Khac',
+        lat: Number(row.lat),
+        long: Number(row.long),
+      })
+    }
+  }
+
+  const map_pins: DashboardData['customer_section']['map_pins'] = []
+  for (const [key, info] of seenCustomersInAllDoor.entries()) {
+    const monthInfo = customerMonthlyTotals.get(key)
+    const value = monthInfo?.value ?? 0
+    map_pins.push({
+      id: key,
+      latitude: info.lat,
+      longitude: info.long,
+      label: info.name,
+      popup: `${info.name}: ${value.toLocaleString('vi-VN')} VND`,
+      customer_type: info.type,
+    })
+  }
 
   const customer_section: DashboardData['customer_section'] = {
     by_type_sales,
@@ -784,18 +673,17 @@ export async function getDashboardData(
   }
 
   // -----------------------------------------------------------------------
-  // p. Top 10
+  // 12. Top 10 (month-scoped)
   // -----------------------------------------------------------------------
-  // Top 10 customers by total_value in selected month
+  // Top 10 customers by revenue
   const custTotals = new Map<string, { name: string; total: number }>()
-  for (const p of monthPurchases) {
-    const cust = allCustomers.find(c => c.id === p.customer_id)
-    const name = cust?.customer_name ?? 'Unknown'
-    const existing = custTotals.get(p.customer_id)
+  for (const row of monthDoorRows) {
+    if (isPromo(row.program_id)) continue
+    const existing = custTotals.get(row.customer_key)
     if (existing) {
-      existing.total += p.total_value
+      existing.total += calcRevenue(row)
     } else {
-      custTotals.set(p.customer_id, { name, total: p.total_value })
+      custTotals.set(row.customer_key, { name: row.customer_name, total: calcRevenue(row) })
     }
   }
   const topCustomers = Array.from(custTotals.values())
@@ -803,16 +691,15 @@ export async function getDashboardData(
     .slice(0, 10)
     .map(c => ({ name: c.name, total_value: c.total }))
 
-  // Top 10 products by total_value in selected month
+  // Top 10 products (sku) by revenue
   const prodTotals = new Map<string, { name: string; total: number }>()
-  for (const p of monthPurchases) {
-    const prod = productMap.get(p.product_id)
-    const name = prod?.product_name ?? 'Unknown'
-    const existing = prodTotals.get(p.product_id)
+  for (const row of monthDoorRows) {
+    if (isPromo(row.program_id)) continue
+    const existing = prodTotals.get(row.sku_code)
     if (existing) {
-      existing.total += p.total_value
+      existing.total += calcRevenue(row)
     } else {
-      prodTotals.set(p.product_id, { name, total: p.total_value })
+      prodTotals.set(row.sku_code, { name: row.sku_name, total: calcRevenue(row) })
     }
   }
   const topProducts = Array.from(prodTotals.values())
