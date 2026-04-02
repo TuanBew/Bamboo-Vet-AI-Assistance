@@ -113,9 +113,9 @@ function lastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate()
 }
 
-/** Revenue formula: off_amt + off_tax_amt - off_dsc, only for non-promo rows */
-function calcRevenue(row: { off_amt: number; off_tax_amt: number; off_dsc: number }): number {
-  return row.off_amt + row.off_tax_amt - row.off_dsc
+/** Revenue formula: off_amt + off_tax_amt - off_dsc (off_dsc can be null) */
+function calcRevenue(row: { off_amt: number; off_tax_amt: number; off_dsc: number | null }): number {
+  return row.off_amt + row.off_tax_amt - (row.off_dsc ?? 0)
 }
 
 /** Purchase value formula: pr_amt + pr_tax_amt */
@@ -123,9 +123,9 @@ function calcPurchaseValue(row: { pr_amt: number; pr_tax_amt: number }): number 
   return row.pr_amt + row.pr_tax_amt
 }
 
-/** Returns true if row is a promotion (should NOT count in revenue) */
-function isPromo(programId: string | null | undefined): boolean {
-  return programId !== null && programId !== undefined && programId !== ''
+/** Free promotion: row was given at zero cost (off_amt = 0). Used for slKm count. */
+function isFreePromo(row: { off_amt: number }): boolean {
+  return row.off_amt === 0
 }
 
 const toNameValue = (map: Map<string, number>) =>
@@ -279,7 +279,6 @@ export async function getDashboardData(
   const yearlyNhapMap = new Map<number, number>()
 
   for (const row of allDoorRows) {
-    if (isPromo(row.program_id)) continue
     const y = row.year || new Date(row.off_date).getFullYear()
     yearlyBanMap.set(y, (yearlyBanMap.get(y) ?? 0) + calcRevenue(row))
   }
@@ -312,7 +311,6 @@ export async function getDashboardData(
   const monthlyNhapMap = new Map<string, number>()
 
   for (const row of allDoorRows) {
-    if (isPromo(row.program_id)) continue
     const d = new Date(row.off_date)
     const key = `${d.getFullYear()}-${d.getMonth() + 1}`
     monthlyBanMap.set(key, (monthlyBanMap.get(key) ?? 0) + calcRevenue(row))
@@ -381,7 +379,6 @@ export async function getDashboardData(
   const dailyNhapMap = new Map<number, number>()
 
   for (const row of monthDoorRows) {
-    if (isPromo(row.program_id)) continue
     const day = new Date(row.off_date).getDate()
     dailyBanMap.set(day, (dailyBanMap.get(day) ?? 0) + calcRevenue(row))
   }
@@ -408,9 +405,7 @@ export async function getDashboardData(
   // -----------------------------------------------------------------------
   // 7. Metrics box (month-scoped)
   // -----------------------------------------------------------------------
-  const banHangMonth = monthDoorRows
-    .filter(r => !isPromo(r.program_id))
-    .reduce((s, r) => s + calcRevenue(r), 0)
+  const banHangMonth = monthDoorRows.reduce((s, r) => s + calcRevenue(r), 0)
 
   let nhapHangMonth = 0
   for (const row of monthDpurRows) {
@@ -419,21 +414,12 @@ export async function getDashboardData(
     else if (row.trntyp === 'D') nhapHangMonth -= val
   }
 
-  const activeCustomerKeys = new Set(
-    monthDoorRows
-      .filter(r => !isPromo(r.program_id))
-      .map(r => r.customer_key)
-  )
+  const activeCustomerKeys = new Set(monthDoorRows.map(r => r.customer_key))
   const totalCustomerKeys = new Set(allDoorRows.map(r => r.customer_key))
-
-  const soldSkuCodes = new Set(
-    monthDoorRows.filter(r => !isPromo(r.program_id)).map(r => r.sku_code)
-  )
+  const soldSkuCodes = new Set(monthDoorRows.map(r => r.sku_code))
 
   // Distinct saleperson_key in the selected month
-  const nhanVienInMonth = new Set(
-    monthDoorRows.filter(r => !isPromo(r.program_id)).map(r => r.saleperson_key)
-  )
+  const nhanVienInMonth = new Set(monthDoorRows.map(r => r.saleperson_key))
 
   const metrics_box: DashboardData['metrics_box'] = {
     nhap_hang: nhapHangMonth,
@@ -467,7 +453,6 @@ export async function getDashboardData(
   const pieBanTH = new Map<string, number>()
 
   for (const row of monthDoorRows) {
-    if (isPromo(row.program_id)) continue
     const val = calcRevenue(row)
     const nganh = row.category || 'Khac'
     const nhom = row.product || 'Khac'
@@ -491,29 +476,25 @@ export async function getDashboardData(
   // -----------------------------------------------------------------------
   // 9. KPI row (month-scoped, with YoY comparison)
   // -----------------------------------------------------------------------
+  // Paid quantity (off_amt > 0) vs free promo quantity (off_amt = 0)
   const slBan = monthDoorRows
-    .filter(r => !isPromo(r.program_id))
+    .filter(r => !isFreePromo(r))
     .reduce((s, r) => s + r.off_qty, 0)
 
-  // Promotional quantity sold (where program_id is set)
   const slKm = monthDoorRows
-    .filter(r => isPromo(r.program_id))
+    .filter(r => isFreePromo(r))
     .reduce((s, r) => s + r.off_qty, 0)
 
   // Distinct (customer_key, off_date) combos as proxy for order count
   const orderTransactions = new Set(
-    monthDoorRows
-      .filter(r => !isPromo(r.program_id))
-      .map(r => `${r.customer_key}|${r.off_date}`)
+    monthDoorRows.map(r => `${r.customer_key}|${r.off_date}`)
   )
   const avgPerOrder = orderTransactions.size > 0
     ? Math.round(banHangMonth / orderTransactions.size)
     : 0
 
   // Previous year same month revenue
-  const prevYearBan = prevDoorRows
-    .filter(r => !isPromo(r.program_id))
-    .reduce((s, r) => s + calcRevenue(r), 0)
+  const prevYearBan = prevDoorRows.reduce((s, r) => s + calcRevenue(r), 0)
 
   let prevYearNhap = 0
   for (const row of prevDpurRows) {
@@ -545,7 +526,7 @@ export async function getDashboardData(
 
   const staff_list: DashboardData['staff_list'] = []
   for (const [sid, sname] of staffKeyToName.entries()) {
-    const myRows = monthDoorRows.filter(r => r.saleperson_key === sid && !isPromo(r.program_id))
+    const myRows = monthDoorRows.filter(r => r.saleperson_key === sid)
 
     const totalSales = myRows.reduce((s, r) => s + calcRevenue(r), 0)
     const transactions = new Set(myRows.map(r => `${r.customer_key}|${r.off_date}`))
@@ -599,7 +580,6 @@ export async function getDashboardData(
   // Revenue by type_name (store type)
   const typeSalesMap = new Map<string, number>()
   for (const row of monthDoorRows) {
-    if (isPromo(row.program_id)) continue
     const type = row.type_name || 'Khac'
     typeSalesMap.set(type, (typeSalesMap.get(type) ?? 0) + calcRevenue(row))
   }
@@ -621,7 +601,6 @@ export async function getDashboardData(
   // Map pins: customers with lat/long, value = revenue in selected month
   const customerMonthlyTotals = new Map<string, { name: string; value: number; type: string; lat: number; long: number }>()
   for (const row of monthDoorRows) {
-    if (isPromo(row.program_id)) continue
     if (row.lat == null || row.long == null) continue
     const key = row.customer_key
     const existing = customerMonthlyTotals.get(key)
@@ -678,7 +657,6 @@ export async function getDashboardData(
   // Top 10 customers by revenue
   const custTotals = new Map<string, { name: string; total: number }>()
   for (const row of monthDoorRows) {
-    if (isPromo(row.program_id)) continue
     const existing = custTotals.get(row.customer_key)
     if (existing) {
       existing.total += calcRevenue(row)
@@ -694,7 +672,6 @@ export async function getDashboardData(
   // Top 10 products (sku) by revenue
   const prodTotals = new Map<string, { name: string; total: number }>()
   for (const row of monthDoorRows) {
-    if (isPromo(row.program_id)) continue
     const existing = prodTotals.get(row.sku_code)
     if (existing) {
       existing.total += calcRevenue(row)
