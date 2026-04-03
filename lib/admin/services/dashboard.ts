@@ -142,7 +142,7 @@ interface DoorRow {
   saleperson_name: string
   customer_key: string
   customer_name: string
-  type_name: string
+  cust_class_name: string | null   // actual customer class: ĐẠI LÝ THÚ Y, CÔNG TY, TRẠI, etc.
   sku_code: string
   sku_name: string
   category: string
@@ -195,7 +195,7 @@ export async function getDashboardData(
   // 1. Build month-scoped queries with conditional filters
   // -----------------------------------------------------------------------
   let monthDoorQ = db.from('door')
-    .select('saleperson_key,saleperson_name,customer_key,customer_name,type_name,sku_code,sku_name,category,brand,product,off_date,off_qty,off_amt,off_dsc,off_tax_amt,lat,long')
+    .select('saleperson_key,saleperson_name,customer_key,customer_name,cust_class_name,sku_code,sku_name,category,brand,product,off_date,off_qty,off_amt,off_dsc,off_tax_amt,lat,long')
     .gte('off_date', startOfMonth)
     .lte('off_date', endOfMonth)
   if (npp)   monthDoorQ = monthDoorQ.eq('ship_from_code', npp)
@@ -250,7 +250,6 @@ export async function getDashboardData(
     prevDpurResult,
     skuTotalResult,
     totalCustomersResult,
-    locationResult,
   ] = await Promise.all([
     // Filter option lookups (distinct values from DB)
     db.rpc('dashboard_npp_list'),
@@ -275,9 +274,7 @@ export async function getDashboardData(
 
     // Total distinct customer count (all-time)
     db.rpc('dashboard_total_customer_count', { p_npp: npp, p_nganh: nganh, p_thuong_hieu: th, p_kenh: kenh }),
-
-    // Customer locations (for map pins)
-    db.rpc('dashboard_customers_with_location', { p_npp: npp, p_kenh: kenh }),
+    // Note: map pins are now computed from monthDoorRows (no separate RPC needed)
   ])
 
   // -----------------------------------------------------------------------
@@ -548,11 +545,12 @@ export async function getDashboardData(
   staff_list.sort((a, b) => b.total_sales - a.total_sales)
 
   // -----------------------------------------------------------------------
-  // 11. Customer section (month-scoped)
+  // 11. Customer section — uses cust_class_name (real store types)
+  //     Map pins computed directly from monthDoorRows (no separate RPC)
   // -----------------------------------------------------------------------
   const typeSalesMap = new Map<string, number>()
   for (const row of monthDoorRows) {
-    const type = row.type_name || 'Khac'
+    const type = row.cust_class_name || 'Khác'
     typeSalesMap.set(type, (typeSalesMap.get(type) ?? 0) + calcRevenue(row))
   }
   const by_type_sales = Array.from(typeSalesMap.entries())
@@ -561,7 +559,7 @@ export async function getDashboardData(
 
   const typeCustomerMap = new Map<string, Set<string>>()
   for (const row of monthDoorRows) {
-    const type = row.type_name || 'Khac'
+    const type = row.cust_class_name || 'Khác'
     if (!typeCustomerMap.has(type)) typeCustomerMap.set(type, new Set())
     typeCustomerMap.get(type)!.add(row.customer_key)
   }
@@ -569,31 +567,32 @@ export async function getDashboardData(
     .map(([type, keySet]) => ({ type, count: keySet.size }))
     .sort((a, b) => b.count - a.count)
 
-  // Map pins from RPC (distinct customers with lat/long)
-  const customerMonthlyRevenue = new Map<string, number>()
+  // Map pins: one pin per distinct active customer this month (with lat/long)
+  // Using a Map to keep only the last seen lat/long per customer
+  const customerInfoMap = new Map<string, { name: string; type: string; lat: number; long: number; revenue: number }>()
   for (const row of monthDoorRows) {
-    customerMonthlyRevenue.set(row.customer_key, (customerMonthlyRevenue.get(row.customer_key) ?? 0) + calcRevenue(row))
+    if (row.lat && row.long) {
+      const existing = customerInfoMap.get(row.customer_key)
+      customerInfoMap.set(row.customer_key, {
+        name: row.customer_name,
+        type: row.cust_class_name || 'Khác',
+        lat: row.lat,
+        long: row.long,
+        revenue: (existing?.revenue ?? 0) + calcRevenue(row),
+      })
+    }
   }
 
-  const locationRows = (locationResult.data ?? []) as Array<{
-    customer_key: string
-    customer_name: string
-    type_name: string
-    lat: number
-    long: number
-  }>
-
-  const map_pins: DashboardData['customer_section']['map_pins'] = locationRows.map(loc => {
-    const value = customerMonthlyRevenue.get(loc.customer_key) ?? 0
-    return {
-      id: loc.customer_key,
-      latitude: loc.lat,
-      longitude: loc.long,
-      label: loc.customer_name,
-      popup: `${loc.customer_name}: ${value.toLocaleString('vi-VN')} VND`,
-      customer_type: loc.type_name || 'Khac',
-    }
-  })
+  const map_pins: DashboardData['customer_section']['map_pins'] = Array.from(customerInfoMap.entries()).map(
+    ([key, info]) => ({
+      id: key,
+      latitude: info.lat,
+      longitude: info.long,
+      label: info.name,
+      popup: `${info.name}: ${info.revenue.toLocaleString('vi-VN')} VND`,
+      customer_type: info.type,
+    })
+  )
 
   const customer_section: DashboardData['customer_section'] = { by_type_sales, by_type_count, map_pins }
 

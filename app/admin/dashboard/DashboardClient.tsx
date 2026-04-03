@@ -23,9 +23,24 @@ const CHART_COLORS = ['#06b6d4', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8
 const AXIS_TICK = { fill: '#9ca3af', fontSize: 12 }
 const TOOLTIP_STYLE = { backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '6px' }
 const GRID_STYLE = { stroke: '#374151', strokeDasharray: '3 3' }
+// Colors for actual cust_class_name values from the door table
 const CUSTOMER_TYPE_COLORS: Record<string, string> = {
-  TH: '#06b6d4', GSO: '#3b82f6', PHA: '#10b981', SPS: '#f59e0b',
-  BTS: '#ef4444', OTHER: '#8b5cf6', PLT: '#ec4899', WMO: '#14b8a6',
+  'ĐẠI LÝ THÚ Y':    '#06b6d4',
+  'CÔNG TY':          '#3b82f6',
+  'TRẠI':             '#10b981',
+  'KH VÃNG LAI':      '#f59e0b',
+  'ĐẠI LÝ':          '#8b5cf6',
+  'Khác':             '#6b7280',
+  'ĐẠI LÝ THỦY SẢN': '#14b8a6',
+  'TRẠI GÀ':          '#f97316',
+  'TRẠI HEO':         '#ec4899',
+  'TRẠI TÔM':         '#6366f1',
+  'NHÂN VIÊN':        '#84cc16',
+  'MGFEED':           '#a78bfa',
+}
+
+function getCustomerTypeColor(type: string): string {
+  return CUSTOMER_TYPE_COLORS[type] ?? '#9ca3af'
 }
 
 // ---------------------------------------------------------------------------
@@ -652,7 +667,7 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
                 longitude: p.longitude,
                 label: p.label,
                 popupContent: p.popup,
-                color: CUSTOMER_TYPE_COLORS[p.customer_type] ?? '#06b6d4',
+                color: getCustomerTypeColor(p.customer_type),
               }))}
               className="h-[250px]"
             />
