@@ -18,6 +18,7 @@ export interface DashboardData {
   filter_options: {
     nganh_hang: string[]
     thuong_hieu: string[]
+    kenh_list: string[]
   }
   yearly_series: Array<{
     year: number
@@ -238,6 +239,7 @@ export async function getDashboardData(
     nppListResult,
     categoriesResult,
     brandsResult,
+    channelsResult,
     doorYearlyResult,
     doorMonthlyResult,
     dpurYearlyResult,
@@ -254,6 +256,7 @@ export async function getDashboardData(
     db.rpc('dashboard_npp_list'),
     db.rpc('dashboard_categories'),
     db.rpc('dashboard_brands'),
+    db.rpc('dashboard_channels'),
 
     // Yearly/monthly series — server-side GROUP BY aggregation
     db.rpc('dashboard_door_yearly',   { p_npp: npp, p_nganh: nganh, p_thuong_hieu: th, p_kenh: kenh }),
@@ -288,7 +291,8 @@ export async function getDashboardData(
 
   const nganh_hang = (categoriesResult.data ?? []).map((r: { category: string }) => r.category)
   const thuong_hieu = (brandsResult.data ?? []).map((r: { brand: string }) => r.brand)
-  const filter_options = { nganh_hang, thuong_hieu }
+  const kenh_list = (channelsResult.data ?? []).map((r: { v_chanel: string }) => r.v_chanel)
+  const filter_options = { nganh_hang, thuong_hieu, kenh_list }
 
   // -----------------------------------------------------------------------
   // 3. Yearly series from RPC results

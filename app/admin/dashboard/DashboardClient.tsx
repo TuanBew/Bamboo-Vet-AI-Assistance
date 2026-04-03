@@ -113,17 +113,16 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
     [data.yearly_series],
   )
 
-  // --- Tong Quan: forecast chart data with bridge point ---
+  // --- Tong Quan: forecast chart data — show only 2025 + 2026 with bridge point ---
   const forecastChartData = useMemo(() => {
-    return data.monthly_series.map((d, idx, arr) => {
+    const visible = data.monthly_series.filter(d => d.year >= 2025)
+    return visible.map((d, idx, arr) => {
       const label = `${String(d.year).slice(2)}/${String(d.month).padStart(2, '0')}`
       const isLastReal = !d.is_forecast && idx < arr.length - 1 && arr[idx + 1].is_forecast
-
       return {
         label,
         ban_real: d.is_forecast ? null : d.ban_hang,
         nhap_real: d.is_forecast ? null : d.nhap_hang,
-        // Bridge: last real point also gets forecast value so dashed line connects
         ban_forecast: d.is_forecast ? d.ban_hang : isLastReal ? d.ban_hang : null,
         nhap_forecast: d.is_forecast ? d.nhap_hang : isLastReal ? d.nhap_hang : null,
       }
@@ -181,13 +180,27 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
           ))}
         </select>
 
-        {/* Month */}
-        <input
-          type="month"
-          value={filters.month}
-          onChange={(e) => setFilters(f => ({ ...f, month: e.target.value }))}
-          className="bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 text-sm"
-        />
+        {/* Month — year + month dual selects, limited to 2022-2026 */}
+        <div className="flex gap-1">
+          <select
+            value={filters.month.split('-')[0]}
+            onChange={(e) => setFilters(f => ({ ...f, month: `${e.target.value}-${f.month.split('-')[1]}` }))}
+            className="bg-gray-800 text-white border border-gray-600 rounded-md px-2 py-2 text-sm"
+          >
+            {[2022, 2023, 2024, 2025, 2026].map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <select
+            value={filters.month.split('-')[1]}
+            onChange={(e) => setFilters(f => ({ ...f, month: `${f.month.split('-')[0]}-${e.target.value}` }))}
+            className="bg-gray-800 text-white border border-gray-600 rounded-md px-2 py-2 text-sm"
+          >
+            {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
+              <option key={m} value={m}>Tháng {Number(m)}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Nganh hang */}
         <select
@@ -213,15 +226,16 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
           ))}
         </select>
 
-        {/* Kenh */}
+        {/* Kenh — dynamic from DB */}
         <select
           value={filters.kenh}
           onChange={(e) => setFilters(f => ({ ...f, kenh: e.target.value }))}
           className="bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 text-sm"
         >
           <option value="">{VI.dashboard.allKenh}</option>
-          <option value="le">{VI.dashboard.kenhLe}</option>
-          <option value="si">{VI.dashboard.kenhSi}</option>
+          {data.filter_options.kenh_list.map(v => (
+            <option key={v} value={v}>{v}</option>
+          ))}
         </select>
 
         {/* Search button */}
