@@ -87,6 +87,7 @@ export interface DashboardData {
       label: string
       popup: string
       customer_type: string
+      customer_type_code: string
     }>
   }
   top10: {
@@ -142,6 +143,7 @@ interface DoorRow {
   saleperson_name: string
   customer_key: string
   customer_name: string
+  cust_class_key: string | null
   cust_class_name: string | null   // actual customer class: ĐẠI LÝ THÚ Y, CÔNG TY, TRẠI, etc.
   sku_code: string
   sku_name: string
@@ -195,7 +197,7 @@ export async function getDashboardData(
   // 1. Build month-scoped queries with conditional filters
   // -----------------------------------------------------------------------
   let monthDoorQ = db.from('door')
-    .select('saleperson_key,saleperson_name,customer_key,customer_name,cust_class_name,sku_code,sku_name,category,brand,product,off_date,off_qty,off_amt,off_dsc,off_tax_amt,lat,long')
+    .select('saleperson_key,saleperson_name,customer_key,customer_name,cust_class_key,cust_class_name,sku_code,sku_name,category,brand,product,off_date,off_qty,off_amt,off_dsc,off_tax_amt,lat,long')
     .gte('off_date', startOfMonth)
     .lte('off_date', endOfMonth)
   if (npp)   monthDoorQ = monthDoorQ.eq('ship_from_code', npp)
@@ -569,13 +571,16 @@ export async function getDashboardData(
 
   // Map pins: one pin per distinct active customer this month (with lat/long)
   // Using a Map to keep only the last seen lat/long per customer
-  const customerInfoMap = new Map<string, { name: string; type: string; lat: number; long: number; revenue: number }>()
+  const customerInfoMap = new Map<string, { name: string; type: string; typeCode: string; lat: number; long: number; revenue: number }>()
   for (const row of monthDoorRows) {
     if (row.lat && row.long) {
       const existing = customerInfoMap.get(row.customer_key)
+      const rawKey = row.cust_class_key
+      const typeCode = !rawKey || rawKey.toUpperCase() === 'OTHER' ? 'OTHER' : rawKey
       customerInfoMap.set(row.customer_key, {
         name: row.customer_name,
         type: row.cust_class_name || 'Khác',
+        typeCode,
         lat: row.lat,
         long: row.long,
         revenue: (existing?.revenue ?? 0) + calcRevenue(row),
@@ -591,6 +596,7 @@ export async function getDashboardData(
       label: info.name,
       popup: `${info.name}: ${info.revenue.toLocaleString('vi-VN')} VND`,
       customer_type: info.type,
+      customer_type_code: info.typeCode,
     })
   )
 

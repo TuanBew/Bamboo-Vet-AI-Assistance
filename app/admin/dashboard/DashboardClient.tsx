@@ -24,25 +24,6 @@ const AXIS_TICK = { fill: '#9ca3af', fontSize: 12 }
 const TOOLTIP_STYLE = { backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '6px' }
 const GRID_STYLE = { stroke: '#374151', strokeDasharray: '3 3' }
 // Colors for actual cust_class_name values from the door table
-const CUSTOMER_TYPE_COLORS: Record<string, string> = {
-  'ĐẠI LÝ THÚ Y':    '#06b6d4',
-  'CÔNG TY':          '#3b82f6',
-  'TRẠI':             '#10b981',
-  'KH VÃNG LAI':      '#f59e0b',
-  'ĐẠI LÝ':          '#8b5cf6',
-  'Khác':             '#6b7280',
-  'ĐẠI LÝ THỦY SẢN': '#14b8a6',
-  'TRẠI GÀ':          '#f97316',
-  'TRẠI HEO':         '#ec4899',
-  'TRẠI TÔM':         '#6366f1',
-  'NHÂN VIÊN':        '#84cc16',
-  'MGFEED':           '#a78bfa',
-}
-
-function getCustomerTypeColor(type: string): string {
-  return CUSTOMER_TYPE_COLORS[type] ?? '#9ca3af'
-}
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -667,7 +648,7 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
                 longitude: p.longitude,
                 label: p.label,
                 popupContent: p.popup,
-                color: getCustomerTypeColor(p.customer_type),
+                customerTypeCode: p.customer_type_code,
               }))}
               className="h-[250px]"
             />
