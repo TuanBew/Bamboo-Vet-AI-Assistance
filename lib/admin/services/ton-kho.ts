@@ -5,12 +5,17 @@ import { createServiceClient } from '@/lib/supabase/server'
 // ---------------------------------------------------------------------------
 
 export interface TonKhoFilters {
-  snapshot_date: string  // YYYY-MM-DD, default today
-  nhom: string           // product_group filter, empty = all
-  search: string         // product name/code search
+  snapshot_date: string   // YYYY-MM-DD, default today
+  npp: string             // site_code filter, empty = all
+  brand: string           // brand filter, empty = all
+  search: string          // product name/code search
 }
 
 export interface TonKhoData {
+  filter_options: {
+    npps: Array<{ code: string; name: string }>
+    brands: string[]
+  }
   kpis: {
     total_value: number       // SUM(qty * unit_price) for latest snapshots
     total_qty: number         // SUM(qty)
@@ -24,14 +29,55 @@ export interface TonKhoData {
   qty_by_brand: Array<{ name: string; value: number }>
   qty_by_category: Array<{ name: string; value: number }>
   products: Array<{
-    product_code: string
-    product_name: string
+    sku_code: string
+    sku_name: string
     qty: number
-    min_stock: number
-    last_import_date: string
-    unit_price: number
+    product: string      // nganh hang (inloc.product column)
+    brand: string        // thuong hieu
+    unit_price: number   // last_cost from product table
     total_value: number
   }>
+}
+
+// ---------------------------------------------------------------------------
+// Row types from real tables
+// ---------------------------------------------------------------------------
+
+interface InlocRow {
+  site_code: string
+  site_name: string
+  sku_code: string
+  sku_name: string
+  inv_date: string
+  onhand_qty: number
+  category: string   // nhom
+  brand: string      // thuong hieu
+  product: string    // nganh hang
+}
+
+interface ProductRow {
+  site_code: string
+  sku_code: string
+  last_cost: number
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function groupBy<T>(
+  items: T[],
+  keyFn: (item: T) => string,
+  valueFn: (item: T) => number
+): Array<{ name: string; value: number }> {
+  const map = new Map<string, number>()
+  for (const item of items) {
+    const key = keyFn(item) || 'Khac'
+    map.set(key, (map.get(key) ?? 0) + valueFn(item))
+  }
+  return Array.from(map.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
 }
 
 // ---------------------------------------------------------------------------
@@ -43,166 +89,221 @@ export async function getTonKhoData(
 ): Promise<TonKhoData> {
   const db = createServiceClient()
 
-  // 1. Fetch latest snapshots per product (on or before snapshot_date)
-  const { data: snapshots } = await db
-    .from('inventory_snapshots')
-    .select('product_id, snapshot_date, qty, unit_price')
-    .lte('snapshot_date', filters.snapshot_date)
-    .order('snapshot_date', { ascending: false })
+  // Step A: Get filter options (always, regardless of filters)
+  // Fetch distinct NPPs
+  const { data: nppRows } = await db
+    .from('inloc')
+    .select('site_code, site_name')
 
-  // Deduplicate: keep only latest snapshot per product
-  const latestByProduct = new Map<string, { product_id: string; snapshot_date: string; qty: number; unit_price: number }>()
-  for (const snap of snapshots ?? []) {
-    const pid = snap.product_id as string
-    if (!latestByProduct.has(pid)) {
-      latestByProduct.set(pid, {
-        product_id: pid,
-        snapshot_date: snap.snapshot_date as string,
-        qty: Number(snap.qty),
-        unit_price: Number(snap.unit_price),
+  const nppMap = new Map<string, string>()
+  for (const row of nppRows ?? []) {
+    if (row.site_code && row.site_name) {
+      nppMap.set(row.site_code as string, row.site_name as string)
+    }
+  }
+  const npps = Array.from(nppMap.entries())
+    .map(([code, name]) => ({ code, name }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  // Fetch distinct brands from a separate query
+  const { data: brandRows } = await db
+    .from('inloc')
+    .select('brand')
+
+  const brandSet = new Set<string>()
+  for (const row of brandRows ?? []) {
+    const b = row.brand as string | null
+    if (b && b.trim()) brandSet.add(b.trim())
+  }
+  const brands = Array.from(brandSet).sort()
+
+  // Step B+C combined: Fetch all inloc rows <= snapshot_date, deduplicate in JS
+  // Paginate to handle large datasets
+  const PAGE_SIZE = 1000
+  let allInlocRows: InlocRow[] = []
+  let offset = 0
+  let hasMore = true
+
+  while (hasMore) {
+    let query = db
+      .from('inloc')
+      .select('site_code, site_name, sku_code, sku_name, inv_date, onhand_qty, category, brand, product')
+      .lte('inv_date', filters.snapshot_date)
+
+    if (filters.npp) {
+      query = query.eq('site_code', filters.npp)
+    }
+
+    const { data: pageRows, error } = await query.range(offset, offset + PAGE_SIZE - 1)
+
+    if (error) {
+      console.error('Inloc query error:', error)
+      break
+    }
+
+    const rows = (pageRows ?? []) as unknown as InlocRow[]
+    allInlocRows = allInlocRows.concat(rows)
+
+    if (rows.length < PAGE_SIZE) {
+      hasMore = false
+    } else {
+      offset += PAGE_SIZE
+    }
+  }
+
+  // Find latest inv_date per (site_code, sku_code)
+  const latestDateMap = new Map<string, string>()
+  for (const row of allInlocRows) {
+    const key = `${row.site_code}|${row.sku_code}`
+    const existing = latestDateMap.get(key)
+    if (!existing || row.inv_date > existing) {
+      latestDateMap.set(key, row.inv_date)
+    }
+  }
+
+  // Filter to only rows matching latest date, SUM onhand_qty per (site_code, sku_code)
+  interface AggItem {
+    site_code: string
+    sku_code: string
+    sku_name: string
+    qty: number
+    category: string
+    brand: string
+    product: string
+  }
+
+  const aggMap = new Map<string, AggItem>()
+  for (const row of allInlocRows) {
+    const key = `${row.site_code}|${row.sku_code}`
+    if (row.inv_date !== latestDateMap.get(key)) continue
+
+    const existing = aggMap.get(key)
+    if (existing) {
+      existing.qty += Number(row.onhand_qty) || 0
+    } else {
+      aggMap.set(key, {
+        site_code: row.site_code,
+        sku_code: row.sku_code,
+        sku_name: row.sku_name,
+        qty: Number(row.onhand_qty) || 0,
+        category: row.category || '',
+        brand: row.brand || '',
+        product: row.product || '',
       })
     }
   }
 
-  // 2. Fetch products for grouping info
-  const { data: productRows } = await db
-    .from('products')
-    .select('id, product_code, product_name, product_group, classification, manufacturer')
+  // Step D: Join with product table for last_cost
+  let allProductRows: ProductRow[] = []
+  offset = 0
+  hasMore = true
 
-  const productMap = new Map(
-    (productRows ?? []).map(p => [
-      p.id as string,
-      {
-        product_code: p.product_code as string,
-        product_name: p.product_name as string,
-        product_group: p.product_group as string,
-        classification: p.classification as string,
-        manufacturer: p.manufacturer as string,
-      },
-    ])
-  )
+  while (hasMore) {
+    let query = db
+      .from('product')
+      .select('site_code, sku_code, last_cost')
 
-  // 3. Fetch last import dates from purchase_order_items
-  const { data: orderItems } = await db
-    .from('purchase_order_items')
-    .select('product_id, order_id')
+    if (filters.npp) {
+      query = query.eq('site_code', filters.npp)
+    }
 
-  const { data: orders } = await db
-    .from('purchase_orders')
-    .select('id, order_date')
+    const { data: pageRows, error } = await query.range(offset, offset + PAGE_SIZE - 1)
 
-  // Build order_id -> order_date map
-  const orderDateMap = new Map(
-    (orders ?? []).map(o => [o.id as string, o.order_date as string])
-  )
+    if (error) {
+      console.error('Product query error:', error)
+      break
+    }
 
-  // Group by product_id, take MAX order_date
-  const lastImportMap = new Map<string, string>()
-  for (const item of orderItems ?? []) {
-    const pid = item.product_id as string
-    const orderDate = orderDateMap.get(item.order_id as string) ?? ''
-    if (!orderDate) continue
-    const existing = lastImportMap.get(pid) ?? ''
-    if (orderDate > existing) {
-      lastImportMap.set(pid, orderDate)
+    const rows = (pageRows ?? []) as unknown as ProductRow[]
+    allProductRows = allProductRows.concat(rows)
+
+    if (rows.length < PAGE_SIZE) {
+      hasMore = false
+    } else {
+      offset += PAGE_SIZE
     }
   }
 
-  // 4. Join snapshots with product info, apply filters
-  type JoinedProduct = {
-    product_code: string
-    product_name: string
-    product_group: string
-    classification: string
-    manufacturer: string
-    qty: number
-    unit_price: number
-    total_value: number
-    last_import_date: string
+  const costMap = new Map<string, number>()
+  for (const row of allProductRows) {
+    const key = `${row.site_code}|${row.sku_code}`
+    costMap.set(key, Number(row.last_cost) || 0)
   }
 
-  const joinedProducts: JoinedProduct[] = []
-  for (const [productId, snap] of latestByProduct) {
-    const product = productMap.get(productId)
-    if (!product) continue
+  // Step E: Apply brand and search filters, build joined items
+  type JoinedItem = {
+    sku_code: string
+    sku_name: string
+    qty: number
+    category: string  // nhom
+    brand: string     // thuong hieu
+    product: string   // nganh hang
+    unit_price: number
+    total_value: number
+  }
 
-    // Apply nhom filter
-    if (filters.nhom && product.product_group !== filters.nhom) continue
+  const joinedItems: JoinedItem[] = []
+  for (const [key, agg] of aggMap) {
+    // Apply brand filter
+    if (filters.brand && agg.brand !== filters.brand) continue
 
     // Apply search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase()
-      const matchCode = product.product_code.toLowerCase().includes(searchLower)
-      const matchName = product.product_name.toLowerCase().includes(searchLower)
+      const matchCode = agg.sku_code.toLowerCase().includes(searchLower)
+      const matchName = agg.sku_name.toLowerCase().includes(searchLower)
       if (!matchCode && !matchName) continue
     }
 
-    joinedProducts.push({
-      product_code: product.product_code,
-      product_name: product.product_name,
-      product_group: product.product_group,
-      classification: product.classification,
-      manufacturer: product.manufacturer,
-      qty: snap.qty,
-      unit_price: snap.unit_price,
-      total_value: snap.qty * snap.unit_price,
-      last_import_date: lastImportMap.get(productId) ?? 'N/A',
+    const unit_price = costMap.get(key) ?? 0
+    joinedItems.push({
+      sku_code: agg.sku_code,
+      sku_name: agg.sku_name,
+      qty: agg.qty,
+      category: agg.category,
+      brand: agg.brand,
+      product: agg.product,
+      unit_price,
+      total_value: agg.qty * unit_price,
     })
   }
 
-  // 5. Compute KPIs
+  // Step F: Compute KPIs
   let total_value = 0
   let total_qty = 0
   let sku_in_stock = 0
-  const total_sku = joinedProducts.length
+  const total_sku = joinedItems.length
 
-  for (const p of joinedProducts) {
-    total_value += p.total_value
-    total_qty += p.qty
-    if (p.qty > 0) sku_in_stock++
+  for (const item of joinedItems) {
+    total_value += item.total_value
+    total_qty += item.qty
+    if (item.qty > 0) sku_in_stock++
   }
 
-  // 6. Compute chart aggregations
-  const groupBy = (
-    items: JoinedProduct[],
-    keyFn: (p: JoinedProduct) => string,
-    valueFn: (p: JoinedProduct) => number
-  ): Array<{ name: string; value: number }> => {
-    const map = new Map<string, number>()
-    for (const item of items) {
-      const key = keyFn(item) || 'Khac'
-      map.set(key, (map.get(key) ?? 0) + valueFn(item))
-    }
-    return Array.from(map.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-  }
+  // Step G: Compute chart aggregations
+  const value_by_nhom = groupBy(joinedItems, i => i.category, i => i.total_value)
+  const value_by_brand = groupBy(joinedItems, i => i.brand, i => i.total_value)
+  const value_by_category = groupBy(joinedItems, i => i.product, i => i.total_value)
+  const qty_by_nhom = groupBy(joinedItems, i => i.category, i => i.qty)
+  const qty_by_brand = groupBy(joinedItems, i => i.brand, i => i.qty)
+  const qty_by_category = groupBy(joinedItems, i => i.product, i => i.qty)
 
-  const value_by_nhom = groupBy(joinedProducts, p => p.product_group, p => p.total_value)
-  const value_by_brand = groupBy(joinedProducts, p => p.classification, p => p.total_value)
-  const value_by_category = groupBy(joinedProducts, p => p.manufacturer, p => p.total_value)
-  const qty_by_nhom = groupBy(joinedProducts, p => p.product_group, p => p.qty)
-  const qty_by_brand = groupBy(joinedProducts, p => p.classification, p => p.qty)
-  const qty_by_category = groupBy(joinedProducts, p => p.manufacturer, p => p.qty)
-
-  // 7. Build products list
-  const products = joinedProducts.map(p => ({
-    product_code: p.product_code,
-    product_name: p.product_name,
-    qty: p.qty,
-    min_stock: 10,
-    last_import_date: p.last_import_date,
-    unit_price: p.unit_price,
-    total_value: p.total_value,
-  }))
+  // Step H: Build products array, sorted by total_value DESC
+  const products = joinedItems
+    .map(item => ({
+      sku_code: item.sku_code,
+      sku_name: item.sku_name,
+      qty: item.qty,
+      product: item.product,
+      brand: item.brand,
+      unit_price: item.unit_price,
+      total_value: item.total_value,
+    }))
+    .sort((a, b) => b.total_value - a.total_value)
 
   return {
-    kpis: {
-      total_value,
-      total_qty,
-      sku_in_stock,
-      total_sku,
-    },
+    filter_options: { npps, brands },
+    kpis: { total_value, total_qty, sku_in_stock, total_sku },
     value_by_nhom,
     value_by_brand,
     value_by_category,

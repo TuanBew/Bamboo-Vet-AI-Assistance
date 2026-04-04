@@ -8,11 +8,12 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const snapshot_date = searchParams.get('snapshot_date') || new Date().toISOString().slice(0, 10)
-  const nhom = searchParams.get('nhom') || ''
+  const npp = searchParams.get('npp') || ''
+  const brand = searchParams.get('brand') || ''
   const search = searchParams.get('search') || ''
 
   try {
-    const data = await getTonKhoData({ snapshot_date, nhom, search })
+    const data = await getTonKhoData({ snapshot_date, npp, brand, search })
     return NextResponse.json(data)
   } catch (error) {
     console.error('Ton kho API error:', error)

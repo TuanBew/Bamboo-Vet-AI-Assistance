@@ -222,6 +222,10 @@ export const VI = {
     latestImport: 'Ngày nhập mới nhất',
     unitPrice: 'Đơn giá',
     totalAmount: 'Thành tiền',
+    allBrands: 'Tất cả thương hiệu',
+    brand: 'Thương hiệu',
+    nganh: 'Ngành hàng',
+    giaChia: 'Giá chia',
   },
 
   // Khach Hang page
