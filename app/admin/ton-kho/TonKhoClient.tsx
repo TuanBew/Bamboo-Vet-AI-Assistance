@@ -52,11 +52,11 @@ function formatVND(n: number): string {
 // ---------------------------------------------------------------------------
 
 type ProductRow = {
-  product_code: string
-  product_name: string
+  sku_code: string
+  sku_name: string
   qty: number
-  min_stock: number
-  last_import_date: string
+  product: string
+  brand: string
   unit_price: number
   total_value: number
 }
@@ -185,18 +185,16 @@ export function TonKhoClient({
   const [filters, setFilters] = useState<TonKhoFilters>(initialFilters)
   const [loading, setLoading] = useState(false)
 
-  // Derive unique nhom values from products for filter dropdown
-  const nhomOptions = useMemo(
-    () => Array.from(new Set(data.value_by_nhom.map(v => v.name))).sort(),
-    [data.value_by_nhom]
-  )
+  // Store initial filter options separately so dropdowns don't cascade-empty
+  const filterOptions = useMemo(() => initialData.filter_options, [initialData.filter_options])
 
   const handleSearch = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       params.set('snapshot_date', filters.snapshot_date)
-      if (filters.nhom) params.set('nhom', filters.nhom)
+      if (filters.npp) params.set('npp', filters.npp)
+      if (filters.brand) params.set('brand', filters.brand)
       if (filters.search) params.set('search', filters.search)
       const res = await fetch(`/api/admin/ton-kho?${params.toString()}`)
       if (res.ok) {
@@ -210,12 +208,12 @@ export function TonKhoClient({
 
   // DataTable columns (memoized to prevent DataTable re-renders)
   const columns = useMemo<DataTableColumn<ProductRow>[]>(() => [
-    { key: 'product_code', label: VI.tonKho.productCode, sortable: true },
-    { key: 'product_name', label: VI.tonKho.productName, sortable: true },
+    { key: 'sku_code', label: VI.tonKho.productCode, sortable: true },
+    { key: 'sku_name', label: VI.tonKho.productName, sortable: true },
     { key: 'qty', label: VI.tonKho.quantity, sortable: true, render: (v) => formatVND(Number(v)) },
-    { key: 'min_stock', label: VI.tonKho.minStock, sortable: true },
-    { key: 'last_import_date', label: VI.tonKho.latestImport, sortable: true },
-    { key: 'unit_price', label: VI.tonKho.unitPrice, sortable: true, render: (v) => formatVND(Number(v)) },
+    { key: 'product', label: VI.tonKho.nganh, sortable: true },
+    { key: 'brand', label: VI.tonKho.brand, sortable: true },
+    { key: 'unit_price', label: VI.tonKho.giaChia, sortable: true, render: (v) => formatVND(Number(v)) },
     { key: 'total_value', label: VI.tonKho.totalAmount, sortable: true, render: (v) => formatVND(Number(v)) },
   ], [])
 
@@ -231,9 +229,13 @@ export function TonKhoClient({
       <div className="flex flex-wrap items-center gap-4">
         <select
           className="bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 text-sm min-w-[200px]"
-          disabled
+          value={filters.npp}
+          onChange={(e) => setFilters(f => ({ ...f, npp: e.target.value }))}
         >
-          <option>{VI.tonKho.allNpp}</option>
+          <option value="">{VI.tonKho.allNpp}</option>
+          {filterOptions.npps.map(npp => (
+            <option key={npp.code} value={npp.code}>{npp.name}</option>
+          ))}
         </select>
 
         <input
@@ -245,12 +247,12 @@ export function TonKhoClient({
 
         <select
           className="bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 text-sm min-w-[200px]"
-          value={filters.nhom}
-          onChange={(e) => setFilters(f => ({ ...f, nhom: e.target.value }))}
+          value={filters.brand}
+          onChange={(e) => setFilters(f => ({ ...f, brand: e.target.value }))}
         >
-          <option value="">{VI.tonKho.allGroups}</option>
-          {nhomOptions.map(nhom => (
-            <option key={nhom} value={nhom}>{nhom}</option>
+          <option value="">{VI.tonKho.allBrands}</option>
+          {filterOptions.brands.map(brand => (
+            <option key={brand} value={brand}>{brand}</option>
           ))}
         </select>
 
