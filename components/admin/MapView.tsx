@@ -12,6 +12,7 @@ export interface MapPin {
   label: string
   popupContent?: string
   color?: string
+  customerTypeCode?: string  // when set, use visual SVG icon for this customer type
 }
 
 export interface MapViewProps {

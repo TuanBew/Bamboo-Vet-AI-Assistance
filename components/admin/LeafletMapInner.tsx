@@ -5,6 +5,7 @@ import L from 'leaflet'
 import { useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import type { MapViewProps } from './MapView'
+import { getCustomerTypeSvgHtml } from '@/lib/admin/customer-types'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -18,7 +19,17 @@ export type MapHandle = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getMarkerIcon(color: string) {
+function getMarkerIcon(color: string, customerTypeCode?: string) {
+  if (customerTypeCode) {
+    const html = getCustomerTypeSvgHtml(customerTypeCode, 28)
+    return L.divIcon({
+      className: '',
+      html,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -30],
+    })
+  }
   return L.divIcon({
     className: '',
     html: `<div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.3)"></div>`,
@@ -93,7 +104,7 @@ export default function LeafletMapInner({
           <Marker
             key={pin.id}
             position={[pin.latitude, pin.longitude]}
-            icon={getMarkerIcon(pin.color || getColorForQueries(0))}
+            icon={getMarkerIcon(pin.color || getColorForQueries(0), pin.customerTypeCode)}
           >
             <Popup>
               <div className="text-sm">
