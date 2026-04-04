@@ -9,10 +9,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -235,36 +231,38 @@ export function NhapHangClient({
       {/* Row 3: Orders table + Top 10 products */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SectionHeader title={`${VI.nhapHang.ordersInMonth} ${monthLabel}`}>
-          <div className="bg-gray-800 rounded-lg p-4 overflow-x-auto">
-            <table className="w-full text-sm text-gray-100">
-              <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left py-2 px-3">{VI.nhapHang.orderCode}</th>
-                  <th className="text-left py-2 px-3">{VI.nhapHang.importDate}</th>
-                  <th className="text-right py-2 px-3">{VI.nhapHang.totalAmount}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.orders.map(order => (
-                  <tr
-                    key={order.order_code}
-                    className="border-b border-gray-700/50 hover:bg-gray-700 cursor-pointer transition-colors"
-                    onClick={() => setSelectedOrder(order.order_code)}
-                  >
-                    <td className="py-2 px-3 font-mono">{order.order_code}</td>
-                    <td className="py-2 px-3">{order.order_date}</td>
-                    <td className="py-2 px-3 text-right">{formatVND(order.total_amount)}</td>
+          <div className="bg-gray-800 rounded-lg overflow-hidden">
+            <div className="overflow-auto max-h-[400px]">
+              <table className="w-full text-sm text-gray-100">
+                <thead className="sticky top-0 z-10 bg-gray-900">
+                  <tr className="border-b border-gray-700">
+                    <th className="text-left py-2 px-3">{VI.nhapHang.orderCode}</th>
+                    <th className="text-left py-2 px-3">{VI.nhapHang.importDate}</th>
+                    <th className="text-right py-2 px-3">{VI.nhapHang.totalAmount}</th>
                   </tr>
-                ))}
-                {data.orders.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="py-4 text-center text-gray-500">
-                      {VI.nhapHang.noOrdersInMonth}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.orders.map(order => (
+                    <tr
+                      key={order.order_code}
+                      className="border-b border-gray-700/50 hover:bg-gray-700 cursor-pointer transition-colors"
+                      onClick={() => setSelectedOrder(order.order_code)}
+                    >
+                      <td className="py-2 px-3 font-mono">{order.order_code}</td>
+                      <td className="py-2 px-3">{order.order_date}</td>
+                      <td className="py-2 px-3 text-right">{formatVND(order.total_amount)}</td>
+                    </tr>
+                  ))}
+                  {data.orders.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="py-4 text-center text-gray-500">
+                        {VI.nhapHang.noOrdersInMonth}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </SectionHeader>
 
@@ -387,31 +385,43 @@ export function NhapHangClient({
         </SectionHeader>
       </div>
 
-      {/* Charts section 3: Radar chart (full width) */}
+      {/* Charts section 3: Brand horizontal bar chart (full width) */}
       <SectionHeader title={`${VI.nhapHang.brandMonth} ${monthLabel}`}>
         <div className="bg-gray-800 rounded-lg p-4">
           {data.by_brand.length === 0 ? (
             <div className="h-[350px] flex items-center justify-center text-gray-500 text-sm">
-              Khong co du lieu trong thang nay
+              {VI.nhapHang.noDataInMonth}
             </div>
           ) : (
-          <ResponsiveContainer width="100%" height={350}>
-            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data.by_brand}>
-              <PolarGrid stroke="#374151" />
-              <PolarAngleAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-              <Radar
-                name={VI.nhapHang.salesAmount}
-                dataKey="revenue"
-                stroke="#06b6d4"
-                fill="#06b6d4"
-                fillOpacity={0.4}
+          <ResponsiveContainer width="100%" height={Math.max(300, data.by_brand.length * 32)}>
+            <BarChart
+              layout="vertical"
+              data={data.by_brand}
+              margin={{ left: 10, right: 50 }}
+            >
+              <CartesianGrid stroke="#374151" strokeDasharray="3 3" />
+              <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={160}
+                tick={{ fill: '#9ca3af', fontSize: 11 }}
+                tickFormatter={(v) => String(v).length > 22 ? String(v).slice(0, 22) + '…' : String(v)}
               />
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
                 formatter={(value) => [formatVND(Number(value)), VI.nhapHang.salesAmount]}
               />
-              <Legend />
-            </RadarChart>
+              <Bar dataKey="revenue" fill="#8b5cf6" name={VI.nhapHang.salesAmount}>
+                <LabelList
+                  dataKey="revenue"
+                  position="right"
+                  fill="#9ca3af"
+                  fontSize={11}
+                  formatter={(v) => formatVND(Number(v))}
+                />
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
           )}
         </div>

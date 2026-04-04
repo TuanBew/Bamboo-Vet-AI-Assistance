@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 // ---------------------------------------------------------------------------
 
 export interface NhapHangFilters {
-  npp: string    // supplier_id or empty string for all
+  npp: string   // site_code or empty string for all
   year: number
   month: number
 }
@@ -47,6 +47,32 @@ export interface NhapHangData {
 }
 
 // ---------------------------------------------------------------------------
+// Row type from dpur table
+// ---------------------------------------------------------------------------
+
+interface DpurRow {
+  docno: string
+  site_code: string
+  site_name: string
+  sku_code: string
+  sku_name: string
+  pur_date: string          // YYYY-MM-DD
+  trntyp: string            // 'I' = receive, 'D' = return to supplier
+  pr_qty: number
+  pr_amt: number
+  pr_tax_amt: number
+  program_id: string        // '0' = regular, anything else = promo/free
+  category: string          // ngành hàng
+  brand: string             // thương hiệu
+  product: string           // nhóm sản phẩm
+}
+
+// Revenue for a single row (regular receive only)
+function calcRowRevenue(row: DpurRow): number {
+  return row.pr_amt + row.pr_tax_amt
+}
+
+// ---------------------------------------------------------------------------
 // Main service function
 // ---------------------------------------------------------------------------
 
@@ -55,238 +81,212 @@ export async function getNhapHangData(
 ): Promise<NhapHangData> {
   const db = createServiceClient()
 
-  // 1. Fetch suppliers list (always, for dropdown)
-  const { data: supplierRows } = await db
-    .from('suppliers')
-    .select('id, supplier_name')
-    .order('supplier_code')
-
-  const suppliers = (supplierRows ?? []).map(s => ({
-    id: s.id as string,
-    name: s.supplier_name as string,
-  }))
-
-  // Build supplier id -> name map
-  const supplierNameMap = new Map(suppliers.map(s => [s.id, s.name]))
-
-  // 2. Fetch orders for month/npp
   const startOfMonth = `${filters.year}-${String(filters.month).padStart(2, '0')}-01`
-  const endOfMonth = `${filters.year}-${String(filters.month).padStart(2, '0')}-${new Date(filters.year, filters.month, 0).getDate()}`
+  const lastDay = new Date(filters.year, filters.month, 0).getDate()
+  const endOfMonth = `${filters.year}-${String(filters.month).padStart(2, '0')}-${lastDay}`
 
-  let orderQuery = db
-    .from('purchase_orders')
-    .select('id, order_code, order_date, supplier_id, total_amount')
-    .gte('order_date', startOfMonth)
-    .lte('order_date', endOfMonth)
-    .order('order_date', { ascending: true })
+  // 1. Get NPP list (always all, for dropdown)
+  const { data: siteRows } = await db
+    .from('dpur')
+    .select('site_code, site_name')
+
+  const siteMap = new Map<string, string>()
+  for (const r of siteRows ?? []) {
+    if (r.site_code && !siteMap.has(r.site_code)) {
+      siteMap.set(r.site_code as string, r.site_name as string)
+    }
+  }
+  const suppliers = Array.from(siteMap.entries())
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.id.localeCompare(b.id))
+
+  // 2. Fetch month rows from dpur
+  let query = db
+    .from('dpur')
+    .select('docno,site_code,site_name,sku_code,sku_name,pur_date,trntyp,pr_qty,pr_amt,pr_tax_amt,program_id,category,brand,product')
+    .gte('pur_date', startOfMonth)
+    .lte('pur_date', endOfMonth)
 
   if (filters.npp) {
-    orderQuery = orderQuery.eq('supplier_id', filters.npp)
+    query = query.eq('site_code', filters.npp)
   }
 
-  const { data: orderRows } = await orderQuery
+  const { data: rawRows } = await query
+  const rows: DpurRow[] = (rawRows ?? []).map(r => ({
+    docno: r.docno as string,
+    site_code: r.site_code as string,
+    site_name: r.site_name as string,
+    sku_code: r.sku_code as string,
+    sku_name: r.sku_name as string,
+    pur_date: r.pur_date as string,
+    trntyp: r.trntyp as string,
+    pr_qty: Number(r.pr_qty ?? 0),
+    pr_amt: Number(r.pr_amt ?? 0),
+    pr_tax_amt: Number(r.pr_tax_amt ?? 0),
+    program_id: String(r.program_id ?? '0'),
+    category: r.category as string || 'Khác',
+    brand: r.brand as string || 'Khác',
+    product: r.product as string || 'Khác',
+  }))
 
-  const matchedOrders = orderRows ?? []
-  const orderIds = matchedOrders.map(o => o.id as string)
+  const receiveRows    = rows.filter(r => r.trntyp === 'I')
+  const regularRows    = receiveRows.filter(r => r.program_id === '0')
+  const promoRows      = receiveRows.filter(r => r.program_id !== '0')
+  const returnRows     = rows.filter(r => r.trntyp === 'D')
 
-  // 3. Fetch all order items for matched orders + join products
-  let allItems: Array<{
-    order_id: string
-    product_id: string
-    quantity: number
-    promo_qty: number
-    unit_price: number
-    subtotal: number
-  }> = []
+  // 3. KPIs
+  const regularRevenue = regularRows.reduce((s, r) => s + calcRowRevenue(r), 0)
+  const returnRevenue  = returnRows.reduce((s, r)  => s + calcRowRevenue(r), 0)
+  const total_revenue  = regularRevenue - returnRevenue
 
-  if (orderIds.length > 0) {
-    const { data: itemRows } = await db
-      .from('purchase_order_items')
-      .select('order_id, product_id, quantity, promo_qty, unit_price, subtotal')
-      .in('order_id', orderIds)
+  const total_quantity   = regularRows.reduce((s, r) => s + r.pr_qty, 0)
+  const total_promo_qty  = promoRows.reduce((s, r) => s + r.pr_qty, 0)
+  const orderSet         = new Set(receiveRows.map(r => r.docno))
+  const total_orders     = orderSet.size
+  const skuSet           = new Set(receiveRows.map(r => r.sku_code))
+  const total_skus       = skuSet.size
+  const avg_per_order    = total_orders > 0 ? Math.round(total_revenue / total_orders) : 0
 
-    allItems = (itemRows ?? []).map(r => ({
-      order_id: r.order_id as string,
-      product_id: r.product_id as string,
-      quantity: Number(r.quantity),
-      promo_qty: Number(r.promo_qty),
-      unit_price: Number(r.unit_price),
-      subtotal: Number(r.subtotal),
-    }))
+  // 4. Daily revenue (by day of month)
+  const dailyRevMap = new Map<number, number>()
+  for (const r of regularRows) {
+    const day = new Date(r.pur_date).getDate()
+    dailyRevMap.set(day, (dailyRevMap.get(day) ?? 0) + calcRowRevenue(r))
   }
-
-  // Fetch products for lookup
-  const { data: productRows } = await db
-    .from('products')
-    .select('id, product_code, product_name, product_group, classification, manufacturer')
-
-  const productMap = new Map(
-    (productRows ?? []).map(p => [
-      p.id as string,
-      {
-        product_code: p.product_code as string,
-        product_name: p.product_name as string,
-        product_group: p.product_group as string,
-        classification: p.classification as string,
-        manufacturer: p.manufacturer as string,
-      },
-    ])
-  )
-
-  // Build order_code -> order_id map and order_id -> order_date map
-  const orderCodeMap = new Map(matchedOrders.map(o => [o.id as string, o.order_code as string]))
-  const orderDateMap = new Map(matchedOrders.map(o => [o.id as string, o.order_date as string]))
-
-  // 4. Compute KPIs from items
-  let total_revenue = 0
-  let total_quantity = 0
-  let total_promo_qty = 0
-  const skuSet = new Set<string>()
-
-  for (const item of allItems) {
-    total_revenue += item.quantity * item.unit_price
-    total_quantity += item.quantity
-    total_promo_qty += item.promo_qty
-    skuSet.add(item.product_id)
+  for (const r of returnRows) {
+    const day = new Date(r.pur_date).getDate()
+    dailyRevMap.set(day, (dailyRevMap.get(day) ?? 0) - calcRowRevenue(r))
   }
-
-  const total_orders = matchedOrders.length
-  const total_skus = skuSet.size
-  const avg_per_order = total_orders > 0 ? Math.round(total_revenue / total_orders) : 0
-
-  // 5. Compute daily_revenue: group items by order date's day
-  const dailyRevenueMap = new Map<number, number>()
-  for (const item of allItems) {
-    const dateStr = orderDateMap.get(item.order_id) ?? ''
-    const day = new Date(dateStr).getDate()
-    dailyRevenueMap.set(day, (dailyRevenueMap.get(day) ?? 0) + item.quantity * item.unit_price)
-  }
-  const daily_revenue = Array.from(dailyRevenueMap.entries())
+  const daily_revenue = Array.from(dailyRevMap.entries())
     .map(([day, revenue]) => ({ day, revenue }))
     .sort((a, b) => a.day - b.day)
 
-  // 6. Compute daily_quantity: group items by order date's day
+  // 5. Daily quantity (by day of month)
   const dailyQtyMap = new Map<number, { quantity: number; promo_qty: number }>()
-  for (const item of allItems) {
-    const dateStr = orderDateMap.get(item.order_id) ?? ''
-    const day = new Date(dateStr).getDate()
-    const existing = dailyQtyMap.get(day) ?? { quantity: 0, promo_qty: 0 }
-    existing.quantity += item.quantity
-    existing.promo_qty += item.promo_qty
-    dailyQtyMap.set(day, existing)
+  for (const r of regularRows) {
+    const day = new Date(r.pur_date).getDate()
+    const cur = dailyQtyMap.get(day) ?? { quantity: 0, promo_qty: 0 }
+    cur.quantity += r.pr_qty
+    dailyQtyMap.set(day, cur)
+  }
+  for (const r of promoRows) {
+    const day = new Date(r.pur_date).getDate()
+    const cur = dailyQtyMap.get(day) ?? { quantity: 0, promo_qty: 0 }
+    cur.promo_qty += r.pr_qty
+    dailyQtyMap.set(day, cur)
   }
   const daily_quantity = Array.from(dailyQtyMap.entries())
-    .map(([day, { quantity, promo_qty }]) => ({ day, quantity, promo_qty }))
+    .map(([day, v]) => ({ day, quantity: v.quantity, promo_qty: v.promo_qty }))
     .sort((a, b) => a.day - b.day)
 
-  // 7. Build order_items map: Record<order_code, items[]>
-  const order_items: Record<string, Array<{
-    product_code: string
-    product_name: string
-    quantity: number
-    promo_qty: number
-    unit_price: number
-    subtotal: number
-  }>> = {}
-
-  for (const order of matchedOrders) {
-    const code = order.order_code as string
-    const orderId = order.id as string
-    const items = allItems
-      .filter(i => i.order_id === orderId)
-      .map(i => {
-        const product = productMap.get(i.product_id)
-        return {
-          product_code: product?.product_code ?? '',
-          product_name: product?.product_name ?? '',
-          quantity: i.quantity,
-          promo_qty: i.promo_qty,
-          unit_price: i.unit_price,
-          subtotal: i.quantity * i.unit_price,
-        }
-      })
-    order_items[code] = items
-  }
-
-  // 8. Compute top_products: group by product, sum revenue, top 10
-  const productRevenue = new Map<string, { code: string; name: string; revenue: number }>()
-  for (const item of allItems) {
-    const product = productMap.get(item.product_id)
-    if (!product) continue
-    const existing = productRevenue.get(item.product_id)
-    const rev = item.quantity * item.unit_price
+  // 6. Orders list (group by docno — regular receives only)
+  const orderMap = new Map<string, { date: string; total: number; site: string }>()
+  for (const r of receiveRows) {
+    const existing = orderMap.get(r.docno)
+    const rev = r.program_id === '0' ? calcRowRevenue(r) : 0
     if (existing) {
-      existing.revenue += rev
+      existing.total += rev
     } else {
-      productRevenue.set(item.product_id, {
-        code: product.product_code,
-        name: product.product_name,
-        revenue: rev,
+      orderMap.set(r.docno, {
+        date: r.pur_date,
+        total: rev,
+        site: r.site_name,
       })
     }
   }
-  const top_products = Array.from(productRevenue.values())
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 10)
-    .map(p => ({
-      product_code: p.code,
-      product_name: p.name,
-      total_revenue: p.revenue,
+  const orders = Array.from(orderMap.entries())
+    .map(([docno, v]) => ({
+      order_code: docno,
+      order_date: v.date.replace(/-/g, '/'),
+      total_amount: Math.round(v.total),
+      supplier_name: v.site,
     }))
+    .sort((a, b) => a.order_date.localeCompare(b.order_date))
 
-  // 9. Compute by_industry: group by product_group
+  // 7. Order items (for detail drawer): group by docno → sku_code
+  const orderItemsMap = new Map<string, Map<string, {
+    product_name: string; quantity: number; promo_qty: number; amt: number; tax: number
+  }>>()
+  for (const r of receiveRows) {
+    if (!orderItemsMap.has(r.docno)) {
+      orderItemsMap.set(r.docno, new Map())
+    }
+    const skuMap = orderItemsMap.get(r.docno)!
+    const cur = skuMap.get(r.sku_code) ?? { product_name: r.sku_name, quantity: 0, promo_qty: 0, amt: 0, tax: 0 }
+    if (r.program_id === '0') {
+      cur.quantity  += r.pr_qty
+      cur.amt       += r.pr_amt
+      cur.tax       += r.pr_tax_amt
+    } else {
+      cur.promo_qty += r.pr_qty
+    }
+    skuMap.set(r.sku_code, cur)
+  }
+
+  const order_items: Record<string, Array<{
+    product_code: string; product_name: string
+    quantity: number; promo_qty: number; unit_price: number; subtotal: number
+  }>> = {}
+  for (const [docno, skuMap] of orderItemsMap.entries()) {
+    order_items[docno] = Array.from(skuMap.entries()).map(([sku_code, v]) => ({
+      product_code: sku_code,
+      product_name: v.product_name,
+      quantity: v.quantity,
+      promo_qty: v.promo_qty,
+      unit_price: v.quantity > 0 ? Math.round(v.amt / v.quantity) : 0,
+      subtotal: Math.round(v.amt + v.tax),
+    }))
+  }
+
+  // 8. Top 10 products by revenue
+  const skuRevMap = new Map<string, { name: string; revenue: number }>()
+  for (const r of regularRows) {
+    const cur = skuRevMap.get(r.sku_code)
+    const rev = calcRowRevenue(r)
+    if (cur) {
+      cur.revenue += rev
+    } else {
+      skuRevMap.set(r.sku_code, { name: r.sku_name.trim(), revenue: rev })
+    }
+  }
+  const top_products = Array.from(skuRevMap.entries())
+    .map(([code, v]) => ({ product_code: code, product_name: v.name, total_revenue: Math.round(v.revenue) }))
+    .sort((a, b) => b.total_revenue - a.total_revenue)
+    .slice(0, 10)
+
+  // 9. By industry (category)
   const industryMap = new Map<string, number>()
-  for (const item of allItems) {
-    const product = productMap.get(item.product_id)
-    if (!product) continue
-    const group = product.product_group || 'Khác'
-    industryMap.set(group, (industryMap.get(group) ?? 0) + item.quantity * item.unit_price)
+  for (const r of regularRows) {
+    industryMap.set(r.category, (industryMap.get(r.category) ?? 0) + calcRowRevenue(r))
   }
   const by_industry = Array.from(industryMap.entries())
-    .map(([name, revenue]) => ({ name, revenue }))
+    .map(([name, revenue]) => ({ name, revenue: Math.round(revenue) }))
+    .filter(d => d.revenue > 0)
     .sort((a, b) => b.revenue - a.revenue)
 
-  // 10. Compute by_product_group: group by classification
-  const classificationMap = new Map<string, number>()
-  for (const item of allItems) {
-    const product = productMap.get(item.product_id)
-    if (!product) continue
-    const cls = product.classification || 'Khác'
-    classificationMap.set(cls, (classificationMap.get(cls) ?? 0) + item.quantity * item.unit_price)
+  // 10. By product group (product column)
+  const productGrpMap = new Map<string, number>()
+  for (const r of regularRows) {
+    productGrpMap.set(r.product, (productGrpMap.get(r.product) ?? 0) + calcRowRevenue(r))
   }
-  const by_product_group = Array.from(classificationMap.entries())
-    .map(([name, revenue]) => ({ name, revenue }))
+  const by_product_group = Array.from(productGrpMap.entries())
+    .map(([name, revenue]) => ({ name, revenue: Math.round(revenue) }))
+    .filter(d => d.revenue > 0)
     .sort((a, b) => b.revenue - a.revenue)
 
-  // 11. Compute by_brand: group by manufacturer
+  // 11. By brand
   const brandMap = new Map<string, number>()
-  for (const item of allItems) {
-    const product = productMap.get(item.product_id)
-    if (!product) continue
-    const brand = product.manufacturer || 'Khác'
-    brandMap.set(brand, (brandMap.get(brand) ?? 0) + item.quantity * item.unit_price)
+  for (const r of regularRows) {
+    const b = r.brand.trim() || 'Khác'
+    brandMap.set(b, (brandMap.get(b) ?? 0) + calcRowRevenue(r))
   }
   const by_brand = Array.from(brandMap.entries())
-    .map(([name, revenue]) => ({ name, revenue }))
+    .map(([name, revenue]) => ({ name, revenue: Math.round(revenue) }))
+    .filter(d => d.revenue > 0)
     .sort((a, b) => b.revenue - a.revenue)
 
-  // Build orders array with YYYY/MM/DD slash format
-  const orders = matchedOrders.map(o => ({
-    order_code: o.order_code as string,
-    order_date: (o.order_date as string).replace(/-/g, '/'),
-    total_amount: Number(o.total_amount),
-    supplier_name: supplierNameMap.get(o.supplier_id as string) ?? '',
-  }))
-
   return {
-    kpis: {
-      total_revenue,
-      total_quantity,
-      total_promo_qty,
-      total_orders,
-      total_skus,
-      avg_per_order,
-    },
+    kpis: { total_revenue: Math.round(total_revenue), total_quantity, total_promo_qty, total_orders, total_skus, avg_per_order },
     daily_revenue,
     daily_quantity,
     orders,
