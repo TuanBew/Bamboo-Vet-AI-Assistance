@@ -206,13 +206,13 @@ export function TonKhoClient({
     }
   }, [filters])
 
-  // DataTable columns (memoized to prevent DataTable re-renders)
+  // DataTable columns — explicit render for all cells to ensure text displays
   const columns = useMemo<DataTableColumn<ProductRow>[]>(() => [
-    { key: 'sku_code', label: VI.tonKho.productCode, sortable: true },
-    { key: 'sku_name', label: VI.tonKho.productName, sortable: true },
+    { key: 'sku_code', label: VI.tonKho.productCode, sortable: true, render: (v) => String(v ?? '') },
+    { key: 'sku_name', label: VI.tonKho.productName, sortable: true, render: (v) => String(v ?? '') },
     { key: 'qty', label: VI.tonKho.quantity, sortable: true, render: (v) => formatVND(Number(v)) },
-    { key: 'product', label: VI.tonKho.nganh, sortable: true },
-    { key: 'brand', label: VI.tonKho.brand, sortable: true },
+    { key: 'product', label: VI.tonKho.nganh, sortable: true, render: (v) => String(v ?? '') },
+    { key: 'brand', label: VI.tonKho.brand, sortable: true, render: (v) => String(v ?? '') },
     { key: 'unit_price', label: VI.tonKho.giaChia, sortable: true, render: (v) => formatVND(Number(v)) },
     { key: 'total_value', label: VI.tonKho.totalAmount, sortable: true, render: (v) => formatVND(Number(v)) },
   ], [])
