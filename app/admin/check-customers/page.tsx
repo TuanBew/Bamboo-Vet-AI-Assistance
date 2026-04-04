@@ -21,7 +21,7 @@ export default async function AdminCheckCustomersPage({
   const data = await getCheckCustomersData({ distributor_id, search, page, page_size })
 
   return (
-    <Suspense fallback={<div className="text-gray-400">Dang tai...</div>}>
+    <Suspense fallback={<div className="text-gray-400">Đang tải...</div>}>
       <CheckCustomersClient
         initialData={data}
         initialFilters={{ distributor_id, search, page, page_size }}

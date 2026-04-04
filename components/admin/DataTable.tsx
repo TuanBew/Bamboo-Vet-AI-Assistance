@@ -103,7 +103,10 @@ function DataTableInner<T extends Record<string, unknown>>({
         cell: col.render
           ? (info: { getValue: () => unknown; row: { original: T } }) =>
               col.render!(info.getValue() as T[keyof T], info.row.original)
-          : undefined,
+          : (info: { getValue: () => unknown }) => {
+              const v = info.getValue()
+              return v != null ? String(v) : ''
+            },
       })),
     [columns]
   )
