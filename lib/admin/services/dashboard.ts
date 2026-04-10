@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
-import { computeForecast } from '@/lib/admin/forecast'
+import { computeMovingAverageForecast } from '@/lib/admin/forecast'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -342,26 +342,26 @@ export async function getDashboardData(
     })
     .sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month))
 
-  const banForecast = computeForecast(
-    monthlyArr.map(d => ({ year: d.year, month: d.month, query_count: d.ban_hang, session_count: 0 }))
+  const banForecast = computeMovingAverageForecast(
+    monthlyArr.map(d => ({ year: d.year, month: d.month, value: d.ban_hang }))
   )
-  const nhapForecast = computeForecast(
-    monthlyArr.map(d => ({ year: d.year, month: d.month, query_count: d.nhap_hang, session_count: 0 }))
+  const nhapForecast = computeMovingAverageForecast(
+    monthlyArr.map(d => ({ year: d.year, month: d.month, value: d.nhap_hang }))
   )
 
   const monthlySeriesMap = new Map<string, { year: number; month: number; ban_hang: number; nhap_hang: number; is_forecast: boolean }>()
   for (const fp of banForecast) {
     const key = `${fp.year}-${fp.month}`
-    monthlySeriesMap.set(key, { year: fp.year, month: fp.month, ban_hang: fp.query_count, nhap_hang: 0, is_forecast: fp.is_forecast })
+    monthlySeriesMap.set(key, { year: fp.year, month: fp.month, ban_hang: fp.value, nhap_hang: 0, is_forecast: fp.is_forecast })
   }
   for (const fp of nhapForecast) {
     const key = `${fp.year}-${fp.month}`
     const existing = monthlySeriesMap.get(key)
     if (existing) {
-      existing.nhap_hang = fp.query_count
+      existing.nhap_hang = fp.value
       if (fp.is_forecast) existing.is_forecast = true
     } else {
-      monthlySeriesMap.set(key, { year: fp.year, month: fp.month, ban_hang: 0, nhap_hang: fp.query_count, is_forecast: fp.is_forecast })
+      monthlySeriesMap.set(key, { year: fp.year, month: fp.month, ban_hang: 0, nhap_hang: fp.value, is_forecast: fp.is_forecast })
     }
   }
   const monthly_series = Array.from(monthlySeriesMap.values())

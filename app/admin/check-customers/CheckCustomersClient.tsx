@@ -13,7 +13,9 @@ import type {
   RevenuePivotRow,
 } from '@/lib/admin/services/check-customers'
 
-type CustomerRow = CustomerRowBase & Record<string, unknown>
+// Extend CustomerRow with computed has_geo field for sortable "Định vị" column
+type CustomerRow = CustomerRowBase & { has_geo: boolean } & Record<string, unknown>
+
 import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
@@ -28,6 +30,25 @@ interface CheckCustomersClientProps {
 type PivotRow = Record<string, unknown>
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function toMapPins(raw: CheckCustomersData['map_pins']): MapPin[] {
+  return raw.map(p => ({
+    id: p.customer_key,
+    latitude: p.lat,
+    longitude: p.long,
+    label: p.customer_name,
+    popupContent: p.cust_class_name,
+    customerTypeCode: p.cust_class_key,
+  }))
+}
+
+function addHasGeo(rows: CustomerRowBase[]): CustomerRow[] {
+  return rows.map(r => ({ ...r, has_geo: r.lat != null && r.long != null }))
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -36,6 +57,8 @@ export function CheckCustomersClient({
   initialFilters,
 }: CheckCustomersClientProps) {
   const [data, setData] = useState<CheckCustomersData>(initialData)
+  // Stable map pins: preserved on page-only changes, updated on filter changes
+  const [mapPins, setMapPins] = useState<MapPin[]>(() => toMapPins(initialData.map_pins))
   const [filters, setFilters] = useState({
     distributor_id: initialFilters.distributor_id,
     search: initialFilters.search,
@@ -50,7 +73,7 @@ export function CheckCustomersClient({
   const mapHandleRef = useRef<MapHandle | null>(null)
 
   // -------------------------------------------------------------------------
-  // NPP options: use real data from DB + "All" option
+  // NPP options
   // -------------------------------------------------------------------------
 
   const nppOptions = useMemo(() => {
@@ -64,20 +87,12 @@ export function CheckCustomersClient({
   }, [data.npp_options])
 
   // -------------------------------------------------------------------------
-  // Map pins — use customerTypeCode for SVG icons
+  // Customer rows with has_geo for sortable "Định vị" column
   // -------------------------------------------------------------------------
 
-  const mapPins: MapPin[] = useMemo(
-    () =>
-      data.map_pins.map((p) => ({
-        id: p.customer_key,
-        latitude: p.lat,
-        longitude: p.long,
-        label: p.customer_name,
-        popupContent: p.cust_class_name,
-        customerTypeCode: p.cust_class_key,
-      })),
-    [data.map_pins]
+  const customersWithGeo = useMemo<CustomerRow[]>(
+    () => addHasGeo(data.customers.data),
+    [data.customers.data]
   )
 
   // -------------------------------------------------------------------------
@@ -85,7 +100,7 @@ export function CheckCustomersClient({
   // -------------------------------------------------------------------------
 
   const fetchData = useCallback(
-    async (page: number) => {
+    async (page: number, updatePins: boolean) => {
       setLoading(true)
       try {
         const params = new URLSearchParams()
@@ -96,6 +111,10 @@ export function CheckCustomersClient({
         const res = await fetch(`/api/admin/check-customers?${params}`)
         const newData: CheckCustomersData = await res.json()
         setData(newData)
+        // Only update map pins when filters change (not on page-only navigation)
+        if (updatePins) {
+          setMapPins(toMapPins(newData.map_pins))
+        }
       } finally {
         setLoading(false)
       }
@@ -103,14 +122,19 @@ export function CheckCustomersClient({
     [filters]
   )
 
-  const handleSearch = useCallback(() => fetchData(1), [fetchData])
-  const handlePageChange = useCallback((page: number) => fetchData(page), [fetchData])
+  // Filter/search change → page 1 + update map pins
+  const handleSearch = useCallback(() => fetchData(1, true), [fetchData])
+  // Page navigation → preserve existing map pins
+  const handlePageChange = useCallback(
+    (page: number) => fetchData(page, false),
+    [fetchData]
+  )
 
   // -------------------------------------------------------------------------
-  // Customer name click → load revenue for that customer
+  // Revenue fetch (shared by customer click and locate click)
   // -------------------------------------------------------------------------
 
-  const handleCustomerClick = useCallback(async (row: CustomerRow) => {
+  const loadRevenue = useCallback(async (row: CustomerRow) => {
     setSelectedCustomer({ key: row.customer_key, name: row.customer_name })
     setRevenueLoading(true)
     try {
@@ -125,14 +149,33 @@ export function CheckCustomersClient({
   }, [])
 
   // -------------------------------------------------------------------------
-  // Định vị click → fly map to location
+  // Customer name click → fly to map (if coords) + load revenue
   // -------------------------------------------------------------------------
 
-  const handleLocateClick = useCallback((row: CustomerRow) => {
-    if (row.lat == null || row.long == null) return
-    mapHandleRef.current?.flyTo(row.lat, row.long, 15)
-    document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
+  const handleCustomerClick = useCallback(
+    (row: CustomerRow) => {
+      if (row.lat != null && row.long != null) {
+        mapHandleRef.current?.flyTo(row.lat, row.long, 15)
+        document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })
+      }
+      loadRevenue(row)
+    },
+    [loadRevenue]
+  )
+
+  // -------------------------------------------------------------------------
+  // Định vị click → fly to map + load revenue
+  // -------------------------------------------------------------------------
+
+  const handleLocateClick = useCallback(
+    (row: CustomerRow) => {
+      if (row.lat == null || row.long == null) return
+      mapHandleRef.current?.flyTo(row.lat, row.long, 15)
+      document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })
+      loadRevenue(row)
+    },
+    [loadRevenue]
+  )
 
   // -------------------------------------------------------------------------
   // Customer table columns
@@ -177,9 +220,10 @@ export function CheckCustomersClient({
         },
       },
       {
-        key: 'lat',
+        // has_geo: boolean field used for sorting; render shows the actual button/badge
+        key: 'has_geo',
         label: 'Định vị',
-        sortable: false,
+        sortable: true,
         render: (_v, row) => {
           const hasCoords = row.lat != null && row.long != null
           return hasCoords ? (
@@ -202,16 +246,24 @@ export function CheckCustomersClient({
   )
 
   // -------------------------------------------------------------------------
-  // Revenue pivot table (brand × month)
+  // Revenue pivot table — fixed 24 columns: last year Jan → current year Dec
   // -------------------------------------------------------------------------
 
   const allMonths = useMemo(() => {
-    const monthSet = new Set<string>()
-    for (const row of revenueRows) monthSet.add(row.month)
-    return Array.from(monthSet).sort()
-  }, [revenueRows])
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const lastYear = currentYear - 1
+    const months: string[] = []
+    for (let m = 1; m <= 12; m++) {
+      months.push(`${lastYear}-${String(m).padStart(2, '0')}`)
+    }
+    for (let m = 1; m <= 12; m++) {
+      months.push(`${currentYear}-${String(m).padStart(2, '0')}`)
+    }
+    return months
+  }, []) // Static: year doesn't change during a session
 
-  // Group rows by brand
+  // Group revenue rows by brand, keyed by fixed month columns
   const pivotRows: PivotRow[] = useMemo(() => {
     const brandMap = new Map<string, PivotRow>()
     for (const row of revenueRows) {
@@ -312,7 +364,7 @@ export function CheckCustomersClient({
         className="[&_button]:bg-amber-600/20 [&_span]:text-amber-400"
       >
         <DataTable<CustomerRow>
-          data={data.customers.data as CustomerRow[]}
+          data={customersWithGeo}
           columns={customerColumns}
           exportConfig={{ copy: true, excel: true, csv: true, pdf: true, print: true }}
           showSearch
@@ -356,7 +408,8 @@ export function CheckCustomersClient({
             columns={pivotColumns}
             exportConfig={{ copy: true, excel: true, csv: true, pdf: true, print: true }}
             showSearch
-            showPageSizeDropdown
+            pageSize={500}
+            showPageSizeDropdown={false}
           />
         )}
       </SectionHeader>

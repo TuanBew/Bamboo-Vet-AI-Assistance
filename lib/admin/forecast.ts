@@ -1,13 +1,18 @@
 /**
- * Linear regression forecast utility for dashboard monthly series.
- * Runs server-side only — no 'use client' directive.
+ * Weighted Moving Average (WMA) forecast for dashboard monthly series.
+ *
+ * Design decisions:
+ * - Excludes the current calendar month (data is not yet complete)
+ * - Uses the last `windowSize` complete months as the WMA window
+ * - Forecasts from (last data month + 1) through December of the same year
+ * - WMA gives more weight to recent months: weights [1, 2, …, n] (newest = n)
+ * - If data already reaches December, no forecast is generated
  */
 
 export interface MonthlyDataPoint {
   year: number
   month: number
-  query_count: number
-  session_count: number
+  value: number
 }
 
 export interface ForecastPoint extends MonthlyDataPoint {
@@ -15,73 +20,66 @@ export interface ForecastPoint extends MonthlyDataPoint {
 }
 
 /**
- * Computes a linear regression forecast from monthly data points.
+ * Compute a Weighted Moving Average forecast from monthly data.
  *
- * @param data - Array of monthly data points (will be sorted ascending by date)
- * @param forecastMonths - Number of months to forecast (default 3)
- * @returns Array of real points (is_forecast: false) followed by forecast points (is_forecast: true)
+ * @param data - Monthly data points (any numeric series)
+ * @param windowSize - Number of recent complete months used for WMA (default: 6)
+ * @returns Sorted real points (is_forecast: false) followed by forecast points (is_forecast: true).
+ *          Forecast extends to December of the year of the last data point.
  */
-export function computeForecast(
+export function computeMovingAverageForecast(
   data: MonthlyDataPoint[],
-  forecastMonths: number = 3
+  windowSize: number = 6
 ): ForecastPoint[] {
   if (data.length === 0) return []
 
-  // Sort by date ascending
+  // Sort ascending by date
   const sorted = [...data].sort(
     (a, b) => a.year * 12 + a.month - (b.year * 12 + b.month)
   )
 
-  // Take last 6 data points for regression
-  const recent = sorted.slice(-6)
+  // Exclude the current calendar month — its data is incomplete
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1
+  const completeData = sorted.filter(
+    d => !(d.year === currentYear && d.month === currentMonth)
+  )
 
-  // Not enough data for regression — return real points only
-  if (recent.length < 2) {
+  if (completeData.length < 2) {
+    // Not enough complete data — return real points with no forecast
     return sorted.map(d => ({ ...d, is_forecast: false }))
   }
 
-  const n = recent.length
+  const lastPoint = completeData[completeData.length - 1]
 
-  // Linear regression: y = a + b*x where x = index (0 to n-1)
-  let sumX = 0
-  let sumY = 0
-  let sumXY = 0
-  let sumX2 = 0
-
-  for (let i = 0; i < n; i++) {
-    const x = i
-    const y = recent[i].query_count
-    sumX += x
-    sumY += y
-    sumXY += x * y
-    sumX2 += x * x
+  // Months to forecast: from lastPoint.month + 1 up to and including December
+  const monthsToForecast = 12 - lastPoint.month
+  if (monthsToForecast <= 0) {
+    // Last data point is already December — nothing to forecast
+    return sorted.map(d => ({ ...d, is_forecast: false }))
   }
 
-  const denominator = n * sumX2 - sumX * sumX
-  const b = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0
-  const a = (sumY - b * sumX) / n
+  // Weighted Moving Average over the last `windowSize` complete months.
+  // Weight of position i (0-indexed, oldest first) = i + 1
+  // → newest month gets weight n, oldest gets weight 1
+  const window = completeData.slice(-windowSize)
+  const n = window.length
+  const weightSum = (n * (n + 1)) / 2 // 1 + 2 + … + n
+  const forecastValue = Math.max(
+    0,
+    Math.round(
+      window.reduce((sum, d, i) => sum + d.value * (i + 1), 0) / weightSum
+    )
+  )
 
-  // Generate forecast points
-  const lastPoint = sorted[sorted.length - 1]
+  // Build forecast points: lastPoint + 1 month → December of lastPoint.year
   const forecastPoints: ForecastPoint[] = []
-
-  for (let i = 1; i <= forecastMonths; i++) {
-    // Compute next year/month with rollover
+  for (let i = 1; i <= monthsToForecast; i++) {
     const totalMonths = lastPoint.year * 12 + lastPoint.month + i
-    const forecastYear = Math.floor((totalMonths - 1) / 12)
-    const forecastMonth = ((totalMonths - 1) % 12) + 1
-
-    // Predict using regression (x continues from last index)
-    const predictedQueries = Math.max(0, Math.round(a + b * (n - 1 + i)))
-    const predictedSessions = Math.round(predictedQueries * 0.25)
-
-    forecastPoints.push({
-      year: forecastYear,
-      month: forecastMonth,
-      query_count: predictedQueries,
-      session_count: predictedSessions,
-      is_forecast: true,
-    })
+    const fy = Math.floor((totalMonths - 1) / 12)
+    const fm = ((totalMonths - 1) % 12) + 1
+    forecastPoints.push({ year: fy, month: fm, value: forecastValue, is_forecast: true })
   }
 
   return [
