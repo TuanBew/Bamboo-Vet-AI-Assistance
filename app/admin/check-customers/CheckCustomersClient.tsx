@@ -71,7 +71,6 @@ export function CheckCustomersClient({
   const [maKH, setMaKH] = useState('')
   const [tenKH, setTenKH] = useState('')
   const [tinh, setTinh] = useState('')       // province_name
-  const [quanHuyen, setQuanHuyen] = useState('') // dist_province (display only — no RPC param)
   const [phuongXa, setPhuongXa] = useState('') // town_name
   const [loaiCoSo, setLoaiCoSo] = useState('')
   const [dinhVi, setDinhVi] = useState('')
@@ -98,44 +97,12 @@ export function CheckCustomersClient({
       .catch(() => {/* silent — dropdowns empty */})
   }, [])
 
-  // Phường/Xã options filtered by selected Tỉnh
+  // All distinct town names (no cascade)
   const phuongXaOptions = useMemo(() => {
-    if (!tinh) return locations.towns
-    return locations.towns.filter(t => t.province_name === tinh)
-  }, [tinh, locations.towns])
-
-  // Tỉnh options filtered by selected Phường/Xã (reverse cascade)
-  const tinhOptions = useMemo(() => {
-    if (!phuongXa) return locations.provinces
-    const found = locations.towns.find(t => t.town_name === phuongXa)
-    return found ? [found.province_name] : locations.provinces
-  }, [phuongXa, locations])
-
-  // Quận/Huyện distinct options from data (dist_province — 3 NPP values)
-  const quanHuyenOptions = useMemo(() => {
     const seen = new Set<string>()
-    for (const t of data.customers.data) {
-      if (t.dist_province) seen.add(t.dist_province)
-    }
-    // Also add from initial data so options don't disappear after filter
+    for (const t of locations.towns) seen.add(t.town_name)
     return Array.from(seen).sort()
-  }, [data.customers.data])
-
-  // -------------------------------------------------------------------------
-  // Cascade handlers
-  // -------------------------------------------------------------------------
-  const handleTinhChange = useCallback((val: string) => {
-    setTinh(val)
-    setPhuongXa('') // reset ward when province changes
-  }, [])
-
-  const handlePhuongXaChange = useCallback((val: string) => {
-    setPhuongXa(val)
-    if (val && !tinh) {
-      const found = locations.towns.find(t => t.town_name === val)
-      if (found) setTinh(found.province_name)
-    }
-  }, [tinh, locations.towns])
+  }, [locations.towns])
 
   // -------------------------------------------------------------------------
   // Autocomplete handlers
@@ -207,6 +174,7 @@ export function CheckCustomersClient({
     activeFilters.current = filters
     fetchData(filters, 1, true)
   }, [npp, maKH, tenKH, tinh, phuongXa, loaiCoSo, dinhVi, fetchData])
+
 
   const handlePageChange = useCallback(
     (page: number) => fetchData(activeFilters.current, page, false),
@@ -456,32 +424,20 @@ export function CheckCustomersClient({
 
             {/* Box 3: Tỉnh */}
             <div className="flex-1 min-w-[110px]">
-              <select value={tinh} onChange={e => handleTinhChange(e.target.value)} className={cls}>
+              <select value={tinh} onChange={e => setTinh(e.target.value)} className={cls}>
                 <option value="">Tất cả Tỉnh</option>
-                {tinhOptions.map(p => (
+                {locations.provinces.map(p => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
             </div>
 
-            {/* Box 4: Quận/Huyện (dist_province — display only) */}
+            {/* Box 4: Phường/Xã */}
             <div className="flex-1 min-w-[110px]">
-              <select value={quanHuyen} onChange={e => setQuanHuyen(e.target.value)} className={cls}>
-                <option value="">Tất cả Q/H</option>
-                {quanHuyenOptions.map(q => (
-                  <option key={q} value={q}>{q}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Box 5: Phường/Xã — cascades from Tỉnh */}
-            <div className="flex-1 min-w-[110px]">
-              <select value={phuongXa} onChange={e => handlePhuongXaChange(e.target.value)} className={cls}>
+              <select value={phuongXa} onChange={e => setPhuongXa(e.target.value)} className={cls}>
                 <option value="">Tất cả P/X</option>
                 {phuongXaOptions.map(t => (
-                  <option key={`${t.province_name}||${t.town_name}`} value={t.town_name}>
-                    {t.town_name}
-                  </option>
+                  <option key={t} value={t}>{t}</option>
                 ))}
               </select>
             </div>
