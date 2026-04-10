@@ -77,6 +77,23 @@ scripts/reset-admin-pw.mjs
 # GSD planning documents (local planning context, not for repo)
 .planning/
 
+# Internal docs and design specs (not for public repo)
+docs/
+CLAUDE.md
+
+# Samples — may contain real company data
+samples/
+*.xlsx
+*.xls
+
+# Dashboard screenshots (may show real data)
+*.jpg
+*.jpeg
+
 # Supabase local config (generated)
 supabase/.gitignore
 supabase/config.toml
+supabase/.temp/
+
+# TypeScript build artefacts
+tsconfig.tsbuildinfo
