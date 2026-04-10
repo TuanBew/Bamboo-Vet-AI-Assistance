@@ -48,6 +48,8 @@ export interface DataTableProps<T> {
   showSearch?: boolean
   // Page size dropdown
   showPageSizeDropdown?: boolean
+  // Page jump input
+  showPageJump?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -85,10 +87,12 @@ function DataTableInner<T extends Record<string, unknown>>({
   onSearch,
   showSearch = false,
   showPageSizeDropdown = true,
+  showPageJump = false,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [pageSizeState, setPageSizeState] = useState(initialPageSize)
+  const [pageJumpValue, setPageJumpValue] = useState('')
 
   const isServerPaginated = totalCount !== undefined && onPageChange !== undefined
 
@@ -460,6 +464,31 @@ function DataTableInner<T extends Record<string, unknown>>({
             >
               {VI.table.next}
             </button>
+            {showPageJump && (
+              <div className="flex items-center gap-1 ml-2">
+                <span className="text-sm text-gray-400">Đến trang:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={serverTotalPages}
+                  value={pageJumpValue}
+                  onChange={e => setPageJumpValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      const p = parseInt(pageJumpValue)
+                      if (p >= 1 && p <= serverTotalPages) { goToPage(p); setPageJumpValue('') }
+                    }
+                  }}
+                  onBlur={() => {
+                    const p = parseInt(pageJumpValue)
+                    if (p >= 1 && p <= serverTotalPages) { goToPage(p); setPageJumpValue('') }
+                  }}
+                  placeholder={String(serverCurrentPage)}
+                  className="w-14 bg-gray-700 border border-gray-600 text-white text-sm rounded px-2 py-1 text-center focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+                <span className="text-sm text-gray-400">/ {serverTotalPages}</span>
+              </div>
+            )}
           </div>
         </div>
       )}

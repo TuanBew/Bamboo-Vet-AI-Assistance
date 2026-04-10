@@ -18,13 +18,26 @@ export default async function AdminCheckCustomersPage({
   const page = parseInt(params.page || '1')
   const page_size = parseInt(params.page_size || '10')
 
-  const data = await getCheckCustomersData({ distributor_id, search, page, page_size })
+  const initialFilters = {
+    distributor_id,
+    search,
+    page,
+    page_size,
+    customer_key_filter: '',
+    customer_name_filter: '',
+    province: '',
+    town: '',
+    cust_class_key: '',
+    has_geo: '',
+  }
+
+  const data = await getCheckCustomersData(initialFilters)
 
   return (
     <Suspense fallback={<div className="text-gray-400">Đang tải...</div>}>
       <CheckCustomersClient
         initialData={data}
-        initialFilters={{ distributor_id, search, page, page_size }}
+        initialFilters={initialFilters}
       />
     </Suspense>
   )

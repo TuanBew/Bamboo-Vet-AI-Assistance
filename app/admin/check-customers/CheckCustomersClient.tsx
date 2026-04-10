@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useMemo, useCallback } from 'react'
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { Search, MapPin as MapPinIcon } from 'lucide-react'
 import { MapView, type MapHandle, type MapPin } from '@/components/admin/MapView'
 import { SectionHeader } from '@/components/admin/SectionHeader'
@@ -11,21 +11,12 @@ import type {
   CheckCustomersFilters,
   CustomerRow as CustomerRowBase,
   RevenuePivotRow,
+  LocationHierarchy,
 } from '@/lib/admin/services/check-customers'
+import { VI } from '@/lib/i18n/vietnamese'
 
 // Extend CustomerRow with computed has_geo field for sortable "Định vị" column
 type CustomerRow = CustomerRowBase & { has_geo: boolean } & Record<string, unknown>
-
-import { VI } from '@/lib/i18n/vietnamese'
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface CheckCustomersClientProps {
-  initialData: CheckCustomersData
-  initialFilters: CheckCustomersFilters
-}
 
 type PivotRow = Record<string, unknown>
 
@@ -49,6 +40,15 @@ function addHasGeo(rows: CustomerRowBase[]): CustomerRow[] {
 }
 
 // ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface CheckCustomersClientProps {
+  initialData: CheckCustomersData
+  initialFilters: CheckCustomersFilters
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -57,90 +57,170 @@ export function CheckCustomersClient({
   initialFilters,
 }: CheckCustomersClientProps) {
   const [data, setData] = useState<CheckCustomersData>(initialData)
-  // Stable map pins: preserved on page-only changes, updated on filter changes
   const [mapPins, setMapPins] = useState<MapPin[]>(() => toMapPins(initialData.map_pins))
-  const [filters, setFilters] = useState({
-    distributor_id: initialFilters.distributor_id,
-    search: initialFilters.search,
-  })
   const [loading, setLoading] = useState(false)
-  const [selectedCustomer, setSelectedCustomer] = useState<{
-    key: string
-    name: string
-  } | null>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<{ key: string; name: string } | null>(null)
   const [revenueRows, setRevenueRows] = useState<RevenuePivotRow[]>([])
   const [revenueLoading, setRevenueLoading] = useState(false)
   const mapHandleRef = useRef<MapHandle | null>(null)
 
   // -------------------------------------------------------------------------
-  // NPP options
+  // Search filter state
   // -------------------------------------------------------------------------
-
-  const nppOptions = useMemo(() => {
-    return [
-      { value: '', label: VI.nhapHang.allNpp },
-      ...data.npp_options.map((o) => ({
-        value: o.ship_from_code,
-        label: o.ship_from_name,
-      })),
-    ]
-  }, [data.npp_options])
+  const [npp, setNpp] = useState(initialFilters.distributor_id)
+  const [maKH, setMaKH] = useState('')
+  const [tenKH, setTenKH] = useState('')
+  const [tinh, setTinh] = useState('')       // province_name
+  const [quanHuyen, setQuanHuyen] = useState('') // dist_province (display only — no RPC param)
+  const [phuongXa, setPhuongXa] = useState('') // town_name
+  const [loaiCoSo, setLoaiCoSo] = useState('')
+  const [dinhVi, setDinhVi] = useState('')
 
   // -------------------------------------------------------------------------
-  // Customer rows with has_geo for sortable "Định vị" column
+  // Autocomplete state
   // -------------------------------------------------------------------------
+  const [maKHSuggestions, setMaKHSuggestions] = useState<string[]>([])
+  const [tenKHSuggestions, setTenKHSuggestions] = useState<string[]>([])
+  const [showMaKHDrop, setShowMaKHDrop] = useState(false)
+  const [showTenKHDrop, setShowTenKHDrop] = useState(false)
+  const maKHTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tenKHTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const customersWithGeo = useMemo<CustomerRow[]>(
-    () => addHasGeo(data.customers.data),
-    [data.customers.data]
-  )
+  // -------------------------------------------------------------------------
+  // Location hierarchy (loaded once)
+  // -------------------------------------------------------------------------
+  const [locations, setLocations] = useState<LocationHierarchy>({ provinces: [], towns: [] })
+
+  useEffect(() => {
+    fetch('/api/admin/check-customers/locations')
+      .then(r => r.json())
+      .then((d: LocationHierarchy) => setLocations(d))
+      .catch(() => {/* silent — dropdowns empty */})
+  }, [])
+
+  // Phường/Xã options filtered by selected Tỉnh
+  const phuongXaOptions = useMemo(() => {
+    if (!tinh) return locations.towns
+    return locations.towns.filter(t => t.province_name === tinh)
+  }, [tinh, locations.towns])
+
+  // Tỉnh options filtered by selected Phường/Xã (reverse cascade)
+  const tinhOptions = useMemo(() => {
+    if (!phuongXa) return locations.provinces
+    const found = locations.towns.find(t => t.town_name === phuongXa)
+    return found ? [found.province_name] : locations.provinces
+  }, [phuongXa, locations])
+
+  // Quận/Huyện distinct options from data (dist_province — 3 NPP values)
+  const quanHuyenOptions = useMemo(() => {
+    const seen = new Set<string>()
+    for (const t of data.customers.data) {
+      if (t.dist_province) seen.add(t.dist_province)
+    }
+    // Also add from initial data so options don't disappear after filter
+    return Array.from(seen).sort()
+  }, [data.customers.data])
+
+  // -------------------------------------------------------------------------
+  // Cascade handlers
+  // -------------------------------------------------------------------------
+  const handleTinhChange = useCallback((val: string) => {
+    setTinh(val)
+    setPhuongXa('') // reset ward when province changes
+  }, [])
+
+  const handlePhuongXaChange = useCallback((val: string) => {
+    setPhuongXa(val)
+    if (val && !tinh) {
+      const found = locations.towns.find(t => t.town_name === val)
+      if (found) setTinh(found.province_name)
+    }
+  }, [tinh, locations.towns])
+
+  // -------------------------------------------------------------------------
+  // Autocomplete handlers
+  // -------------------------------------------------------------------------
+  const handleMaKHChange = useCallback((val: string) => {
+    setMaKH(val)
+    if (maKHTimer.current) clearTimeout(maKHTimer.current)
+    if (!val.trim()) { setMaKHSuggestions([]); setShowMaKHDrop(false); return }
+    maKHTimer.current = setTimeout(() => {
+      fetch(`/api/admin/check-customers/autocomplete?field=customer_key&query=${encodeURIComponent(val)}`)
+        .then(r => r.json())
+        .then((s: string[]) => { setMaKHSuggestions(s); setShowMaKHDrop(s.length > 0) })
+        .catch(() => { setMaKHSuggestions([]); setShowMaKHDrop(false) })
+    }, 200)
+  }, [])
+
+  const handleTenKHChange = useCallback((val: string) => {
+    setTenKH(val)
+    if (tenKHTimer.current) clearTimeout(tenKHTimer.current)
+    if (!val.trim()) { setTenKHSuggestions([]); setShowTenKHDrop(false); return }
+    tenKHTimer.current = setTimeout(() => {
+      fetch(`/api/admin/check-customers/autocomplete?field=customer_name&query=${encodeURIComponent(val)}`)
+        .then(r => r.json())
+        .then((s: string[]) => { setTenKHSuggestions(s); setShowTenKHDrop(s.length > 0) })
+        .catch(() => { setTenKHSuggestions([]); setShowTenKHDrop(false) })
+    }, 200)
+  }, [])
 
   // -------------------------------------------------------------------------
   // Data fetching
   // -------------------------------------------------------------------------
+  const activeFilters = useRef<CheckCustomersFilters>(initialFilters)
 
-  const fetchData = useCallback(
-    async (page: number, updatePins: boolean) => {
-      setLoading(true)
-      try {
-        const params = new URLSearchParams()
-        if (filters.distributor_id) params.set('distributor_id', filters.distributor_id)
-        if (filters.search) params.set('search', filters.search)
-        params.set('page', String(page))
-        params.set('page_size', '10')
-        const res = await fetch(`/api/admin/check-customers?${params}`)
-        const newData: CheckCustomersData = await res.json()
-        setData(newData)
-        // Only update map pins when filters change (not on page-only navigation)
-        if (updatePins) {
-          setMapPins(toMapPins(newData.map_pins))
-        }
-      } finally {
-        setLoading(false)
-      }
-    },
-    [filters]
-  )
+  const fetchData = useCallback(async (filters: CheckCustomersFilters, page: number, updatePins: boolean) => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (filters.distributor_id) params.set('distributor_id', filters.distributor_id)
+      if (filters.customer_key_filter) params.set('customer_key_filter', filters.customer_key_filter)
+      if (filters.customer_name_filter) params.set('customer_name_filter', filters.customer_name_filter)
+      if (filters.province) params.set('province', filters.province)
+      if (filters.town) params.set('town', filters.town)
+      if (filters.cust_class_key) params.set('cust_class_key', filters.cust_class_key)
+      if (filters.has_geo) params.set('has_geo', filters.has_geo)
+      params.set('page', String(page))
+      params.set('page_size', '10')
+      const res = await fetch(`/api/admin/check-customers?${params}`)
+      const newData: CheckCustomersData = await res.json()
+      setData(newData)
+      if (updatePins) setMapPins(toMapPins(newData.map_pins))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
-  // Filter/search change → page 1 + update map pins
-  const handleSearch = useCallback(() => fetchData(1, true), [fetchData])
-  // Page navigation → preserve existing map pins
+  const handleSearch = useCallback(() => {
+    const filters: CheckCustomersFilters = {
+      distributor_id: npp,
+      search: '',
+      page: 1,
+      page_size: 10,
+      customer_key_filter: maKH.trim(),
+      customer_name_filter: tenKH.trim(),
+      province: tinh,
+      town: phuongXa,
+      cust_class_key: loaiCoSo,
+      has_geo: dinhVi,
+    }
+    activeFilters.current = filters
+    fetchData(filters, 1, true)
+  }, [npp, maKH, tenKH, tinh, phuongXa, loaiCoSo, dinhVi, fetchData])
+
   const handlePageChange = useCallback(
-    (page: number) => fetchData(page, false),
+    (page: number) => fetchData(activeFilters.current, page, false),
     [fetchData]
   )
 
   // -------------------------------------------------------------------------
-  // Revenue fetch (shared by customer click and locate click)
+  // Revenue fetch
   // -------------------------------------------------------------------------
-
   const loadRevenue = useCallback(async (row: CustomerRow) => {
     setSelectedCustomer({ key: row.customer_key, name: row.customer_name })
     setRevenueLoading(true)
     try {
-      const res = await fetch(
-        `/api/admin/check-customers/revenue?customer_key=${encodeURIComponent(row.customer_key)}`
-      )
+      const res = await fetch(`/api/admin/check-customers/revenue?customer_key=${encodeURIComponent(row.customer_key)}`)
       const rows: RevenuePivotRow[] = await res.json()
       setRevenueRows(rows)
     } finally {
@@ -148,140 +228,117 @@ export function CheckCustomersClient({
     }
   }, [])
 
-  // -------------------------------------------------------------------------
-  // Customer name click → fly to map (if coords) + load revenue
-  // -------------------------------------------------------------------------
-
-  const handleCustomerClick = useCallback(
-    (row: CustomerRow) => {
-      if (row.lat != null && row.long != null) {
-        mapHandleRef.current?.flyTo(row.lat, row.long, 15)
-        document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })
-      }
-      loadRevenue(row)
-    },
-    [loadRevenue]
-  )
-
-  // -------------------------------------------------------------------------
-  // Định vị click → fly to map + load revenue
-  // -------------------------------------------------------------------------
-
-  const handleLocateClick = useCallback(
-    (row: CustomerRow) => {
-      if (row.lat == null || row.long == null) return
+  const handleCustomerClick = useCallback((row: CustomerRow) => {
+    if (row.lat != null && row.long != null) {
       mapHandleRef.current?.flyTo(row.lat, row.long, 15)
       document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })
-      loadRevenue(row)
-    },
-    [loadRevenue]
+    }
+    loadRevenue(row)
+  }, [loadRevenue])
+
+  const handleLocateClick = useCallback((row: CustomerRow) => {
+    if (row.lat == null || row.long == null) return
+    mapHandleRef.current?.flyTo(row.lat, row.long, 15)
+    document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })
+    loadRevenue(row)
+  }, [loadRevenue])
+
+  // -------------------------------------------------------------------------
+  // Derived data
+  // -------------------------------------------------------------------------
+  const nppOptions = useMemo(() => [
+    { value: '', label: VI.nhapHang.allNpp },
+    ...data.npp_options.map(o => ({ value: o.ship_from_code, label: o.ship_from_name })),
+  ], [data.npp_options])
+
+  const customersWithGeo = useMemo<CustomerRow[]>(
+    () => addHasGeo(data.customers.data),
+    [data.customers.data]
   )
 
   // -------------------------------------------------------------------------
   // Customer table columns
   // -------------------------------------------------------------------------
-
-  const customerColumns = useMemo<DataTableColumn<CustomerRow>[]>(
-    () => [
-      { key: 'customer_key', label: 'Mã KH', sortable: true },
-      {
-        key: 'customer_name',
-        label: 'Tên KH',
-        sortable: true,
-        render: (_v, row) => (
+  const customerColumns = useMemo<DataTableColumn<CustomerRow>[]>(() => [
+    { key: 'customer_key', label: 'Mã KH', sortable: true },
+    {
+      key: 'customer_name',
+      label: 'Tên KH',
+      sortable: true,
+      render: (_v, row) => (
+        <button
+          onClick={() => handleCustomerClick(row)}
+          className={`text-left hover:underline cursor-pointer font-medium transition-colors ${
+            selectedCustomer?.key === row.customer_key ? 'text-cyan-300' : 'text-cyan-400 hover:text-cyan-300'
+          }`}
+        >
+          {row.customer_name}
+        </button>
+      ),
+    },
+    { key: 'address', label: 'Địa chỉ' },
+    { key: 'town_name', label: 'Phường/Xã' },
+    { key: 'dist_province', label: 'Quận/Huyện' },
+    { key: 'province_name', label: 'Tỉnh' },
+    {
+      key: 'cust_class_name',
+      label: 'Loại cơ sở',
+      render: (v, row) => {
+        const cfg = getCustomerTypeConfig(row.cust_class_key)
+        return (
+          <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${cfg.bgClass}/20 ${cfg.textClass}`}>
+            {v as string}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'has_geo',
+      label: 'Định vị',
+      sortable: true,
+      render: (_v, row) => {
+        const hasCoords = row.lat != null && row.long != null
+        return hasCoords ? (
           <button
-            onClick={() => handleCustomerClick(row)}
-            className={`text-left hover:underline cursor-pointer font-medium transition-colors ${
-              selectedCustomer?.key === row.customer_key
-                ? 'text-cyan-300'
-                : 'text-cyan-400 hover:text-cyan-300'
-            }`}
+            onClick={() => handleLocateClick(row)}
+            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500/40 transition-colors cursor-pointer"
           >
-            {row.customer_name}
+            <MapPinIcon className="w-3 h-3" />
+            Đã định vị
           </button>
-        ),
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-600/40 text-gray-400">
+            Chưa định vị
+          </span>
+        )
       },
-      { key: 'address', label: 'Địa chỉ' },
-      { key: 'town_name', label: 'Phường/Xã' },
-      { key: 'dist_province', label: 'Quận/Huyện' },
-      { key: 'province_name', label: 'Tỉnh' },
-      {
-        key: 'cust_class_name',
-        label: 'Loại cơ sở',
-        render: (v, row) => {
-          const cfg = getCustomerTypeConfig(row.cust_class_key)
-          return (
-            <span
-              className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${cfg.bgClass}/20 ${cfg.textClass}`}
-            >
-              {v as string}
-            </span>
-          )
-        },
-      },
-      {
-        // has_geo: boolean field used for sorting; render shows the actual button/badge
-        key: 'has_geo',
-        label: 'Định vị',
-        sortable: true,
-        render: (_v, row) => {
-          const hasCoords = row.lat != null && row.long != null
-          return hasCoords ? (
-            <button
-              onClick={() => handleLocateClick(row)}
-              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500/40 transition-colors cursor-pointer"
-            >
-              <MapPinIcon className="w-3 h-3" />
-              Đã định vị
-            </button>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-600/40 text-gray-400">
-              Chưa định vị
-            </span>
-          )
-        },
-      },
-    ],
-    [selectedCustomer, handleCustomerClick, handleLocateClick]
-  )
+    },
+  ], [selectedCustomer, handleCustomerClick, handleLocateClick])
 
   // -------------------------------------------------------------------------
-  // Revenue pivot table — fixed 24 columns: last year Jan → current year Dec
+  // Revenue pivot columns
   // -------------------------------------------------------------------------
-
   const allMonths = useMemo(() => {
     const now = new Date()
-    const currentYear = now.getFullYear()
-    const lastYear = currentYear - 1
+    const cur = now.getFullYear()
+    const last = cur - 1
     const months: string[] = []
-    for (let m = 1; m <= 12; m++) {
-      months.push(`${lastYear}-${String(m).padStart(2, '0')}`)
-    }
-    for (let m = 1; m <= 12; m++) {
-      months.push(`${currentYear}-${String(m).padStart(2, '0')}`)
-    }
+    for (let m = 1; m <= 12; m++) months.push(`${last}-${String(m).padStart(2, '0')}`)
+    for (let m = 1; m <= 12; m++) months.push(`${cur}-${String(m).padStart(2, '0')}`)
     return months
-  }, []) // Static: year doesn't change during a session
+  }, [])
 
-  // Group revenue rows by brand, keyed by fixed month columns
   const pivotRows: PivotRow[] = useMemo(() => {
-    const brandMap = new Map<string, PivotRow>()
+    const map = new Map<string, PivotRow>()
     for (const row of revenueRows) {
-      if (!brandMap.has(row.brand)) {
-        brandMap.set(row.brand, { brand: row.brand })
-      }
-      const entry = brandMap.get(row.brand)!
-      entry[row.month] = row.revenue
+      if (!map.has(row.brand)) map.set(row.brand, { brand: row.brand })
+      map.get(row.brand)![row.month] = row.revenue
     }
-    return Array.from(brandMap.values()).sort((a, b) =>
-      String(a.brand).localeCompare(String(b.brand))
-    )
+    return Array.from(map.values()).sort((a, b) => String(a.brand).localeCompare(String(b.brand)))
   }, [revenueRows])
 
   const pivotColumns = useMemo<DataTableColumn<PivotRow>[]>(() => {
-    const cols: DataTableColumn<PivotRow>[] = [
-      { key: 'brand', label: 'Thương hiệu', sortable: true },
-    ]
+    const cols: DataTableColumn<PivotRow>[] = [{ key: 'brand', label: 'Thương hiệu', sortable: true }]
     for (const m of allMonths) {
       cols.push({
         key: m,
@@ -289,8 +346,7 @@ export function CheckCustomersClient({
         sortable: true,
         render: (v) => {
           const val = v as number | undefined
-          if (!val) return ''
-          return val.toLocaleString('vi-VN')
+          return val ? val.toLocaleString('vi-VN') : ''
         },
       })
     }
@@ -300,19 +356,15 @@ export function CheckCustomersClient({
   // -------------------------------------------------------------------------
   // Pagination info
   // -------------------------------------------------------------------------
+  const showingFrom = data.customers.total === 0 ? 0 : (data.customers.page - 1) * data.customers.page_size + 1
+  const showingTo = Math.min(data.customers.page * data.customers.page_size, data.customers.total)
 
-  const showingFrom = data.customers.total === 0
-    ? 0
-    : (data.customers.page - 1) * data.customers.page_size + 1
-  const showingTo = Math.min(
-    data.customers.page * data.customers.page_size,
-    data.customers.total
-  )
+  // Shared input/select class
+  const cls = 'bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 w-full'
 
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
-
   return (
     <div className="space-y-6">
       {/* Page title */}
@@ -323,56 +375,160 @@ export function CheckCustomersClient({
         </div>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex items-center gap-3">
-        <select
-          value={filters.distributor_id}
-          onChange={(e) => setFilters((f) => ({ ...f, distributor_id: e.target.value }))}
-          className="flex-1 bg-gray-700 text-white border border-gray-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
-        >
-          {nppOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={handleSearch}
-          disabled={loading}
-          className="bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white px-4 py-2 rounded-md transition-colors"
-        >
-          <Search className="h-5 w-5" />
-        </button>
-      </div>
-
       {/* Section 1: Map */}
       <div id="map-section">
         <SectionHeader title={VI.checkCustomers.customerLocationMonth}>
           <MapView
             pins={mapPins}
             className="h-[400px]"
-            onMapReady={(handle) => {
-              mapHandleRef.current = handle
-            }}
+            onMapReady={(handle) => { mapHandleRef.current = handle }}
           />
         </SectionHeader>
       </div>
 
-      {/* Section 2: Customer list */}
+      {/* Section 2: Customer list with embedded search */}
       <SectionHeader
         title={VI.checkCustomers.customerList}
         className="[&_button]:bg-amber-600/20 [&_span]:text-amber-400"
       >
+        {/* ── Search bar ── */}
+        <div className="space-y-2 mb-4">
+          {/* Row 1: NPP */}
+          <select value={npp} onChange={e => setNpp(e.target.value)} className={cls}>
+            {nppOptions.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+
+          {/* Row 2: 7 filter boxes + button */}
+          <div className="flex items-start gap-2 flex-wrap">
+            {/* Box 1: Mã KH */}
+            <div className="relative flex-1 min-w-[110px]">
+              <input
+                type="text"
+                placeholder="Mã KH"
+                value={maKH}
+                onChange={e => handleMaKHChange(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                onBlur={() => setTimeout(() => setShowMaKHDrop(false), 150)}
+                className={cls}
+              />
+              {showMaKHDrop && maKHSuggestions.length > 0 && (
+                <ul className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {maKHSuggestions.map(s => (
+                    <li
+                      key={s}
+                      onMouseDown={() => { setMaKH(s); setShowMaKHDrop(false) }}
+                      className="px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer"
+                    >
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Box 2: Tên KH */}
+            <div className="relative flex-[2] min-w-[160px]">
+              <input
+                type="text"
+                placeholder="Tên KH"
+                value={tenKH}
+                onChange={e => handleTenKHChange(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                onBlur={() => setTimeout(() => setShowTenKHDrop(false), 150)}
+                className={cls}
+              />
+              {showTenKHDrop && tenKHSuggestions.length > 0 && (
+                <ul className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {tenKHSuggestions.map(s => (
+                    <li
+                      key={s}
+                      onMouseDown={() => { setTenKH(s); setShowTenKHDrop(false) }}
+                      className="px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer"
+                    >
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Box 3: Tỉnh */}
+            <div className="flex-1 min-w-[110px]">
+              <select value={tinh} onChange={e => handleTinhChange(e.target.value)} className={cls}>
+                <option value="">Tất cả Tỉnh</option>
+                {tinhOptions.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Box 4: Quận/Huyện (dist_province — display only) */}
+            <div className="flex-1 min-w-[110px]">
+              <select value={quanHuyen} onChange={e => setQuanHuyen(e.target.value)} className={cls}>
+                <option value="">Tất cả Q/H</option>
+                {quanHuyenOptions.map(q => (
+                  <option key={q} value={q}>{q}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Box 5: Phường/Xã — cascades from Tỉnh */}
+            <div className="flex-1 min-w-[110px]">
+              <select value={phuongXa} onChange={e => handlePhuongXaChange(e.target.value)} className={cls}>
+                <option value="">Tất cả P/X</option>
+                {phuongXaOptions.map(t => (
+                  <option key={`${t.province_name}||${t.town_name}`} value={t.town_name}>
+                    {t.town_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Box 6: Loại cơ sở */}
+            <div className="flex-1 min-w-[110px]">
+              <select value={loaiCoSo} onChange={e => setLoaiCoSo(e.target.value)} className={cls}>
+                <option value="">Tất cả loại</option>
+                {data.cust_class_options.map(c => (
+                  <option key={`${c.cust_class_key}||${c.cust_class_name}`} value={c.cust_class_key}>
+                    {c.cust_class_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Box 7: Định vị */}
+            <div className="flex-1 min-w-[100px]">
+              <select value={dinhVi} onChange={e => setDinhVi(e.target.value)} className={cls}>
+                <option value="">Tất cả</option>
+                <option value="yes">Đã định vị</option>
+                <option value="no">Chưa định vị</option>
+              </select>
+            </div>
+
+            {/* Search button */}
+            <button
+              onClick={handleSearch}
+              disabled={loading}
+              className="bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white px-4 py-2 rounded-md transition-colors flex items-center gap-2 whitespace-nowrap"
+            >
+              <Search className="h-4 w-4" />
+              <span className="text-sm">Tìm kiếm</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Customer table ── */}
         <DataTable<CustomerRow>
           data={customersWithGeo}
           columns={customerColumns}
-          exportConfig={{ copy: true, excel: true, csv: true, pdf: true, print: true }}
-          showSearch
-          searchPlaceholder="Search..."
+          exportConfig={undefined}
           totalCount={data.customers.total}
           currentPage={data.customers.page}
           onPageChange={handlePageChange}
           showPageSizeDropdown
+          showPageJump
         />
         {data.customers.total > 0 && (
           <div className="text-sm text-gray-400 mt-2">
@@ -381,13 +537,9 @@ export function CheckCustomersClient({
         )}
       </SectionHeader>
 
-      {/* Section 3: Doanh số — loads when customer is selected */}
+      {/* Section 3: Doanh số */}
       <SectionHeader
-        title={
-          selectedCustomer
-            ? `Doanh số — ${selectedCustomer.name}`
-            : VI.checkCustomers.revenue
-        }
+        title={selectedCustomer ? `Doanh số — ${selectedCustomer.name}` : VI.checkCustomers.revenue}
         className="[&_button]:bg-amber-600/20 [&_span]:text-amber-400"
       >
         {!selectedCustomer ? (
@@ -400,7 +552,7 @@ export function CheckCustomersClient({
           </div>
         ) : pivotRows.length === 0 ? (
           <div className="rounded-lg border border-gray-700 bg-gray-800 p-8 text-center text-sm text-gray-400">
-            Không có dữ liệu doanh số cho khách hàng này
+            Không có dữ liệu doanh số trong 2025-2026 cho khách hàng này
           </div>
         ) : (
           <DataTable<PivotRow>

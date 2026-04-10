@@ -9,6 +9,22 @@ export interface CheckCustomersFilters {
   search: string
   page: number
   page_size: number
+  customer_key_filter: string
+  customer_name_filter: string
+  province: string        // province_name
+  town: string            // town_name (labeled Phường/Xã)
+  cust_class_key: string
+  has_geo: string         // 'yes' | 'no' | ''
+}
+
+export interface CustClassOption {
+  cust_class_key: string
+  cust_class_name: string
+}
+
+export interface LocationHierarchy {
+  provinces: string[]
+  towns: Array<{ province_name: string; town_name: string }>
 }
 
 export interface CustomerRow {
@@ -50,6 +66,7 @@ export interface CheckCustomersData {
     page_size: number
   }
   npp_options: Array<{ ship_from_code: string; ship_from_name: string }>
+  cust_class_options: CustClassOption[]
 }
 
 // ---------------------------------------------------------------------------
@@ -61,8 +78,7 @@ export async function getCheckCustomersData(
 ): Promise<CheckCustomersData> {
   const db = createServiceClient()
 
-  // Run map pins and customer list in parallel
-  const [mapPinsResult, customersResult, nppResult] = await Promise.all([
+  const [mapPinsResult, customersResult, nppResult, classResult] = await Promise.all([
     db.rpc('get_check_customers_map_pins', {
       p_ship_from_code: filters.distributor_id,
     }),
@@ -71,8 +87,15 @@ export async function getCheckCustomersData(
       p_search: filters.search,
       p_page: filters.page,
       p_page_size: filters.page_size,
+      p_customer_key_filter: filters.customer_key_filter,
+      p_customer_name_filter: filters.customer_name_filter,
+      p_province: filters.province,
+      p_town: filters.town,
+      p_cust_class_key: filters.cust_class_key,
+      p_has_geo: filters.has_geo,
     }),
     db.rpc('get_door_npp_options'),
+    db.rpc('get_check_customers_class_options'),
   ])
 
   const mapPinsRaw = (mapPinsResult.data ?? []) as MapPin[]
@@ -80,11 +103,8 @@ export async function getCheckCustomersData(
     total: number
     data: CustomerRow[]
   } | null
-
-  const nppRaw = (nppResult.data ?? []) as Array<{
-    ship_from_code: string
-    ship_from_name: string
-  }>
+  const nppRaw = (nppResult.data ?? []) as Array<{ ship_from_code: string; ship_from_name: string }>
+  const classRaw = (classResult.data ?? []) as CustClassOption[]
 
   return {
     map_pins: mapPinsRaw,
@@ -95,7 +115,36 @@ export async function getCheckCustomersData(
       page_size: filters.page_size,
     },
     npp_options: nppRaw,
+    cust_class_options: classRaw,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Location hierarchy for cascade dropdowns
+// ---------------------------------------------------------------------------
+
+export async function getCustomerLocations(): Promise<LocationHierarchy> {
+  const db = createServiceClient()
+  const { data } = await db.rpc('get_check_customers_locations')
+  return (data ?? { provinces: [], towns: [] }) as LocationHierarchy
+}
+
+// ---------------------------------------------------------------------------
+// Autocomplete suggestions for Mã KH / Tên KH
+// ---------------------------------------------------------------------------
+
+export async function getCustomerAutocomplete(
+  field: 'customer_key' | 'customer_name',
+  query: string,
+  limit = 10
+): Promise<string[]> {
+  const db = createServiceClient()
+  const { data } = await db.rpc('get_check_customers_autocomplete', {
+    p_field: field,
+    p_query: query,
+    p_limit: limit,
+  })
+  return (data ?? []) as string[]
 }
 
 // ---------------------------------------------------------------------------
