@@ -6,7 +6,7 @@
 
 ## Overview
 
-Bamboo Vet is a full-stack web application built for **Công ty CP Thú y Bamboovet Việt Nam** and its distribution partners. It combines:
+Bamboo Vet is a mock full-stack web application built for **Công ty Cổ phần thương mại IMEXCO Việt Nam** and its distribution partner  **Công ty CP Thú y Bamboovet Việt Nam**. It combines:
 
 - **AI Chat Interface** — RAGflow-powered assistant that answers drug lookup, dosage, and treatment questions for veterinarians and distributors
 - **Admin Analytics Dashboard** — Role-gated business intelligence panel with real-time sales data, inventory, customer maps, and revenue pivots drawn from live ERP data
@@ -229,4 +229,4 @@ npx tsx scripts/<script>.ts
 
 ## License
 
-Private — proprietary to Công ty CP Thú y Bamboovet Việt Nam. All rights reserved.
+Private — proprietary to Công ty Cổ phần thương mại IMEXCO Việt Nam. All rights reserved.
