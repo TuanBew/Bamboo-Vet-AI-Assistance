@@ -44,3 +44,39 @@ yarn-error.log*
 *.swp
 *.swo
 *~
+
+# Development screenshots & ad-hoc test scripts (accumulated during debugging)
+*.png
+test-*.mjs
+
+# Playwright MCP browser session artefacts
+.playwright-mcp/
+
+# One-off debug/migration scripts (not part of the application)
+scripts/apply-migrations.ts
+scripts/check-counts.ts
+scripts/check-counts2.ts
+scripts/check-extensions.ts
+scripts/check-schema.ts
+scripts/create-tables-via-rpc.ts
+scripts/debug-dashboard-data.mjs
+scripts/exec-sql-pg.ts
+scripts/exec-sql.ts
+scripts/run-sql.ts
+scripts/test-dashboard-full.mjs
+scripts/test-dashboard.mjs
+scripts/test-filters-visual.mjs
+scripts/test-filters.mjs
+scripts/test-login.mjs
+scripts/test-rpc.mjs
+scripts/try-extensions-schema.ts
+scripts/try-pg-connect.ts
+scripts/try-sql-endpoints.ts
+scripts/reset-admin-pw.mjs
+
+# GSD planning documents (local planning context, not for repo)
+.planning/
+
+# Supabase local config (generated)
+supabase/.gitignore
+supabase/config.toml
