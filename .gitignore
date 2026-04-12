@@ -90,6 +90,9 @@ samples/
 *.jpg
 *.jpeg
 
+# Playwright auth state (contains credentials)
+tests/.auth/
+
 # Supabase local config (generated)
 supabase/.gitignore
 supabase/config.toml
