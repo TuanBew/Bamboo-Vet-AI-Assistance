@@ -62,7 +62,6 @@ export function CheckCustomersClient({
   const [revenueRows, setRevenueRows] = useState<RevenuePivotRow[]>([])
   const [revenueLoading, setRevenueLoading] = useState(false)
   const mapHandleRef = useRef<MapHandle | null>(null)
-  const selectedCustomerRowRef = useRef<CustomerRow | null>(null)
 
   // -------------------------------------------------------------------------
   // Search filter state
@@ -236,7 +235,6 @@ export function CheckCustomersClient({
   // Revenue fetch
   // -------------------------------------------------------------------------
   const loadRevenue = useCallback(async (row: CustomerRow) => {
-    selectedCustomerRowRef.current = row
     setSelectedCustomer({ key: row.customer_key, name: row.customer_name })
     setRevenueLoading(true)
     try {
@@ -262,91 +260,6 @@ export function CheckCustomersClient({
     document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })
     loadRevenue(row)
   }, [loadRevenue])
-
-  // -------------------------------------------------------------------------
-  // Print handler — opens a new tab with selected customer info + revenue + map
-  // -------------------------------------------------------------------------
-  const handlePrintCustomer = useCallback(() => {
-    const row = selectedCustomerRowRef.current
-    if (!row) { window.print(); return }
-
-    const esc = (s: unknown) =>
-      String(s ?? '-').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-
-    const hasGeo = row.lat != null && row.long != null
-    const lat = row.lat ?? 0
-    const lng = row.long ?? 0
-    const mapSection = hasGeo
-      ? `<h2>V&#7883; tr&#237; tr&#234;n b&#7843;n &#273;&#7891;</h2>
-         <img src="https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=14&size=500x300&markers=${lat},${lng},red-pushpin"
-              style="max-width:100%;border:1px solid #ccc" alt="ban do" />`
-      : ''
-
-    const now = new Date()
-    const cur = now.getFullYear()
-    const last = cur - 1
-    const months: string[] = []
-    for (let m = 1; m <= 12; m++) months.push(`${last}-${String(m).padStart(2, '0')}`)
-    for (let m = 1; m <= 12; m++) months.push(`${cur}-${String(m).padStart(2, '0')}`)
-
-    const brandMap = new Map<string, Map<string, number>>()
-    for (const r of revenueRows) {
-      if (!brandMap.has(r.brand)) brandMap.set(r.brand, new Map())
-      brandMap.get(r.brand)!.set(r.month, r.revenue)
-    }
-    const sortedBrands = Array.from(brandMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))
-
-    const monthHeaders = months.map(m => `<th>${m.replace('-', '/')}</th>`).join('')
-    const brandRows = sortedBrands.map(([brand, mmap]) => {
-      const cells = months.map(m => {
-        const v = mmap.get(m)
-        return `<td>${v ? v.toLocaleString('vi-VN') : ''}</td>`
-      }).join('')
-      return `<tr><td>${esc(brand)}</td>${cells}</tr>`
-    }).join('')
-
-    const revenueSection = brandMap.size > 0
-      ? `<h2>Doanh s&#7889; theo th&#432;&#417;ng hi&#7879;u</h2>
-         <table><thead><tr><th>Th&#432;&#417;ng hi&#7879;u</th>${monthHeaders}</tr></thead>
-         <tbody>${brandRows}</tbody></table>`
-      : '<p>Kh&#244;ng c&#243; d&#7919; li&#7879;u doanh s&#7889;</p>'
-
-    const pageHtml = [
-      '<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">',
-      `<title>KH: ${esc(row.customer_name)}</title>`,
-      '<style>',
-      'body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#111}',
-      'h1{font-size:16px;margin-bottom:12px}h2{font-size:14px;margin:16px 0 8px}',
-      '.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;margin-bottom:16px}',
-      '.row{display:flex;gap:8px}.lbl{font-weight:bold;color:#555;min-width:110px}',
-      'table{border-collapse:collapse;width:100%;font-size:10px}',
-      'th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}',
-      'th{background:#1f2937;color:white;white-space:nowrap}td{white-space:nowrap}',
-      '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}',
-      '</style></head><body>',
-      `<h1>Th&#244;ng tin kh&#225;ch h&#224;ng: ${esc(row.customer_name)}</h1>`,
-      '<div class="grid">',
-      `<div class="row"><span class="lbl">M&#227; KH:</span><span>${esc(row.customer_key)}</span></div>`,
-      `<div class="row"><span class="lbl">Lo&#7841;i c&#417; s&#7903;:</span><span>${esc(row.cust_class_name)}</span></div>`,
-      `<div class="row"><span class="lbl">&#272;&#7883;a ch&#7881;:</span><span>${esc(row.address)}</span></div>`,
-      `<div class="row"><span class="lbl">Qu&#7853;n/Huy&#7879;n:</span><span>${esc(row.town_name)}</span></div>`,
-      `<div class="row"><span class="lbl">T&#7881;nh:</span><span>${esc(row.province_name)}</span></div>`,
-      `<div class="row"><span class="lbl">NPP:</span><span>${esc(row.ship_from_name)}</span></div>`,
-      '</div>',
-      revenueSection,
-      mapSection,
-      '</body></html>',
-    ].join('')
-
-    const blob = new Blob([pageHtml], { type: 'text/html;charset=utf-8' })
-    const blobUrl = URL.createObjectURL(blob)
-    const win = window.open(blobUrl, '_blank')
-    if (win) {
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
-    } else {
-      URL.revokeObjectURL(blobUrl)
-    }
-  }, [revenueRows])
 
   // -------------------------------------------------------------------------
   // Derived data
@@ -640,7 +553,6 @@ export function CheckCustomersClient({
           totalCount={data.customers.total}
           currentPage={data.customers.page}
           onPageChange={handlePageChange}
-          onPrint={handlePrintCustomer}
           showPageSizeDropdown
           showPageJump
         />
@@ -673,7 +585,6 @@ export function CheckCustomersClient({
             data={pivotRows}
             columns={pivotColumns}
             exportConfig={{ copy: true, excel: true, csv: true, pdf: true, print: true }}
-            onPrint={handlePrintCustomer}
             showSearch
             pageSize={500}
             showPageSizeDropdown={false}
