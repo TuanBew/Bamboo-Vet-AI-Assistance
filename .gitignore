@@ -6,6 +6,9 @@
 # Superpowers brainstorm directory
 .superpowers/
 
+# Git worktrees
+.worktrees/
+
 # Next.js
 /.next/
 /out/

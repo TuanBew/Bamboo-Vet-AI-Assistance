@@ -23,12 +23,12 @@ export default async function globalSetup(_config: FullConfig) {
   fs.mkdirSync(path.dirname(storageStatePath), { recursive: true })
 
   const browser = await chromium.launch()
-  const context = await browser.newContext()
+  const context = await browser.newContext({ baseURL: 'http://localhost:3001' })
   const page = await context.newPage()
 
   try {
     // Navigate to the login page
-    await page.goto('/login')
+    await page.goto('http://localhost:3001/login')
 
     // Fill in credentials using the form's input IDs
     await page.fill('#email', email)
@@ -37,7 +37,11 @@ export default async function globalSetup(_config: FullConfig) {
     // Submit the form
     await page.click('button[type="submit"]')
 
-    // After login, the app redirects to /app which middleware forwards to /admin/dashboard
+    // After login the app redirects to /app (chat page)
+    await page.waitForURL('**/app**', { timeout: 30_000 })
+
+    // Navigate to admin dashboard to confirm admin access
+    await page.goto('http://localhost:3001/admin/dashboard')
     await page.waitForURL('**/admin/dashboard', { timeout: 30_000 })
 
     // Persist authentication state for reuse across tests

@@ -377,6 +377,15 @@ export const VI = {
     nppName: 'Tên NPP',
   },
 
+  // AI Analysis board
+  aiAnalysis: {
+    title: 'AI phân tích',
+    waiting: '🤖 AI đang chuẩn bị phân tích dữ liệu...',
+    loading: '🤖 AI đang phân tích dữ liệu...',
+    error: 'Không thể tải phân tích AI. Vui lòng thử lại sau.',
+    retry: 'Thử lại',
+  },
+
   // Common
   common: {
     loading: 'Đang tải...',

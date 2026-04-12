@@ -13,6 +13,7 @@ import { SectionHeader } from '@/components/admin/SectionHeader'
 import { KpiCard } from '@/components/admin/KpiCard'
 import { SparklineChart } from '@/components/admin/SparklineChart'
 import { MapView } from '@/components/admin/MapView'
+import { AIAnalysisBoard } from '@/components/admin/AIAnalysisBoard'
 import { VI } from '@/lib/i18n/vietnamese'
 
 // ---------------------------------------------------------------------------
@@ -376,6 +377,11 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
           {loading ? '...' : VI.dashboard.searchBtn}
         </button>
       </div>
+
+      {/* ================================================================= */}
+      {/* AI Analysis Board — 10s gate, state machine, DOMPurify           */}
+      {/* ================================================================= */}
+      <AIAnalysisBoard committedFilters={committedFilters} />
 
       {/* ================================================================= */}
       {/* Section 2: Tong Quan                                              */}
