@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin/auth'
 import { getKhachHangData } from '@/lib/admin/services/khach-hang'
+import { jsonWithCache } from '@/lib/admin/cache-headers'
 
 export async function GET(request: NextRequest) {
   const user = await requireAdmin()
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const data = await getKhachHangData({ npp })
-    return NextResponse.json(data)
+    return jsonWithCache(request, data)
   } catch (error) {
     console.error('Khach hang API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -5,6 +5,7 @@ import {
   getCachedDashboardFastData,
   getCachedDashboardSlowData,
 } from '@/lib/admin/services/dashboard'
+import { jsonWithCache } from '@/lib/admin/cache-headers'
 
 export async function GET(request: NextRequest) {
   const user = await requireAdmin()
@@ -23,15 +24,15 @@ export async function GET(request: NextRequest) {
   try {
     if (layer === 'fast') {
       const data = await getCachedDashboardFastData(filters)
-      return NextResponse.json(data)
+      return jsonWithCache(request, data)
     }
     if (layer === 'slow') {
       const data = await getCachedDashboardSlowData(filters)
-      return NextResponse.json(data)
+      return jsonWithCache(request, data)
     }
     // layer === 'all' or no layer param — backward compat
     const data = await getDashboardData(filters)
-    return NextResponse.json(data)
+    return jsonWithCache(request, data)
   } catch (error) {
     console.error('Dashboard API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

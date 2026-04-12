@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin/auth'
 import { getTonKhoData } from '@/lib/admin/services/ton-kho'
+import { jsonWithCache } from '@/lib/admin/cache-headers'
 
 export async function GET(request: NextRequest) {
   const user = await requireAdmin()
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const data = await getTonKhoData({ snapshot_date, npp, brand, search })
-    return NextResponse.json(data)
+    return jsonWithCache(request, data)
   } catch (error) {
     console.error('Ton kho API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
