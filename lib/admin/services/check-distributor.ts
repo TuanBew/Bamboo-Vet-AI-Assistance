@@ -6,12 +6,12 @@ import { createServiceClient } from '@/lib/supabase/server'
 
 export interface CheckDistributorFilters {
   year: number
-  metric: string          // 'revenue' | 'retail_revenue'
-  system_type: string     // filter placeholder
-  ship_from: string       // filter placeholder
-  category: string        // filter placeholder
-  brand: string           // filter placeholder
-  search: string
+  metric: string      // 'revenue' | 'retail_revenue' (both use door off_amt)
+  system_type: string // filter by door.v_chanel
+  ship_from: string   // filter by specific ship_from_code
+  category: string    // filter by door.category
+  brand: string       // filter by door.brand
+  search: string      // search by ship_from_name or ship_from_code
   page: number
   page_size: number
 }
@@ -19,13 +19,13 @@ export interface CheckDistributorFilters {
 export interface CheckDistributorData {
   distributors: {
     data: Array<{
-      distributor_id: string
-      region: string
-      zone: string
-      province: string
-      distributor_code: string
-      distributor_name: string
-      monthly_data: Record<string, number>  // "1"-"12" -> revenue
+      distributor_id: string   // ship_from_code (from door)
+      region: string           // from dpur geo lookup
+      zone: string             // from dpur geo lookup
+      province: string         // from dpur geo lookup
+      distributor_code: string // ship_from_code
+      distributor_name: string // ship_from_name
+      monthly_data: Record<string, number>  // "1"–"12" → rounded VND
     }>
     total: number
     page: number
@@ -41,12 +41,12 @@ export interface CheckDistributorData {
 
 export interface DistributorDetailData {
   distributor_name: string
-  distributor_id: string
+  distributor_id: string  // ship_from_code from door
   year: number
   month: number
   staff: Array<{
-    staff_id: string
-    staff_name: string
+    staff_id: string    // saleperson_key
+    staff_name: string  // saleperson_name
     daily_data: Array<{
       day: number
       revenue: number
@@ -56,20 +56,37 @@ export interface DistributorDetailData {
 }
 
 // ---------------------------------------------------------------------------
-// Deterministic hash for mock daily data
+// Helpers
 // ---------------------------------------------------------------------------
 
-function deterministicValue(seed: string, max: number): number {
-  let h = 0
-  for (let i = 0; i < seed.length; i++) {
-    h = ((h << 5) - h + seed.charCodeAt(i)) | 0
+interface DpurGeo {
+  region: string
+  area: string
+  dist_province: string
+}
+
+/** Match a door.ship_from_name to its geo info from dpur by keyword overlap */
+function matchGeo(
+  shipFromName: string,
+  dpurSites: Array<{ site_name: string } & DpurGeo>
+): DpurGeo {
+  const nameLower = shipFromName.toLowerCase()
+  let bestScore = 0
+  let best: DpurGeo = { region: '', area: '', dist_province: '' }
+
+  for (const site of dpurSites) {
+    const words = site.site_name.toLowerCase().split(/\s+/).filter(w => w.length > 2)
+    const score = words.filter(w => nameLower.includes(w)).length
+    if (score > bestScore) {
+      bestScore = score
+      best = { region: site.region, area: site.area, dist_province: site.dist_province }
+    }
   }
-  // Map to 0..max using sin-based approach for smooth distribution
-  return Math.abs(Math.round(Math.sin(h) * max))
+  return best
 }
 
 // ---------------------------------------------------------------------------
-// Main service functions
+// Main pivot: DB-side aggregation via RPC (avoids PostgREST row limit)
 // ---------------------------------------------------------------------------
 
 export async function getCheckDistributorData(
@@ -77,160 +94,151 @@ export async function getCheckDistributorData(
 ): Promise<CheckDistributorData> {
   const db = createServiceClient()
 
-  // 1. Fetch suppliers (distributors) with pagination
-  let supplierQuery = db
-    .from('suppliers')
-    .select('id, supplier_code, supplier_name, province, region, zone', { count: 'exact' })
-    .order('supplier_code')
+  // 1. Run main pivot + filter options in parallel
+  const [pivotResult, optionsResult, dpurResult] = await Promise.all([
+    db.rpc('get_check_distributor_pivot', {
+      p_year:        filters.year,
+      p_system_type: filters.system_type,
+      p_ship_from:   filters.ship_from,
+      p_category:    filters.category,
+      p_brand:       filters.brand,
+      p_search:      filters.search,
+      p_page:        filters.page,
+      p_page_size:   filters.page_size,
+    }),
+    db.rpc('get_check_distributor_filter_options', {
+      p_year: filters.year,
+    }),
+    db.from('dpur').select('site_name, region, area, dist_province'),
+  ])
 
-  if (filters.search) {
-    supplierQuery = supplierQuery.ilike('supplier_name', `%${filters.search}%`)
+  // 2. Parse pivot result
+  const pivotPayload = pivotResult.data as {
+    total: number
+    data: Array<{
+      distributor_code: string
+      distributor_name: string
+      m1: number; m2: number; m3: number; m4: number
+      m5: number; m6: number; m7: number; m8: number
+      m9: number; m10: number; m11: number; m12: number
+    }>
+  } | null
+
+  // 3. Build dpur geo lookup
+  const dpurSites: Array<{ site_name: string } & DpurGeo> = []
+  const seen = new Set<string>()
+  for (const r of dpurResult.data ?? []) {
+    const name = (r.site_name as string)?.trim() || ''
+    if (!name || seen.has(name)) continue
+    seen.add(name)
+    dpurSites.push({
+      site_name:     name,
+      region:        (r.region as string)        || '',
+      area:          (r.area as string)          || '',
+      dist_province: (r.dist_province as string) || '',
+    })
   }
 
-  const rangeStart = (filters.page - 1) * filters.page_size
-  const rangeEnd = rangeStart + filters.page_size - 1
-  supplierQuery = supplierQuery.range(rangeStart, rangeEnd)
-
-  const { data: supplierRows, count: supplierCount } = await supplierQuery
-
-  const suppliers = supplierRows ?? []
-  const supplierIds = suppliers.map(s => s.id as string)
-
-  // 2. Fetch all purchase orders for the given year in one query
-  const yearStart = `${filters.year}-01-01`
-  const yearEnd = `${filters.year}-12-31`
-
-  let orderData: Array<{ supplier_id: string; order_date: string; total_amount: number }> = []
-  if (supplierIds.length > 0) {
-    const { data: orderRows } = await db
-      .from('purchase_orders')
-      .select('supplier_id, order_date, total_amount')
-      .gte('order_date', yearStart)
-      .lte('order_date', yearEnd)
-      .in('supplier_id', supplierIds)
-
-    orderData = (orderRows ?? []).map(r => ({
-      supplier_id: r.supplier_id as string,
-      order_date: r.order_date as string,
-      total_amount: Number(r.total_amount),
-    }))
-  }
-
-  // 3. Group by supplier_id and month in JS
-  const supplierMonthlyMap = new Map<string, Map<string, number>>()
-  for (const order of orderData) {
-    const month = String(new Date(order.order_date).getMonth() + 1)
-    if (!supplierMonthlyMap.has(order.supplier_id)) {
-      supplierMonthlyMap.set(order.supplier_id, new Map())
-    }
-    const monthMap = supplierMonthlyMap.get(order.supplier_id)!
-    monthMap.set(month, (monthMap.get(month) ?? 0) + order.total_amount)
-  }
-
-  // 4. Build distributor data
-  const distributorData = suppliers.map(s => {
-    const id = s.id as string
-    const monthMap = supplierMonthlyMap.get(id) ?? new Map()
-    const monthly_data: Record<string, number> = {}
-    for (let m = 1; m <= 12; m++) {
-      monthly_data[String(m)] = monthMap.get(String(m)) ?? 0
-    }
-
+  // 4. Map pivot rows → distributor data with geo
+  const distributorData = (pivotPayload?.data ?? []).map(row => {
+    const geo = matchGeo(row.distributor_name, dpurSites)
     return {
-      distributor_id: id,
-      region: (s.region as string) || '',
-      zone: (s.zone as string) || '',
-      province: (s.province as string) || '',
-      distributor_code: s.supplier_code as string,
-      distributor_name: s.supplier_name as string,
-      monthly_data,
+      distributor_id:   row.distributor_code,
+      region:           geo.region,
+      zone:             geo.area,
+      province:         geo.dist_province,
+      distributor_code: row.distributor_code,
+      distributor_name: row.distributor_name,
+      monthly_data: {
+        '1':  row.m1,  '2':  row.m2,  '3':  row.m3,
+        '4':  row.m4,  '5':  row.m5,  '6':  row.m6,
+        '7':  row.m7,  '8':  row.m8,  '9':  row.m9,
+        '10': row.m10, '11': row.m11, '12': row.m12,
+      },
     }
   })
 
-  // 5. Filter options
-  const { data: productRows } = await db
-    .from('products')
-    .select('classification, manufacturer')
-
-  const categories = [...new Set((productRows ?? []).map(p => p.classification as string).filter(Boolean))]
-  const brands = [...new Set((productRows ?? []).map(p => p.manufacturer as string).filter(Boolean))]
+  // 5. Parse filter options
+  const opts = optionsResult.data as {
+    categories: string[] | null
+    brands: string[] | null
+    system_types: string[] | null
+    ship_froms: string[] | null
+  } | null
 
   return {
     distributors: {
-      data: distributorData,
-      total: supplierCount ?? 0,
-      page: filters.page,
+      data:      distributorData,
+      total:     pivotPayload?.total ?? 0,
+      page:      filters.page,
       page_size: filters.page_size,
     },
     filter_options: {
-      system_types: ['All Systemtype'],
-      ship_froms: ['All Shipfrom'],
-      categories: ['All Category', ...categories.sort()],
-      brands: ['All Brands', ...brands.sort()],
+      categories:   opts?.categories   ?? [],
+      brands:       opts?.brands       ?? [],
+      system_types: opts?.system_types ?? [],
+      ship_froms:   opts?.ship_froms   ?? [],
     },
   }
 }
 
+// ---------------------------------------------------------------------------
+// Detail: DB-side aggregation via RPC
+// ---------------------------------------------------------------------------
+
 export async function getDistributorDetail(
-  id: string,
+  id: string,   // ship_from_code from door
   month: number,
   year: number
 ): Promise<DistributorDetailData> {
   const db = createServiceClient()
 
-  // 1. Get supplier info
-  const { data: supplier } = await db
-    .from('suppliers')
-    .select('id, supplier_name')
-    .eq('id', id)
-    .single()
+  const { data } = await db.rpc('get_check_distributor_detail', {
+    p_ship_from_code: id,
+    p_month:          month,
+    p_year:           year,
+  })
 
-  const distributor_name = (supplier?.supplier_name as string) || ''
+  const result = data as {
+    distributor_name: string
+    distributor_id: string
+    year: number
+    month: number
+    staff: Array<{
+      staff_id: string
+      staff_name: string
+      daily_data: Array<{ day: number; revenue: number; customer_count: number }>
+    }>
+  } | null
 
-  // 2. Get staff for this supplier
-  const { data: staffRows } = await db
-    .from('distributor_staff')
-    .select('id, staff_code, staff_name')
-    .eq('supplier_id', id)
-    .order('staff_code')
+  if (!result) {
+    return { distributor_name: id, distributor_id: id, year, month, staff: [] }
+  }
 
-  const staffList = staffRows ?? []
-
-  // 3. Generate deterministic daily data for each staff member
-  // Since there's no real staff->order link, use deterministic hash
-  const daysInMonth = new Date(year, month, 0).getDate()
-
-  const staff = staffList.map(s => {
-    const staffId = s.staff_code as string
-    const staffName = s.staff_name as string
-
-    const daily_data: Array<{ day: number; revenue: number; customer_count: number }> = []
-    for (let day = 1; day <= daysInMonth; day++) {
-      const seed = `${id}-${staffId}-${year}-${month}-${day}`
-      const revenue = deterministicValue(seed + '-rev', 5000000)
-      const customer_count = deterministicValue(seed + '-cust', 8)
-
-      // ~20% chance of zero activity day
-      const activitySeed = deterministicValue(seed + '-act', 100)
-      if (activitySeed < 20) {
-        daily_data.push({ day, revenue: 0, customer_count: 0 })
-      } else {
-        daily_data.push({ day, revenue, customer_count })
-      }
-    }
-
+  // The RPC returns only days with data — fill out the full month day array
+  const lastDay = new Date(year, month, 0).getDate()
+  const staff = (result.staff ?? []).map(s => {
+    const dayMap = new Map(s.daily_data.map(d => [d.day, d]))
     return {
-      staff_id: staffId,
-      staff_name: staffName,
-      daily_data,
+      staff_id:   s.staff_id,
+      staff_name: s.staff_name,
+      daily_data: Array.from({ length: lastDay }, (_, i) => {
+        const day = i + 1
+        const d = dayMap.get(day)
+        return {
+          day,
+          revenue:        d?.revenue ?? 0,
+          customer_count: d?.customer_count ?? 0,
+        }
+      }),
     }
   })
 
   return {
-    distributor_name,
-    distributor_id: id,
-    year,
-    month,
+    distributor_name: result.distributor_name,
+    distributor_id:   result.distributor_id,
+    year:             result.year,
+    month:            result.month,
     staff,
   }
 }

@@ -370,7 +370,7 @@ export function ColorPivotTable({
                         ? 'sticky z-20 bg-gray-900'
                         : ''
                     }`}
-                    style={dim.sticky ? { left: stickyOffsets[idx] } : undefined}
+                    style={dim.sticky ? { left: stickyOffsets[idx], minWidth: 120, maxWidth: 120, width: 120 } : undefined}
                   >
                     {dim.label}
                   </th>
@@ -416,7 +416,7 @@ export function ColorPivotTable({
                             ? 'sticky z-10 bg-gray-800'
                             : ''
                         }`}
-                        style={dim.sticky ? { left: stickyOffsets[idx] } : undefined}
+                        style={dim.sticky ? { left: stickyOffsets[idx], minWidth: 120, maxWidth: 120, width: 120, overflow: 'hidden', textOverflow: 'ellipsis' } : undefined}
                       >
                         {row.dimColumns?.[dim.key] ?? ''}
                       </td>

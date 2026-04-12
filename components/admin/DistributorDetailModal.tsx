@@ -32,10 +32,12 @@ export interface DistributorDetailModalProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Daily per-salesperson revenue thresholds (in VND)
+// green ≥ 2M, yellow ≥ 1M, red ≥ 1, grey = 0
 function getRevenueColorClass(value: number): string {
-  if (value >= 100_000_000) return 'bg-green-500 text-white'
-  if (value >= 10_000_000) return 'bg-yellow-400 text-black'
-  if (value >= 1) return 'bg-red-500 text-white'
+  if (value >= 2_000_000) return 'bg-green-500 text-white'
+  if (value >= 1_000_000) return 'bg-yellow-400 text-black'
+  if (value >= 1)         return 'bg-red-500 text-white'
   return 'text-gray-500'
 }
 
@@ -84,10 +86,10 @@ export function DistributorDetailModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
           <div>
-            <h2 className="text-lg font-bold">Chi tiet theo nhan vien</h2>
+            <h2 className="text-lg font-bold">Chi tiết theo nhân viên</h2>
             {data && (
               <p className="text-sm text-gray-400 mt-1">
-                Du lieu {data.distributor_name} Thang {String(data.month).padStart(2, '0')} Nam {data.year}
+                Dữ liệu {data.distributor_name} Tháng {String(data.month).padStart(2, '0')} Năm {data.year}
               </p>
             )}
           </div>
@@ -108,7 +110,7 @@ export function DistributorDetailModal({
           )}
 
           {!loading && data && data.staff.length === 0 && (
-            <p className="text-center text-gray-400 py-8">Khong co du lieu nhan vien</p>
+            <p className="text-center text-gray-400 py-8">Không có dữ liệu nhân viên cho tháng này</p>
           )}
 
           {!loading && data && data.staff.length > 0 && (
@@ -117,17 +119,17 @@ export function DistributorDetailModal({
                 <thead className="sticky top-0 z-20">
                   <tr className="bg-gray-800">
                     <th className="sticky left-0 z-30 bg-gray-800 px-2 py-2 text-left text-gray-300 font-medium whitespace-nowrap border-r border-gray-700 min-w-[80px]">
-                      Ma NV
+                      Mã NV
                     </th>
-                    <th className="sticky left-[80px] z-30 bg-gray-800 px-2 py-2 text-left text-gray-300 font-medium whitespace-nowrap border-r border-gray-700 min-w-[120px]">
-                      Ten NV
+                    <th className="sticky left-[80px] z-30 bg-gray-800 px-2 py-2 text-left text-gray-300 font-medium whitespace-nowrap border-r border-gray-700 min-w-[140px]">
+                      Tên NV
                     </th>
                     {dayColumns.map(day => (
                       <th
                         key={day}
                         className="px-1 py-2 text-center text-gray-300 font-medium whitespace-nowrap border-r border-gray-700 min-w-[80px]"
                       >
-                        Ngay {day}
+                        Ngày {day}
                       </th>
                     ))}
                   </tr>
@@ -190,7 +192,7 @@ export function DistributorDetailModal({
             onClick={onClose}
             className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-md transition-colors"
           >
-            Close
+            Đóng
           </button>
         </div>
       </div>
