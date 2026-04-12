@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 
 // ---------------------------------------------------------------------------
@@ -70,7 +71,7 @@ export interface KhachHangData {
 // Main service function — runs two RPC calls in parallel
 // ---------------------------------------------------------------------------
 
-export async function getKhachHangData(
+async function _getKhachHangData(
   filters: KhachHangFilters
 ): Promise<KhachHangData> {
   const db = createServiceClient()
@@ -110,3 +111,9 @@ export async function getKhachHangData(
     geo_points: geoPoints,
   }
 }
+
+export const getKhachHangData = unstable_cache(
+  _getKhachHangData,
+  ['khach-hang'],
+  { tags: ['khach-hang'], revalidate: 3600 }
+)

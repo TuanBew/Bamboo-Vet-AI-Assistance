@@ -3,8 +3,8 @@ import { requireAdmin } from '@/lib/admin/auth'
 import { getCustomerRevenue } from '@/lib/admin/services/check-customers'
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin()
-  if (auth instanceof NextResponse) return auth
+  const user = await requireAdmin()
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(request.url)
   const customer_key = searchParams.get('customer_key') || ''

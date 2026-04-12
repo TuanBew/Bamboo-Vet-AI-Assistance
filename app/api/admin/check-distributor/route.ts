@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin/auth'
 import { getCheckDistributorData } from '@/lib/admin/services/check-distributor'
+import { jsonWithCache } from '@/lib/admin/cache-headers'
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin()
-  if (auth instanceof NextResponse) return auth
+  const user = await requireAdmin()
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(request.url)
   const now = new Date()
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
     const data = await getCheckDistributorData({
       year, metric, system_type, ship_from, category, brand, search, page, page_size,
     })
-    return NextResponse.json(data)
+    return jsonWithCache(request, data)
   } catch (error) {
     console.error('Check distributor API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

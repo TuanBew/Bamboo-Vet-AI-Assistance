@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin/auth'
 import { getCheckCustomersData } from '@/lib/admin/services/check-customers'
+import { jsonWithCache } from '@/lib/admin/cache-headers'
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin()
-  if (auth instanceof NextResponse) return auth
+  const user = await requireAdmin()
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(request.url)
   const distributor_id = searchParams.get('distributor_id') || ''
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
       cust_class_key,
       has_geo,
     })
-    return NextResponse.json(data)
+    return jsonWithCache(request, data)
   } catch (error) {
     console.error('Check customers API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

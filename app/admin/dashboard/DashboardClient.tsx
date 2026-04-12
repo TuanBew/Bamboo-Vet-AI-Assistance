@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   BarChart, Bar, ComposedChart, Area, Line, LineChart,
@@ -8,7 +8,7 @@ import {
   Tooltip, ResponsiveContainer, Legend,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts'
-import type { DashboardData, DashboardFilters } from '@/lib/admin/services/dashboard'
+import type { DashboardFastData, DashboardSlowData, DashboardFilters } from '@/lib/admin/services/dashboard'
 import { SectionHeader } from '@/components/admin/SectionHeader'
 import { KpiCard } from '@/components/admin/KpiCard'
 import { SparklineChart } from '@/components/admin/SparklineChart'
@@ -173,7 +173,7 @@ function MiniDonut({ title, data }: { title: string; data: Array<{ name: string;
 // ---------------------------------------------------------------------------
 
 interface Props {
-  initialData: DashboardData
+  initialData: DashboardFastData
   initialFilters: DashboardFilters
 }
 
@@ -181,11 +181,36 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
   const router = useRouter()
   const [data, setData] = useState(initialData)
   const [filters, setFilters] = useState(initialFilters)
+  const [committedFilters, setCommittedFilters] = useState(initialFilters)
   const [loading, setLoading] = useState(false)
+  const [slowData, setSlowData] = useState<DashboardSlowData | null>(null)
 
   // Parse month for display
   const [displayYear, displayMonth] = filters.month.split('-').map(Number)
   const monthLabel = `${String(displayMonth).padStart(2, '0')}-${displayYear}`
+
+  // --- Progressive slow data fetch after mount, re-fetches when committedFilters change ---
+  useEffect(() => {
+    setSlowData(null)
+    const controller = new AbortController()
+    const params = new URLSearchParams({
+      npp: committedFilters.npp,
+      month: committedFilters.month,
+      nganhHang: committedFilters.nganhHang,
+      thuongHieu: committedFilters.thuongHieu,
+      kenh: committedFilters.kenh,
+      layer: 'slow',
+    })
+
+    fetch(`/api/admin/dashboard?${params.toString()}`, { signal: controller.signal })
+      .then(res => res.json())
+      .then((data: DashboardSlowData) => setSlowData(data))
+      .catch((err: Error) => {
+        if (err.name !== 'AbortError') { /* fail silently — skeletons remain */ }
+      })
+
+    return () => controller.abort()
+  }, [committedFilters])
 
   // --- Search handler (button click, NOT onChange) ---
   const handleSearch = useCallback(async () => {
@@ -196,6 +221,7 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
     if (filters.nganhHang) params.set('nganhHang', filters.nganhHang)
     if (filters.thuongHieu) params.set('thuongHieu', filters.thuongHieu)
     params.set('kenh', filters.kenh)
+    params.set('layer', 'fast')
     router.push(`/admin/dashboard?${params.toString()}`)
     try {
       const res = await fetch(`/api/admin/dashboard?${params.toString()}`)
@@ -203,6 +229,7 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
     } finally {
       setLoading(false)
     }
+    setCommittedFilters(filters)
   }, [filters, router])
 
   // --- Tong Quan: yearly chart data ---
@@ -512,183 +539,255 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
       </SectionHeader>
 
       {/* ================================================================= */}
-      {/* Section 4: Nhan Vien                                             */}
+      {/* Section 4: Nhan Vien — skeleton until slowData arrives          */}
       {/* ================================================================= */}
       <SectionHeader title={`${VI.dashboard.staffMonth} ${monthLabel}`}>
-        {/* Staff performance table — fixed height, scrollable, sticky header */}
-        <div className="bg-gray-800 rounded-lg overflow-hidden">
-          <div className="overflow-auto max-h-[560px]">
-            <table className="w-full">
-              <thead className="sticky top-0 z-10 bg-gray-900">
-                <tr className="text-gray-400 text-xs uppercase">
-                  <th className="px-3 py-2 text-left">{VI.dashboard.staffName}</th>
-                  <th className="px-3 py-2 text-left">{VI.dashboard.dailySales}</th>
-                  <th className="px-3 py-2 text-right">{VI.dashboard.total}</th>
-                  <th className="px-3 py-2 text-right">{VI.dashboard.orders}</th>
-                  <th className="px-3 py-2 text-right">{VI.dashboard.average}</th>
-                  <th className="px-3 py-2 text-right">{VI.dashboard.customersLabel}</th>
-                  <th className="px-3 py-2 text-right">{VI.dashboard.daysOver1m}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.staff_list.map((staff) => (
-                  <tr key={staff.staff_id} className="text-white text-sm border-b border-gray-700">
-                    <td className="px-3 py-2">{staff.staff_name}</td>
-                    <td className="px-3 py-2">
-                      <SparklineChart data={staff.daily_sparkline} width={120} height={30} color="#06b6d4" />
-                    </td>
-                    <td className="px-3 py-2 text-right font-medium">{formatVND(staff.total_sales)}</td>
-                    <td className="px-3 py-2 text-right">{staff.order_count}</td>
-                    <td className="px-3 py-2 text-right">{formatVND(staff.avg_per_order)}</td>
-                    <td className="px-3 py-2 text-right">{staff.customer_count}</td>
-                    <td className="px-3 py-2 text-right">{staff.days_over_1m}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Two stacked horizontal bar charts — scrollable when > 10 staff */}
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          {/* Chart 1: Ti trong theo nhom */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h4 className="text-xs text-gray-400 mb-2">Tỉ trọng theo nhóm tháng {monthLabel}</h4>
-            {/* Scrollable wrapper: fixed viewport height, inner div stretches to full chart height */}
-            <div className="overflow-y-auto" style={{ maxHeight: 420 }}>
-              <div style={{ height: Math.max(200, data.staff_list.length * 44) }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    layout="vertical"
-                    data={data.staff_list.map(s => ({
-                      name: s.staff_name.length > 14 ? s.staff_name.slice(0, 14) + '…' : s.staff_name,
-                      ...s.by_nhom,
-                    }))}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
-                    <YAxis type="category" dataKey="name" width={120} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatVND(Number(v))} />
-                    {[...new Set(data.staff_list.flatMap(s => Object.keys(s.by_nhom)))].map((key, i) => (
-                      <Bar key={key} dataKey={key} stackId="a" fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
+        {slowData === null ? (
+          <>
+            <div className="bg-gray-800 rounded-lg p-6 animate-pulse">
+              <div className="h-4 bg-gray-700 rounded w-1/3 mb-4" />
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex gap-4 mb-3">
+                  <div className="h-3 bg-gray-700 rounded w-32" />
+                  <div className="h-3 bg-gray-700 rounded flex-1" />
+                  <div className="h-3 bg-gray-700 rounded w-20" />
+                  <div className="h-3 bg-gray-700 rounded w-12" />
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="bg-gray-800 rounded-lg p-4 h-48 animate-pulse">
+                <div className="h-3 bg-gray-700 rounded w-1/2 mb-3" />
+                <div className="h-full bg-gray-700 rounded" />
+              </div>
+              <div className="bg-gray-800 rounded-lg p-4 h-48 animate-pulse">
+                <div className="h-3 bg-gray-700 rounded w-1/2 mb-3" />
+                <div className="h-full bg-gray-700 rounded" />
               </div>
             </div>
-          </div>
-
-          {/* Chart 2: Ti trong theo thuong hieu */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h4 className="text-xs text-gray-400 mb-2">Tỉ trọng theo thương hiệu tháng {monthLabel}</h4>
-            <div className="overflow-y-auto" style={{ maxHeight: 420 }}>
-              <div style={{ height: Math.max(200, data.staff_list.length * 44) }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    layout="vertical"
-                    data={data.staff_list.map(s => ({
-                      name: s.staff_name.length > 14 ? s.staff_name.slice(0, 14) + '…' : s.staff_name,
-                      ...s.by_thuong_hieu,
-                    }))}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
-                    <YAxis type="category" dataKey="name" width={120} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatVND(Number(v))} />
-                    {[...new Set(data.staff_list.flatMap(s => Object.keys(s.by_thuong_hieu)))].map((key, i) => (
-                      <Bar key={key} dataKey={key} stackId="a" fill={CHART_COLORS[i % CHART_COLORS.length]} />
+          </>
+        ) : (
+          <>
+            {/* Staff performance table — fixed height, scrollable, sticky header */}
+            <div className="bg-gray-800 rounded-lg overflow-hidden">
+              <div className="overflow-auto max-h-[560px]">
+                <table className="w-full">
+                  <thead className="sticky top-0 z-10 bg-gray-900">
+                    <tr className="text-gray-400 text-xs uppercase">
+                      <th className="px-3 py-2 text-left">{VI.dashboard.staffName}</th>
+                      <th className="px-3 py-2 text-left">{VI.dashboard.dailySales}</th>
+                      <th className="px-3 py-2 text-right">{VI.dashboard.total}</th>
+                      <th className="px-3 py-2 text-right">{VI.dashboard.orders}</th>
+                      <th className="px-3 py-2 text-right">{VI.dashboard.average}</th>
+                      <th className="px-3 py-2 text-right">{VI.dashboard.customersLabel}</th>
+                      <th className="px-3 py-2 text-right">{VI.dashboard.daysOver1m}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {slowData.staff_list.map((staff) => (
+                      <tr key={staff.staff_id} className="text-white text-sm border-b border-gray-700">
+                        <td className="px-3 py-2">{staff.staff_name}</td>
+                        <td className="px-3 py-2">
+                          <SparklineChart data={staff.daily_sparkline} width={120} height={30} color="#06b6d4" />
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium">{formatVND(staff.total_sales)}</td>
+                        <td className="px-3 py-2 text-right">{staff.order_count}</td>
+                        <td className="px-3 py-2 text-right">{formatVND(staff.avg_per_order)}</td>
+                        <td className="px-3 py-2 text-right">{staff.customer_count}</td>
+                        <td className="px-3 py-2 text-right">{staff.days_over_1m}</td>
+                      </tr>
                     ))}
-                  </BarChart>
-                </ResponsiveContainer>
+                  </tbody>
+                </table>
               </div>
             </div>
-          </div>
-        </div>
+
+            {/* Two stacked horizontal bar charts — scrollable when > 10 staff */}
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              {/* Chart 1: Ti trong theo nhom */}
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h4 className="text-xs text-gray-400 mb-2">Tỉ trọng theo nhóm tháng {monthLabel}</h4>
+                {/* Scrollable wrapper: fixed viewport height, inner div stretches to full chart height */}
+                <div className="overflow-y-auto" style={{ maxHeight: 420 }}>
+                  <div style={{ height: Math.max(200, slowData.staff_list.length * 44) }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        layout="vertical"
+                        data={slowData.staff_list.map(s => ({
+                          name: s.staff_name.length > 14 ? s.staff_name.slice(0, 14) + '…' : s.staff_name,
+                          ...s.by_nhom,
+                        }))}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                        <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
+                        <YAxis type="category" dataKey="name" width={120} tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatVND(Number(v))} />
+                        {[...new Set(slowData.staff_list.flatMap(s => Object.keys(s.by_nhom)))].map((key, i) => (
+                          <Bar key={key} dataKey={key} stackId="a" fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart 2: Ti trong theo thuong hieu */}
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h4 className="text-xs text-gray-400 mb-2">Tỉ trọng theo thương hiệu tháng {monthLabel}</h4>
+                <div className="overflow-y-auto" style={{ maxHeight: 420 }}>
+                  <div style={{ height: Math.max(200, slowData.staff_list.length * 44) }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        layout="vertical"
+                        data={slowData.staff_list.map(s => ({
+                          name: s.staff_name.length > 14 ? s.staff_name.slice(0, 14) + '…' : s.staff_name,
+                          ...s.by_thuong_hieu,
+                        }))}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                        <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
+                        <YAxis type="category" dataKey="name" width={120} tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatVND(Number(v))} />
+                        {[...new Set(slowData.staff_list.flatMap(s => Object.keys(s.by_thuong_hieu)))].map((key, i) => (
+                          <Bar key={key} dataKey={key} stackId="a" fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </SectionHeader>
 
       {/* ================================================================= */}
-      {/* Section 5: Khach Hang                                             */}
+      {/* Section 5: Khach Hang — skeleton until slowData arrives        */}
       {/* ================================================================= */}
       <SectionHeader title={`${VI.dashboard.customerMonth} ${monthLabel}`}>
-        <div className="grid grid-cols-3 gap-4">
-          {/* Col 1 — Radar chart */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h4 className="text-xs text-gray-400 mb-2">{VI.dashboard.salesByStoreType}</h4>
-            <ResponsiveContainer width="100%" height={250}>
-              <RadarChart data={data.customer_section.by_type_sales}>
-                <PolarGrid stroke="#374151" />
-                <PolarAngleAxis dataKey="type" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                <PolarRadiusAxis tick={{ fill: '#6b7280', fontSize: 10 }} />
-                <Radar dataKey="ban_hang" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.3} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatVND(Number(v))} />
-              </RadarChart>
-            </ResponsiveContainer>
+        {slowData === null ? (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-gray-800 rounded-lg p-4 h-[282px] animate-pulse">
+              <div className="h-3 bg-gray-700 rounded w-1/2 mb-3" />
+              <div className="rounded-full border-4 border-gray-700 w-32 h-32 mx-auto mt-6" />
+            </div>
+            <div className="bg-gray-800 rounded-lg p-4 h-[282px] animate-pulse">
+              <div className="h-3 bg-gray-700 rounded w-1/2 mb-3" />
+              <div className="flex items-end gap-2 h-48 px-2">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="flex-1 bg-gray-700 rounded-t" style={{ height: `${30 + i * 12}%` }} />
+                ))}
+              </div>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-4 h-[282px] animate-pulse">
+              <div className="h-3 bg-gray-700 rounded w-1/2 mb-3" />
+              <div className="h-[250px] bg-gray-700 rounded" />
+            </div>
           </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-4">
+            {/* Col 1 — Radar chart */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h4 className="text-xs text-gray-400 mb-2">{VI.dashboard.salesByStoreType}</h4>
+              <ResponsiveContainer width="100%" height={250}>
+                <RadarChart data={slowData.customer_section.by_type_sales}>
+                  <PolarGrid stroke="#374151" />
+                  <PolarAngleAxis dataKey="type" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                  <PolarRadiusAxis tick={{ fill: '#6b7280', fontSize: 10 }} />
+                  <Radar dataKey="ban_hang" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.3} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatVND(Number(v))} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
 
-          {/* Col 2 — Count bar chart */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h4 className="text-xs text-gray-400 mb-2">{VI.dashboard.countByStoreType}</h4>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={data.customer_section.by_type_count}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="type" tick={AXIS_TICK} />
-                <YAxis tick={AXIS_TICK} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Bar dataKey="count" fill="#06b6d4" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+            {/* Col 2 — Count bar chart */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h4 className="text-xs text-gray-400 mb-2">{VI.dashboard.countByStoreType}</h4>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={slowData.customer_section.by_type_count}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="type" tick={AXIS_TICK} />
+                  <YAxis tick={AXIS_TICK} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Bar dataKey="count" fill="#06b6d4" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
-          {/* Col 3 — Leaflet map */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <MapView
-              pins={data.customer_section.map_pins.map(p => ({
-                id: p.id,
-                latitude: p.latitude,
-                longitude: p.longitude,
-                label: p.label,
-                popupContent: p.popup,
-                customerTypeCode: p.customer_type_code,
-              }))}
-              className="h-[250px]"
-            />
+            {/* Col 3 — Leaflet map */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <MapView
+                pins={slowData.customer_section.map_pins.map(p => ({
+                  id: p.id,
+                  latitude: p.latitude,
+                  longitude: p.longitude,
+                  label: p.label,
+                  popupContent: p.popup,
+                  customerTypeCode: p.customer_type_code,
+                }))}
+                className="h-[250px]"
+              />
+            </div>
           </div>
-        </div>
+        )}
       </SectionHeader>
 
       {/* ================================================================= */}
-      {/* Section 6: Top 10                                                 */}
+      {/* Section 6: Top 10 — skeleton until slowData arrives            */}
       {/* ================================================================= */}
       <SectionHeader title={`Top 10 ${monthLabel}`}>
-        <div className="grid grid-cols-2 gap-4">
-          {/* Left — Top 10 Khach hang */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h4 className="text-xs text-gray-400 mb-2">{VI.dashboard.top10Customers}</h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart layout="vertical" data={data.top10.customers}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
-                <YAxis type="category" dataKey="name" width={150} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatVND(Number(v))} />
-                <Bar dataKey="total_value" fill="#06b6d4" />
-              </BarChart>
-            </ResponsiveContainer>
+        {slowData === null ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-800 rounded-lg p-4 animate-pulse">
+              <div className="h-3 bg-gray-700 rounded w-1/3 mb-4" />
+              {[...Array(10)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 mb-2">
+                  <div className="h-3 bg-gray-700 rounded w-36 shrink-0" />
+                  <div className="h-3 bg-gray-700 rounded" style={{ width: `${100 - i * 8}%` }} />
+                </div>
+              ))}
+            </div>
+            <div className="bg-gray-800 rounded-lg p-4 animate-pulse">
+              <div className="h-3 bg-gray-700 rounded w-1/3 mb-4" />
+              {[...Array(10)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 mb-2">
+                  <div className="h-3 bg-gray-700 rounded w-36 shrink-0" />
+                  <div className="h-3 bg-gray-700 rounded" style={{ width: `${100 - i * 8}%` }} />
+                </div>
+              ))}
+            </div>
           </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {/* Left — Top 10 Khach hang */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h4 className="text-xs text-gray-400 mb-2">{VI.dashboard.top10Customers}</h4>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart layout="vertical" data={slowData.top10.customers}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
+                  <YAxis type="category" dataKey="name" width={150} tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatVND(Number(v))} />
+                  <Bar dataKey="total_value" fill="#06b6d4" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
-          {/* Right — Top 10 San pham */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h4 className="text-xs text-gray-400 mb-2">{VI.dashboard.top10Products}</h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart layout="vertical" data={data.top10.products}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
-                <YAxis type="category" dataKey="name" width={150} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatVND(Number(v))} />
-                <Bar dataKey="total_value" fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
+            {/* Right — Top 10 San pham */}
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h4 className="text-xs text-gray-400 mb-2">{VI.dashboard.top10Products}</h4>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart layout="vertical" data={slowData.top10.products}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => formatVND(Number(v))} />
+                  <YAxis type="category" dataKey="name" width={150} tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => formatVND(Number(v))} />
+                  <Bar dataKey="total_value" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
+        )}
       </SectionHeader>
     </div>
   )

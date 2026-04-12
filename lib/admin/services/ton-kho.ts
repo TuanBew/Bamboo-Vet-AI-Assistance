@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 
 // ---------------------------------------------------------------------------
@@ -74,7 +75,7 @@ interface FilterOptionsRpcResult {
 // Main service function
 // ---------------------------------------------------------------------------
 
-export async function getTonKhoData(
+async function _getTonKhoData(
   filters: TonKhoFilters
 ): Promise<TonKhoData> {
   const db = createServiceClient()
@@ -120,3 +121,9 @@ export async function getTonKhoData(
     products: rpc.products ?? [],
   }
 }
+
+export const getTonKhoData = unstable_cache(
+  _getTonKhoData,
+  ['ton-kho'],
+  { tags: ['ton-kho'], revalidate: 3600 }
+)

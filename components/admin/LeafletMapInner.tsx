@@ -2,7 +2,7 @@
 
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import type { MapViewProps } from './MapView'
 import { getCustomerTypeSvgHtml } from '@/lib/admin/customer-types'
@@ -83,6 +83,23 @@ export default function LeafletMapInner({
   className,
   onMapReady,
 }: MapViewProps) {
+  // Memoize SVG icons keyed by customerTypeCode — O(n_types) ≤ 13 instead of O(n_pins)
+  const iconsByType = useMemo(() => {
+    const types = [...new Set(pins.map(p => p.customerTypeCode).filter(Boolean))] as string[]
+    return Object.fromEntries(
+      types.map(t => [
+        t,
+        L.divIcon({
+          className: '',
+          html: getCustomerTypeSvgHtml(t, 28),
+          iconSize: [28, 28],
+          iconAnchor: [14, 28],
+          popupAnchor: [0, -30],
+        }),
+      ])
+    )
+  }, [pins])
+
   return (
     <div
       className={className}
@@ -104,7 +121,11 @@ export default function LeafletMapInner({
           <Marker
             key={pin.id}
             position={[pin.latitude, pin.longitude]}
-            icon={getMarkerIcon(pin.color || getColorForQueries(0), pin.customerTypeCode)}
+            icon={
+              pin.customerTypeCode
+                ? iconsByType[pin.customerTypeCode]
+                : getMarkerIcon(pin.color || getColorForQueries(0))
+            }
           >
             <Popup>
               <div className="text-sm">

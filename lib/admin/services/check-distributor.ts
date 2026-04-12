@@ -1,4 +1,6 @@
+import { unstable_cache } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getDpurGeoLookup, type DpurGeoEntry } from './dpur-geo'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,7 +70,7 @@ interface DpurGeo {
 /** Match a door.ship_from_name to its geo info from dpur by keyword overlap */
 function matchGeo(
   shipFromName: string,
-  dpurSites: Array<{ site_name: string } & DpurGeo>
+  dpurSites: DpurGeoEntry[]
 ): DpurGeo {
   const nameLower = shipFromName.toLowerCase()
   let bestScore = 0
@@ -89,27 +91,29 @@ function matchGeo(
 // Main pivot: DB-side aggregation via RPC (avoids PostgREST row limit)
 // ---------------------------------------------------------------------------
 
-export async function getCheckDistributorData(
+async function _getCheckDistributorData(
   filters: CheckDistributorFilters
 ): Promise<CheckDistributorData> {
   const db = createServiceClient()
 
-  // 1. Run main pivot + filter options in parallel
-  const [pivotResult, optionsResult, dpurResult] = await Promise.all([
-    db.rpc('get_check_distributor_pivot', {
-      p_year:        filters.year,
-      p_system_type: filters.system_type,
-      p_ship_from:   filters.ship_from,
-      p_category:    filters.category,
-      p_brand:       filters.brand,
-      p_search:      filters.search,
-      p_page:        filters.page,
-      p_page_size:   filters.page_size,
-    }),
-    db.rpc('get_check_distributor_filter_options', {
-      p_year: filters.year,
-    }),
-    db.from('dpur').select('site_name, region, area, dist_province'),
+  // 1. Run main pivot + filter options in parallel; geo lookup is cached separately
+  const [[pivotResult, optionsResult], dpurSites] = await Promise.all([
+    Promise.all([
+      db.rpc('get_check_distributor_pivot', {
+        p_year:        filters.year,
+        p_system_type: filters.system_type,
+        p_ship_from:   filters.ship_from,
+        p_category:    filters.category,
+        p_brand:       filters.brand,
+        p_search:      filters.search,
+        p_page:        filters.page,
+        p_page_size:   filters.page_size,
+      }),
+      db.rpc('get_check_distributor_filter_options', {
+        p_year: filters.year,
+      }),
+    ]),
+    getDpurGeoLookup(),
   ])
 
   // 2. Parse pivot result
@@ -124,22 +128,7 @@ export async function getCheckDistributorData(
     }>
   } | null
 
-  // 3. Build dpur geo lookup
-  const dpurSites: Array<{ site_name: string } & DpurGeo> = []
-  const seen = new Set<string>()
-  for (const r of dpurResult.data ?? []) {
-    const name = (r.site_name as string)?.trim() || ''
-    if (!name || seen.has(name)) continue
-    seen.add(name)
-    dpurSites.push({
-      site_name:     name,
-      region:        (r.region as string)        || '',
-      area:          (r.area as string)          || '',
-      dist_province: (r.dist_province as string) || '',
-    })
-  }
-
-  // 4. Map pivot rows → distributor data with geo
+  // 3. Map pivot rows → distributor data with geo (dpurSites already deduplicated by cache)
   const distributorData = (pivotPayload?.data ?? []).map(row => {
     const geo = matchGeo(row.distributor_name, dpurSites)
     return {
@@ -181,6 +170,12 @@ export async function getCheckDistributorData(
     },
   }
 }
+
+export const getCheckDistributorData = unstable_cache(
+  _getCheckDistributorData,
+  ['check-distributor'],
+  { tags: ['check-distributor'], revalidate: 3600 }
+)
 
 // ---------------------------------------------------------------------------
 // Detail: DB-side aggregation via RPC

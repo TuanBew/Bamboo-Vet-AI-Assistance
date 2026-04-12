@@ -1,4 +1,4 @@
-import { getDashboardData, type DashboardFilters } from '@/lib/admin/services/dashboard'
+import { getCachedDashboardFastData, type DashboardFilters } from '@/lib/admin/services/dashboard'
 import { DashboardClient } from './DashboardClient'
 
 export async function DashboardLoader({
@@ -6,6 +6,6 @@ export async function DashboardLoader({
 }: {
   filters: DashboardFilters
 }) {
-  const data = await getDashboardData(filters)
+  const data = await getCachedDashboardFastData(filters)
   return <DashboardClient initialData={data} initialFilters={filters} />
 }

@@ -1,4 +1,6 @@
+import { unstable_cache } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getNppOptions } from './npp-options'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -76,7 +78,7 @@ function calcRowRevenue(row: DpurRow): number {
 // Main service function
 // ---------------------------------------------------------------------------
 
-export async function getNhapHangData(
+async function _getNhapHangData(
   filters: NhapHangFilters
 ): Promise<NhapHangData> {
   const db = createServiceClient()
@@ -85,20 +87,9 @@ export async function getNhapHangData(
   const lastDay = new Date(filters.year, filters.month, 0).getDate()
   const endOfMonth = `${filters.year}-${String(filters.month).padStart(2, '0')}-${lastDay}`
 
-  // 1. Get NPP list (always all, for dropdown)
-  const { data: siteRows } = await db
-    .from('dpur')
-    .select('site_code, site_name')
-
-  const siteMap = new Map<string, string>()
-  for (const r of siteRows ?? []) {
-    if (r.site_code && !siteMap.has(r.site_code)) {
-      siteMap.set(r.site_code as string, r.site_name as string)
-    }
-  }
-  const suppliers = Array.from(siteMap.entries())
-    .map(([id, name]) => ({ id, name }))
-    .sort((a, b) => a.id.localeCompare(b.id))
+  // 1. Get NPP list (always all, for dropdown) — 24h cached
+  const nppOptions = await getNppOptions()
+  const suppliers = nppOptions.map(o => ({ id: o.site_code, name: o.site_name }))
 
   // 2. Fetch month rows from dpur
   let query = db
@@ -298,3 +289,9 @@ export async function getNhapHangData(
     suppliers,
   }
 }
+
+export const getNhapHangData = unstable_cache(
+  _getNhapHangData,
+  ['nhap-hang'],
+  { tags: ['nhap-hang'], revalidate: 3600 }
+)
