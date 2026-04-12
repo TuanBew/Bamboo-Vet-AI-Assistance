@@ -52,6 +52,8 @@ export interface DataTableProps<T> {
   showPageJump?: boolean
   // For server-paginated tables: fetches ALL rows before export
   exportAllFetcher?: () => Promise<T[]>
+  // Custom print handler — overrides default window.print()
+  onPrint?: () => void
 }
 
 // ---------------------------------------------------------------------------
@@ -91,6 +93,7 @@ function DataTableInner<T extends Record<string, unknown>>({
   showPageSizeDropdown = true,
   showPageJump = false,
   exportAllFetcher,
+  onPrint,
 }: DataTableProps<T>) {
   const [exporting, setExporting] = useState(false)
 
@@ -199,7 +202,7 @@ function DataTableInner<T extends Record<string, unknown>>({
         }).join(',')
       ),
     ]
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -209,9 +212,12 @@ function DataTableInner<T extends Record<string, unknown>>({
   }, [getExportData, columns])
 
   const handlePdf = useCallback(async () => {
-    const jsPDFModule = await import('jspdf')
+    const [jsPDFModule, autoTableModule] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ])
     const jsPDF = jsPDFModule.default
-    await import('jspdf-autotable')
+    const autoTable = autoTableModule.default
 
     const allRows = await getExportData()
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
@@ -225,7 +231,7 @@ function DataTableInner<T extends Record<string, unknown>>({
       })
     )
 
-    ;(doc as unknown as Record<string, Function>).autoTable({
+    autoTable(doc, {
       head: [headers],
       body,
       startY: 15,
@@ -235,11 +241,15 @@ function DataTableInner<T extends Record<string, unknown>>({
     })
 
     doc.save('export.pdf')
-  }, [data, columns])
+  }, [getExportData, columns])
 
   const handlePrint = useCallback(() => {
-    window.print()
-  }, [])
+    if (onPrint) {
+      onPrint()
+    } else {
+      window.print()
+    }
+  }, [onPrint])
 
   // Search handler
   const handleSearchInput = useCallback(
