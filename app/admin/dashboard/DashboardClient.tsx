@@ -181,6 +181,7 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
   const router = useRouter()
   const [data, setData] = useState(initialData)
   const [filters, setFilters] = useState(initialFilters)
+  const [committedFilters, setCommittedFilters] = useState(initialFilters)
   const [loading, setLoading] = useState(false)
   const [slowData, setSlowData] = useState<DashboardSlowData | null>(null)
 
@@ -188,33 +189,39 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
   const [displayYear, displayMonth] = filters.month.split('-').map(Number)
   const monthLabel = `${String(displayMonth).padStart(2, '0')}-${displayYear}`
 
-  // --- Progressive slow data fetch after mount, re-fetches when filters change ---
+  // --- Progressive slow data fetch after mount, re-fetches when committedFilters change ---
   useEffect(() => {
+    setSlowData(null)
+    const controller = new AbortController()
     const params = new URLSearchParams({
-      npp: filters.npp,
-      month: filters.month,
-      nganhHang: filters.nganhHang,
-      thuongHieu: filters.thuongHieu,
-      kenh: filters.kenh,
+      npp: committedFilters.npp,
+      month: committedFilters.month,
+      nganhHang: committedFilters.nganhHang,
+      thuongHieu: committedFilters.thuongHieu,
+      kenh: committedFilters.kenh,
       layer: 'slow',
     })
 
-    fetch(`/api/admin/dashboard?${params.toString()}`)
+    fetch(`/api/admin/dashboard?${params.toString()}`, { signal: controller.signal })
       .then(res => res.json())
       .then((data: DashboardSlowData) => setSlowData(data))
-      .catch(() => {/* fail silently — skeletons remain visible */})
-  }, [filters])
+      .catch((err: Error) => {
+        if (err.name !== 'AbortError') { /* fail silently — skeletons remain */ }
+      })
+
+    return () => controller.abort()
+  }, [committedFilters])
 
   // --- Search handler (button click, NOT onChange) ---
   const handleSearch = useCallback(async () => {
     setLoading(true)
-    setSlowData(null)
     const params = new URLSearchParams()
     if (filters.npp) params.set('npp', filters.npp)
     params.set('month', filters.month)
     if (filters.nganhHang) params.set('nganhHang', filters.nganhHang)
     if (filters.thuongHieu) params.set('thuongHieu', filters.thuongHieu)
     params.set('kenh', filters.kenh)
+    params.set('layer', 'fast')
     router.push(`/admin/dashboard?${params.toString()}`)
     try {
       const res = await fetch(`/api/admin/dashboard?${params.toString()}`)
@@ -222,6 +229,7 @@ export function DashboardClient({ initialData, initialFilters }: Props) {
     } finally {
       setLoading(false)
     }
+    setCommittedFilters(filters)
   }, [filters, router])
 
   // --- Tong Quan: yearly chart data ---
