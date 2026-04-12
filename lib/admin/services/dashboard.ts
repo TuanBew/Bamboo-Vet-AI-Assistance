@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import { computeMovingAverageForecast } from '@/lib/admin/forecast'
 
@@ -94,6 +95,26 @@ export interface DashboardData {
     customers: Array<{ name: string; total_value: number }>
     products: Array<{ name: string; total_value: number }>
   }
+}
+
+// Fast data: everything computable from RPCs + bounded month-scoped row fetches
+export interface DashboardFastData {
+  npp_list: DashboardData['npp_list']
+  filter_options: DashboardData['filter_options']
+  yearly_series: DashboardData['yearly_series']
+  monthly_series: DashboardData['monthly_series']
+  kpi_row: DashboardData['kpi_row']
+  metrics_box: DashboardData['metrics_box']
+  daily_series: DashboardData['daily_series']
+  pie_nhap: DashboardData['pie_nhap']
+  pie_ban: DashboardData['pie_ban']
+}
+
+// Slow data: everything requiring raw row fetches + heavy JS aggregation
+export interface DashboardSlowData {
+  staff_list: DashboardData['staff_list']
+  customer_section: DashboardData['customer_section']
+  top10: DashboardData['top10']
 }
 
 // ---------------------------------------------------------------------------
@@ -647,3 +668,56 @@ export async function getDashboardData(
     top10,
   }
 }
+
+// ---------------------------------------------------------------------------
+// Fast data: RPC-based aggregates + bounded month-scoped row fetches
+// (everything except heavy JS aggregation over large row sets)
+// ---------------------------------------------------------------------------
+
+async function getDashboardFastData(
+  filters: DashboardFilters
+): Promise<DashboardFastData> {
+  const full = await getDashboardData(filters)
+  return {
+    npp_list: full.npp_list,
+    filter_options: full.filter_options,
+    yearly_series: full.yearly_series,
+    monthly_series: full.monthly_series,
+    kpi_row: full.kpi_row,
+    metrics_box: full.metrics_box,
+    daily_series: full.daily_series,
+    pie_nhap: full.pie_nhap,
+    pie_ban: full.pie_ban,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Slow data: heavy JS aggregation over large row sets
+// ---------------------------------------------------------------------------
+
+async function getDashboardSlowData(
+  filters: DashboardFilters
+): Promise<DashboardSlowData> {
+  const full = await getDashboardData(filters)
+  return {
+    staff_list: full.staff_list,
+    customer_section: full.customer_section,
+    top10: full.top10,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cached exports
+// ---------------------------------------------------------------------------
+
+export const getCachedDashboardFastData = unstable_cache(
+  getDashboardFastData,
+  ['dashboard-fast'],
+  { tags: ['dashboard-fast'], revalidate: 3600 }
+)
+
+export const getCachedDashboardSlowData = unstable_cache(
+  getDashboardSlowData,
+  ['dashboard-slow'],
+  { tags: ['dashboard-slow'], revalidate: 3600 }
+)
