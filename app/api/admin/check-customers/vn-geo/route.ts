@@ -26,14 +26,24 @@ function findDistrictCode(dbDistrictName: string): string | null {
   return match?.code ?? null
 }
 
+// Strip "Tỉnh " / "Thành phố " prefix → matches DB province_name format
+function toShortName(libName: string): string {
+  return libName.replace(/^Thành phố /, '').replace(/^Tỉnh /, '')
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin()
   if (auth instanceof NextResponse) return auth
 
   const { searchParams } = request.nextUrl
-  const type = searchParams.get('type') // 'districts' | 'wards'
+  const type = searchParams.get('type') // 'provinces' | 'districts' | 'wards'
   const province = searchParams.get('province') ?? ''
   const district = searchParams.get('district') ?? ''
+
+  if (type === 'provinces') {
+    const provinces = getProvinces() as Array<{ name: string }>
+    return NextResponse.json(provinces.map(p => toShortName(p.name)).sort())
+  }
 
   if (type === 'districts') {
     if (!province) return NextResponse.json([])

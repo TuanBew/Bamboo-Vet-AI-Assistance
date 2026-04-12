@@ -11,7 +11,6 @@ import type {
   CheckCustomersFilters,
   CustomerRow as CustomerRowBase,
   RevenuePivotRow,
-  LocationHierarchy,
 } from '@/lib/admin/services/check-customers'
 import { VI } from '@/lib/i18n/vietnamese'
 
@@ -92,15 +91,15 @@ export function CheckCustomersClient({
   const tenKHTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // -------------------------------------------------------------------------
-  // Location hierarchy (loaded once)
+  // Province list (loaded once from vn-provinces library via API)
   // -------------------------------------------------------------------------
-  const [locations, setLocations] = useState<LocationHierarchy>({ provinces: [], towns: [] })
+  const [provinces, setProvinces] = useState<string[]>([])
 
   useEffect(() => {
-    fetch('/api/admin/check-customers/locations')
+    fetch('/api/admin/check-customers/vn-geo?type=provinces')
       .then(r => r.json())
-      .then((d: LocationHierarchy) => setLocations(d))
-      .catch(() => {/* silent — dropdowns empty */})
+      .then((d: string[]) => setProvinces(d))
+      .catch(() => {/* silent */})
   }, [])
 
   // Load Q/H districts when Tỉnh changes
@@ -458,7 +457,7 @@ export function CheckCustomersClient({
             <div className="flex-1 min-w-[110px]">
               <select value={tinh} onChange={e => handleTinhChange(e.target.value)} className={cls}>
                 <option value="">Tất cả Tỉnh</option>
-                {locations.provinces.map(p => (
+                {provinces.map(p => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
