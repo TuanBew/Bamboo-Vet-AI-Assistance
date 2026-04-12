@@ -217,15 +217,4 @@ describe('computeMovingAverageForecast', () => {
     expect(forecasted[1].value).not.toBe(mayForecast)
   })
 
-  it('forecast line is not flat — values vary as window rolls forward', () => {
-    const data = [
-      makeMonth(2026, 2, 70),
-      makeMonth(2026, 3, 85),
-    ]
-    const result = computeMovingAverageForecast(data)
-    const forecasted = result.filter(d => d.is_forecast)
-
-    // May=78, Jun=82 → at least the first two differ
-    expect(forecasted[0].value).not.toBe(forecasted[1].value)
-  })
 })

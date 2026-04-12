@@ -1,12 +1,12 @@
 /**
- * Weighted Moving Average (WMA) forecast for dashboard monthly series.
+ * Simple Moving Average (SMA) forecast for dashboard monthly series.
  *
  * Design decisions:
  * - Excludes the current calendar month (data is not yet complete)
- * - Uses the last `windowSize` complete months as the WMA window
- * - Forecasts from (last data month + 1) through December of the same year
- * - WMA gives more weight to recent months: weights [1, 2, …, n] (newest = n)
- * - If data already reaches December, no forecast is generated
+ * - Forecast range: currentMonth+1 through December of currentYear
+ * - 2-month rolling SMA: Forecast(M) = (Value(M-1) + Value(M-2)) / 2
+ * - Each forecasted value feeds into the next forecast (rolling forward)
+ * - Values floored at 0 — no negative forecasts
  */
 
 export interface MonthlyDataPoint {
@@ -20,16 +20,16 @@ export interface ForecastPoint extends MonthlyDataPoint {
 }
 
 /**
- * Compute a Weighted Moving Average forecast from monthly data.
+ * Compute a 2-month rolling Simple Moving Average forecast from monthly data.
  *
- * @param data - Monthly data points (any numeric series)
- * @param windowSize - Number of recent complete months used for WMA (default: 6)
+ * @param data       - Monthly data points (any numeric series)
+ * @param windowSize - SMA window size (default: 2)
  * @returns Sorted real points (is_forecast: false) followed by forecast points (is_forecast: true).
- *          Forecast extends to December of the year of the last data point.
+ *          Forecast starts at currentMonth+1 and extends to December of currentYear.
  */
 export function computeMovingAverageForecast(
   data: MonthlyDataPoint[],
-  windowSize: number = 6
+  windowSize: number = 2
 ): ForecastPoint[] {
   if (data.length === 0) return []
 
@@ -51,35 +51,35 @@ export function computeMovingAverageForecast(
     return sorted.map(d => ({ ...d, is_forecast: false }))
   }
 
-  const lastPoint = completeData[completeData.length - 1]
+  // Forecast range: skip current month entirely, start from next month
+  // e.g. currentMonth=4 (April) → forecastStartMonth=5 (May), monthsToForecast=8 (May–Dec)
+  const forecastStartMonth = currentMonth + 1
+  const monthsToForecast = 12 - currentMonth
 
-  // Months to forecast: from lastPoint.month + 1 up to and including December
-  const monthsToForecast = 12 - lastPoint.month
   if (monthsToForecast <= 0) {
-    // Last data point is already December — nothing to forecast
+    // Current month is December — nothing left to forecast this year
     return sorted.map(d => ({ ...d, is_forecast: false }))
   }
 
-  // Weighted Moving Average over the last `windowSize` complete months.
-  // Weight of position i (0-indexed, oldest first) = i + 1
-  // → newest month gets weight n, oldest gets weight 1
-  const window = completeData.slice(-windowSize)
-  const n = window.length
-  const weightSum = (n * (n + 1)) / 2 // 1 + 2 + … + n
-  const forecastValue = Math.max(
-    0,
-    Math.round(
-      window.reduce((sum, d, i) => sum + d.value * (i + 1), 0) / weightSum
-    )
-  )
+  // Seed the rolling window with the last `windowSize` complete months
+  const slidingWindow = completeData.slice(-windowSize).map(d => d.value)
 
-  // Build forecast points: lastPoint + 1 month → December of lastPoint.year
   const forecastPoints: ForecastPoint[] = []
-  for (let i = 1; i <= monthsToForecast; i++) {
-    const totalMonths = lastPoint.year * 12 + lastPoint.month + i
+  for (let i = 0; i < monthsToForecast; i++) {
+    // SMA of the last windowSize values (actual or previously forecasted)
+    const window = slidingWindow.slice(-windowSize)
+    const forecastValue = Math.max(
+      0,
+      Math.round(window.reduce((sum, v) => sum + v, 0) / window.length)
+    )
+
+    // Convert (currentYear, forecastStartMonth + i) to (year, month)
+    const totalMonths = currentYear * 12 + forecastStartMonth + i
     const fy = Math.floor((totalMonths - 1) / 12)
     const fm = ((totalMonths - 1) % 12) + 1
+
     forecastPoints.push({ year: fy, month: fm, value: forecastValue, is_forecast: true })
+    slidingWindow.push(forecastValue) // roll forward: this forecast seeds the next iteration
   }
 
   return [
