@@ -70,10 +70,16 @@ export function CheckCustomersClient({
   const [npp, setNpp] = useState(initialFilters.distributor_id)
   const [maKH, setMaKH] = useState('')
   const [tenKH, setTenKH] = useState('')
-  const [tinh, setTinh] = useState('')       // province_name
-  const [phuongXa, setPhuongXa] = useState('') // town_name
+  const [tinh, setTinh] = useState('')          // province_name
+  const [quanHuyen, setQuanHuyen] = useState('') // town_name (district) — actual DB filter
+  const [phuongXa, setPhuongXa] = useState('')   // ward — UI cascade only, no DB column
   const [loaiCoSo, setLoaiCoSo] = useState('')
   const [dinhVi, setDinhVi] = useState('')
+
+  // VN geo cascade options (loaded from vn-geo API)
+  const [quanHuyenOptions, setQuanHuyenOptions] = useState<string[]>([])
+  const [phuongXaOptions, setPhuongXaOptions] = useState<string[]>([])
+  const [geoLoading, setGeoLoading] = useState(false)
 
   // -------------------------------------------------------------------------
   // Autocomplete state
@@ -97,12 +103,39 @@ export function CheckCustomersClient({
       .catch(() => {/* silent — dropdowns empty */})
   }, [])
 
-  // All distinct town names (no cascade)
-  const phuongXaOptions = useMemo(() => {
-    const seen = new Set<string>()
-    for (const t of locations.towns) seen.add(t.town_name)
-    return Array.from(seen).sort()
-  }, [locations.towns])
+  // Load Q/H districts when Tỉnh changes
+  const handleTinhChange = useCallback(async (val: string) => {
+    setTinh(val)
+    setQuanHuyen('')
+    setPhuongXa('')
+    setPhuongXaOptions([])
+    setQuanHuyenOptions([])
+    if (!val) return
+    setGeoLoading(true)
+    try {
+      const res = await fetch(`/api/admin/check-customers/vn-geo?type=districts&province=${encodeURIComponent(val)}`)
+      const opts: string[] = await res.json()
+      setQuanHuyenOptions(opts)
+    } finally {
+      setGeoLoading(false)
+    }
+  }, [])
+
+  // Load P/X wards when Q/H changes
+  const handleQuanHuyenChange = useCallback(async (val: string) => {
+    setQuanHuyen(val)
+    setPhuongXa('')
+    setPhuongXaOptions([])
+    if (!val) return
+    setGeoLoading(true)
+    try {
+      const res = await fetch(`/api/admin/check-customers/vn-geo?type=wards&district=${encodeURIComponent(val)}`)
+      const opts: string[] = await res.json()
+      setPhuongXaOptions(opts)
+    } finally {
+      setGeoLoading(false)
+    }
+  }, [])
 
   // -------------------------------------------------------------------------
   // Autocomplete handlers
@@ -167,13 +200,13 @@ export function CheckCustomersClient({
       customer_key_filter: maKH.trim(),
       customer_name_filter: tenKH.trim(),
       province: tinh,
-      town: phuongXa,
+      town: quanHuyen, // Q/H district name matches town_name in DB exactly
       cust_class_key: loaiCoSo,
       has_geo: dinhVi,
     }
     activeFilters.current = filters
     fetchData(filters, 1, true)
-  }, [npp, maKH, tenKH, tinh, phuongXa, loaiCoSo, dinhVi, fetchData])
+  }, [npp, maKH, tenKH, tinh, quanHuyen, loaiCoSo, dinhVi, fetchData])
 
 
   const handlePageChange = useCallback(
@@ -245,8 +278,7 @@ export function CheckCustomersClient({
       ),
     },
     { key: 'address', label: 'Địa chỉ' },
-    { key: 'town_name', label: 'Phường/Xã' },
-    { key: 'dist_province', label: 'Quận/Huyện' },
+    { key: 'town_name', label: 'Quận/Huyện' },
     { key: 'province_name', label: 'Tỉnh' },
     {
       key: 'cust_class_name',
@@ -424,7 +456,7 @@ export function CheckCustomersClient({
 
             {/* Box 3: Tỉnh */}
             <div className="flex-1 min-w-[110px]">
-              <select value={tinh} onChange={e => setTinh(e.target.value)} className={cls}>
+              <select value={tinh} onChange={e => handleTinhChange(e.target.value)} className={cls}>
                 <option value="">Tất cả Tỉnh</option>
                 {locations.provinces.map(p => (
                   <option key={p} value={p}>{p}</option>
@@ -432,12 +464,32 @@ export function CheckCustomersClient({
               </select>
             </div>
 
-            {/* Box 4: Phường/Xã */}
-            <div className="flex-1 min-w-[110px]">
-              <select value={phuongXa} onChange={e => setPhuongXa(e.target.value)} className={cls}>
-                <option value="">Tất cả P/X</option>
-                {phuongXaOptions.map(t => (
-                  <option key={t} value={t}>{t}</option>
+            {/* Box 4: Quận/Huyện — cascades from Tỉnh via vn-provinces */}
+            <div className="flex-1 min-w-[130px]">
+              <select
+                value={quanHuyen}
+                onChange={e => handleQuanHuyenChange(e.target.value)}
+                disabled={!tinh || geoLoading}
+                className={cls + (!tinh ? ' opacity-50' : '')}
+              >
+                <option value="">{tinh ? 'Tất cả Q/H' : 'Chọn Tỉnh trước'}</option>
+                {quanHuyenOptions.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Box 5: Phường/Xã — cascades from Q/H via vn-provinces */}
+            <div className="flex-1 min-w-[130px]">
+              <select
+                value={phuongXa}
+                onChange={e => setPhuongXa(e.target.value)}
+                disabled={!quanHuyen || geoLoading}
+                className={cls + (!quanHuyen ? ' opacity-50' : '')}
+              >
+                <option value="">{quanHuyen ? 'Tất cả P/X' : 'Chọn Q/H trước'}</option>
+                {phuongXaOptions.map(w => (
+                  <option key={w} value={w}>{w}</option>
                 ))}
               </select>
             </div>
