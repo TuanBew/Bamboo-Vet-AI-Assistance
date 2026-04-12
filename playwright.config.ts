@@ -7,26 +7,22 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: 'list',
+  globalSetup: './tests/performance/global-setup.ts',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3001',
     headless: true,
     screenshot: 'only-on-failure',
     storageState: 'tests/.auth/admin.json',
   },
   projects: [
     {
-      name: 'setup',
-      testMatch: /global-setup\.ts/,
-    },
-    {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup'],
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    port: 3000,
+    command: 'npm run dev -- -p 3001',
+    port: 3001,
     reuseExistingServer: true,
     timeout: 120_000,
   },
