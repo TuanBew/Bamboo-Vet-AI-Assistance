@@ -28,7 +28,7 @@ export default async function globalSetup(_config: FullConfig) {
 
   try {
     // Navigate to the login page
-    await page.goto('http://localhost:3000/login')
+    await page.goto('/login')
 
     // Fill in credentials using the form's input IDs
     await page.fill('#email', email)
