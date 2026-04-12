@@ -1,9 +1,4 @@
 import { defineConfig, devices } from '@playwright/test'
-import { fileURLToPath } from 'url'
-import path from 'path'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 
 export default defineConfig({
   testDir: './tests',
@@ -16,7 +11,7 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     headless: true,
     screenshot: 'only-on-failure',
-    storageState: path.join(__dirname, 'tests/.auth/admin.json'),
+    storageState: 'tests/.auth/admin.json',
   },
   projects: [
     {
