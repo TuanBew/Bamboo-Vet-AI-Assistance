@@ -55,9 +55,7 @@ test.describe('Performance Regression — dashboard API call count', () => {
 
     await page.goto('/admin/dashboard', { waitUntil: 'domcontentloaded' })
     await page.waitForSelector('main', { timeout: 30_000 })
-
-    // Allow in-flight requests to settle before asserting
-    await page.waitForTimeout(500)
+    await page.waitForLoadState('networkidle', { timeout: 10_000 })
 
     expect(
       apiCallCount,
