@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 
 // ---------------------------------------------------------------------------
@@ -73,7 +74,7 @@ export interface CheckCustomersData {
 // Main service function
 // ---------------------------------------------------------------------------
 
-export async function getCheckCustomersData(
+async function _getCheckCustomersData(
   filters: CheckCustomersFilters
 ): Promise<CheckCustomersData> {
   const db = createServiceClient()
@@ -118,6 +119,12 @@ export async function getCheckCustomersData(
     cust_class_options: classRaw,
   }
 }
+
+export const getCheckCustomersData = unstable_cache(
+  _getCheckCustomersData,
+  ['check-customers'],
+  { tags: ['check-customers'], revalidate: 3600 }
+)
 
 // ---------------------------------------------------------------------------
 // Location hierarchy for cascade dropdowns

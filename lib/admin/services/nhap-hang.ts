@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getNppOptions } from './npp-options'
 
@@ -77,7 +78,7 @@ function calcRowRevenue(row: DpurRow): number {
 // Main service function
 // ---------------------------------------------------------------------------
 
-export async function getNhapHangData(
+async function _getNhapHangData(
   filters: NhapHangFilters
 ): Promise<NhapHangData> {
   const db = createServiceClient()
@@ -288,3 +289,9 @@ export async function getNhapHangData(
     suppliers,
   }
 }
+
+export const getNhapHangData = unstable_cache(
+  _getNhapHangData,
+  ['nhap-hang'],
+  { tags: ['nhap-hang'], revalidate: 3600 }
+)

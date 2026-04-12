@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getDpurGeoLookup, type DpurGeoEntry } from './dpur-geo'
 
@@ -90,7 +91,7 @@ function matchGeo(
 // Main pivot: DB-side aggregation via RPC (avoids PostgREST row limit)
 // ---------------------------------------------------------------------------
 
-export async function getCheckDistributorData(
+async function _getCheckDistributorData(
   filters: CheckDistributorFilters
 ): Promise<CheckDistributorData> {
   const db = createServiceClient()
@@ -169,6 +170,12 @@ export async function getCheckDistributorData(
     },
   }
 }
+
+export const getCheckDistributorData = unstable_cache(
+  _getCheckDistributorData,
+  ['check-distributor'],
+  { tags: ['check-distributor'], revalidate: 3600 }
+)
 
 // ---------------------------------------------------------------------------
 // Detail: DB-side aggregation via RPC
