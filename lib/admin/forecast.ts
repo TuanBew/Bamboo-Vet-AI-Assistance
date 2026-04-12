@@ -47,7 +47,9 @@ export function computeMovingAverageForecast(
   )
 
   if (completeData.length < 2) {
-    // Not enough complete data — return real points with no forecast
+    // Not enough complete data to compute a forecast.
+    // Return all raw data (including the current incomplete month) so the chart
+    // can still display whatever data exists, just without any forecast extension.
     return sorted.map(d => ({ ...d, is_forecast: false }))
   }
 
@@ -67,10 +69,10 @@ export function computeMovingAverageForecast(
   const forecastPoints: ForecastPoint[] = []
   for (let i = 0; i < monthsToForecast; i++) {
     // SMA of the last windowSize values (actual or previously forecasted)
-    const window = slidingWindow.slice(-windowSize)
+    const currentWindow = slidingWindow.slice(-windowSize)
     const forecastValue = Math.max(
       0,
-      Math.round(window.reduce((sum, v) => sum + v, 0) / window.length)
+      Math.round(currentWindow.reduce((sum, v) => sum + v, 0) / currentWindow.length)
     )
 
     // Convert (currentYear, forecastStartMonth + i) to (year, month)

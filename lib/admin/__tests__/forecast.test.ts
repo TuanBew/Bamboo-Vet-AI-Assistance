@@ -65,7 +65,7 @@ describe('computeMovingAverageForecast', () => {
   // Tests: current month exclusion
   // ---------------------------------------------------------------------------
 
-  it('excludes current month (April 2026) from WMA window', () => {
+  it('excludes current month (April 2026) from SMA window', () => {
     // April 2026 is "now" (fake timer) — it should be excluded from calculation
     const dataWithCurrentMonth = [
       makeMonth(2025, 10, 80),
@@ -90,7 +90,7 @@ describe('computeMovingAverageForecast', () => {
     const forecastWith = withCurrent.filter(d => d.is_forecast)
     const forecastWithout = without.filter(d => d.is_forecast)
 
-    // Forecast values should be identical — current month is excluded from WMA
+    // Forecast values should be identical — current month is excluded from SMA
     forecastWith.forEach((fp, i) => {
       expect(fp.value).toBe(forecastWithout[i].value)
     })
