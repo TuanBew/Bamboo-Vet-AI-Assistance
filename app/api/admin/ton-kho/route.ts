@@ -3,8 +3,8 @@ import { requireAdmin } from '@/lib/admin/auth'
 import { getTonKhoData } from '@/lib/admin/services/ton-kho'
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin()
-  if (auth instanceof NextResponse) return auth
+  const user = await requireAdmin()
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(request.url)
   const snapshot_date = searchParams.get('snapshot_date') || new Date().toISOString().slice(0, 10)

@@ -32,8 +32,8 @@ function toShortName(libName: string): string {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin()
-  if (auth instanceof NextResponse) return auth
+  const user = await requireAdmin()
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = request.nextUrl
   const type = searchParams.get('type') // 'provinces' | 'districts' | 'wards'

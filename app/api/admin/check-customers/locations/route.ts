@@ -3,8 +3,8 @@ import { requireAdmin } from '@/lib/admin/auth'
 import { getCustomerLocations } from '@/lib/admin/services/check-customers'
 
 export async function GET() {
-  const auth = await requireAdmin()
-  if (auth instanceof NextResponse) return auth
+  const user = await requireAdmin()
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   try {
     const data = await getCustomerLocations()

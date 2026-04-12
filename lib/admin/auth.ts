@@ -1,59 +1,34 @@
-import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
-
-type Profile = {
-  id: string
-  full_name: string | null
-  email: string | null
-  is_admin: boolean
-  clinic_name: string | null
-  clinic_type: string | null
-  facility_code: string | null
-  staff_code: string | null
-  province: string | null
-  district: string | null
-  region: string | null
-  latitude: number | null
-  longitude: number | null
-  avatar_url: string | null
-  created_at: string
-}
-
-type AdminContext = {
-  user: { id: string; email?: string }
-  profile: Profile
-}
+import { createClient } from '@/lib/supabase/server'
+import type { User } from '@supabase/supabase-js'
 
 /**
  * Server utility for protecting /api/admin/* routes.
  *
  * Usage in every API route handler:
- *   const auth = await requireAdmin()
- *   if (auth instanceof NextResponse) return auth
- *   const { user, profile } = auth
+ *   const user = await requireAdmin()
+ *   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
  *
- * Returns { user, profile } for valid admin, or NextResponse(403) for unauthorized.
- * Uses createClient() for session verification (getUser verifies with auth server)
- * and createServiceClient() for profile lookup (bypasses RLS).
+ * Returns the verified Supabase User when the caller is an admin, or null otherwise.
+ *
+ * Security rationale:
+ * - getUser() performs server-side JWT verification against the Supabase auth server.
+ * - app_metadata is set server-side only; Supabase enforces this — clients cannot modify it.
+ * - Reading is_admin from a verified JWT token is equivalent security to reading from the DB,
+ *   with zero additional network round-trips.
  */
-export async function requireAdmin(): Promise<AdminContext | NextResponse> {
+export async function requireAdmin(): Promise<User | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return null
   }
 
-  const svc = createServiceClient()
-  const { data: profile, error } = await svc
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  const isAdmin = user.app_metadata?.is_admin === true
 
-  if (error || !profile || !profile.is_admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!isAdmin) {
+    return null
   }
 
-  return { user: { id: user.id, email: user.email }, profile: profile as Profile }
+  return user
 }
