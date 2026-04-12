@@ -207,6 +207,24 @@ export function CheckCustomersClient({
     fetchData(filters, 1, true)
   }, [npp, maKH, tenKH, tinh, quanHuyen, loaiCoSo, dinhVi, fetchData])
 
+  // Fetch ALL customers (with current filters) for export
+  const fetchAllCustomers = useCallback(async (): Promise<CustomerRow[]> => {
+    const f = activeFilters.current
+    const params = new URLSearchParams()
+    if (f.distributor_id) params.set('distributor_id', f.distributor_id)
+    if (f.customer_key_filter) params.set('customer_key_filter', f.customer_key_filter)
+    if (f.customer_name_filter) params.set('customer_name_filter', f.customer_name_filter)
+    if (f.province) params.set('province', f.province)
+    if (f.town) params.set('town', f.town)
+    if (f.cust_class_key) params.set('cust_class_key', f.cust_class_key)
+    if (f.has_geo) params.set('has_geo', f.has_geo)
+    params.set('page', '1')
+    params.set('page_size', '10000')
+    const res = await fetch(`/api/admin/check-customers?${params}`)
+    const d: CheckCustomersData = await res.json()
+    return addHasGeo(d.customers.data)
+  }, [])
+
 
   const handlePageChange = useCallback(
     (page: number) => fetchData(activeFilters.current, page, false),
@@ -530,7 +548,8 @@ export function CheckCustomersClient({
         <DataTable<CustomerRow>
           data={customersWithGeo}
           columns={customerColumns}
-          exportConfig={undefined}
+          exportConfig={{ copy: true, excel: true, csv: true, pdf: true, print: true }}
+          exportAllFetcher={fetchAllCustomers}
           totalCount={data.customers.total}
           currentPage={data.customers.page}
           onPageChange={handlePageChange}

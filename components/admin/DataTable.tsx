@@ -50,6 +50,8 @@ export interface DataTableProps<T> {
   showPageSizeDropdown?: boolean
   // Page jump input
   showPageJump?: boolean
+  // For server-paginated tables: fetches ALL rows before export
+  exportAllFetcher?: () => Promise<T[]>
 }
 
 // ---------------------------------------------------------------------------
@@ -88,7 +90,22 @@ function DataTableInner<T extends Record<string, unknown>>({
   showSearch = false,
   showPageSizeDropdown = true,
   showPageJump = false,
+  exportAllFetcher,
 }: DataTableProps<T>) {
+  const [exporting, setExporting] = useState(false)
+
+  // Get data for export — uses fetcher to load all rows for server-paginated tables
+  const getExportData = useCallback(async (): Promise<T[]> => {
+    if (exportAllFetcher) {
+      setExporting(true)
+      try {
+        return await exportAllFetcher()
+      } finally {
+        setExporting(false)
+      }
+    }
+    return data
+  }, [exportAllFetcher, data])
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [pageSizeState, setPageSizeState] = useState(initialPageSize)
@@ -148,26 +165,29 @@ function DataTableInner<T extends Record<string, unknown>>({
   // ---------------------------------------------------------------------------
 
   const handleCopy = useCallback(async () => {
-    const exportData = flattenForExport(data, columns)
+    const allRows = await getExportData()
+    const exportData = flattenForExport(allRows, columns)
     const headers = columns.map(c => c.label)
     const header = headers.join('\t')
     const rows = exportData.map(row => headers.map(h => String(row[h] ?? '')).join('\t'))
     const text = [header, ...rows].join('\n')
     await navigator.clipboard.writeText(text)
-  }, [data, columns])
+  }, [getExportData, columns])
 
   const handleExcel = useCallback(async () => {
     const XLSX = await import('xlsx')
-    const exportData = flattenForExport(data, columns)
+    const allRows = await getExportData()
+    const exportData = flattenForExport(allRows, columns)
     const ws = XLSX.utils.json_to_sheet(exportData)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Data')
     XLSX.writeFile(wb, 'export.xlsx')
-  }, [data, columns])
+  }, [getExportData, columns])
 
-  const handleCsv = useCallback(() => {
+  const handleCsv = useCallback(async () => {
     const headers = columns.map(c => c.label)
-    const exportData = flattenForExport(data, columns)
+    const allRows = await getExportData()
+    const exportData = flattenForExport(allRows, columns)
     const csvRows = [
       headers.join(','),
       ...exportData.map(row =>
@@ -186,18 +206,19 @@ function DataTableInner<T extends Record<string, unknown>>({
     a.download = 'export.csv'
     a.click()
     URL.revokeObjectURL(url)
-  }, [data, columns])
+  }, [getExportData, columns])
 
   const handlePdf = useCallback(async () => {
     const jsPDFModule = await import('jspdf')
     const jsPDF = jsPDFModule.default
     await import('jspdf-autotable')
 
+    const allRows = await getExportData()
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
     addVietnameseFont(doc)
 
     const headers = columns.map(c => c.label)
-    const body = data.map(row =>
+    const body = allRows.map(row =>
       columns.map(c => {
         const val = row[c.key]
         return val == null ? '' : String(val)
@@ -301,10 +322,14 @@ function DataTableInner<T extends Record<string, unknown>>({
 
           {hasAnyExport(exportConfig) && (
             <div className="flex items-center gap-2">
+              {exporting && (
+                <span className="text-xs text-gray-400 animate-pulse">Đang xuất...</span>
+              )}
               {exportConfig?.copy && (
                 <button
                   onClick={handleCopy}
-                  className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors"
+                  disabled={exporting}
+                  className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-200 text-xs px-3 py-1.5 rounded transition-colors"
                 >
                   {VI.buttons.copy}
                 </button>
