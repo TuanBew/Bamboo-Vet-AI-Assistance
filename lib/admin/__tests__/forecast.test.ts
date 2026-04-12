@@ -100,8 +100,8 @@ describe('computeMovingAverageForecast', () => {
   // Tests: forecast extent (to December of last data year)
   // ---------------------------------------------------------------------------
 
-  it('forecasts from last complete month + 1 through December of that year', () => {
-    // Last complete data: March 2026 → should forecast April–December 2026 (9 months)
+  it('forecasts from currentMonth+1 (May) through December — 8 months', () => {
+    // Current month is April 2026 → forecast May through December = 8 months
     const data = [
       makeMonth(2025, 10, 80),
       makeMonth(2025, 11, 90),
@@ -113,81 +113,42 @@ describe('computeMovingAverageForecast', () => {
     const result = computeMovingAverageForecast(data)
     const forecasted = result.filter(d => d.is_forecast)
 
-    // March 2026 is last → forecast Apr, May, …, Dec 2026 = 9 months
-    expect(forecasted).toHaveLength(9)
-    expect(forecasted[0]).toMatchObject({ year: 2026, month: 4 })
+    // April is current month → skipped. Forecast: May (5) through December (12) = 8 months
+    expect(forecasted).toHaveLength(8)
+    expect(forecasted[0]).toMatchObject({ year: 2026, month: 5 })
     expect(forecasted[forecasted.length - 1]).toMatchObject({ year: 2026, month: 12 })
   })
 
-  it('generates no forecast when last data point is December', () => {
+  it('generates no forecast when current month is December', () => {
+    vi.setSystemTime(new Date('2026-12-15'))
     const data = [
-      makeMonth(2025, 7, 80),
-      makeMonth(2025, 8, 90),
-      makeMonth(2025, 9, 100),
-      makeMonth(2025, 10, 95),
-      makeMonth(2025, 11, 85),
-      makeMonth(2025, 12, 88), // last point is December
+      makeMonth(2026, 9, 80),
+      makeMonth(2026, 10, 90),
+      makeMonth(2026, 11, 100),
     ]
     const result = computeMovingAverageForecast(data)
     expect(result.filter(d => d.is_forecast)).toHaveLength(0)
   })
 
-  it('forecasts to December of the year containing the last data point', () => {
-    // Data through November 2025 → forecast only December 2025
+  it('April (current month) stays as real data — forecast starts from May', () => {
     const data = [
-      makeMonth(2025, 6, 80),
-      makeMonth(2025, 7, 90),
-      makeMonth(2025, 8, 100),
-      makeMonth(2025, 9, 95),
-      makeMonth(2025, 10, 85),
-      makeMonth(2025, 11, 88),
-    ]
-    const result = computeMovingAverageForecast(data)
-    const forecasted = result.filter(d => d.is_forecast)
-    expect(forecasted).toHaveLength(1)
-    expect(forecasted[0]).toMatchObject({ year: 2025, month: 12 })
-  })
-
-  // ---------------------------------------------------------------------------
-  // Tests: WMA produces a STABLE forecast (not trend-following)
-  // ---------------------------------------------------------------------------
-
-  it('WMA forecast value is stable (not extrapolating trend)', () => {
-    // Strongly increasing data — WMA should NOT keep increasing into forecasts
-    const data = [
-      makeMonth(2025, 10, 100),
-      makeMonth(2025, 11, 200),
-      makeMonth(2025, 12, 300),
-      makeMonth(2026, 1, 400),
-      makeMonth(2026, 2, 500),
-      makeMonth(2026, 3, 600),
+      makeMonth(2026, 2, 85),
+      makeMonth(2026, 3, 88),
+      makeMonth(2026, 4, 50), // partial April data from DB
     ]
     const result = computeMovingAverageForecast(data)
     const forecasted = result.filter(d => d.is_forecast)
 
-    // All forecast months must have the same value (stable WMA)
-    const allSameValue = forecasted.every(f => f.value === forecasted[0].value)
-    expect(allSameValue).toBe(true)
+    // No forecast point for April
+    expect(forecasted.some(f => f.year === 2026 && f.month === 4)).toBe(false)
 
-    // Forecast value should be less than the last real value (WMA averages, not extrapolates)
-    expect(forecasted[0].value).toBeLessThan(600)
-  })
+    // April appears as real data (is_forecast: false)
+    const aprilReal = result.find(d => d.year === 2026 && d.month === 4 && !d.is_forecast)
+    expect(aprilReal).toBeDefined()
+    expect(aprilReal!.value).toBe(50)
 
-  it('WMA forecast is a weighted average — heavier weight on recent months', () => {
-    // 6 months: weights 1,2,3,4,5,6 → WMA = (100+2*100+3*200+4*200+5*200+6*300) / 21
-    // = (100 + 200 + 600 + 800 + 1000 + 1800) / 21 = 4500 / 21 ≈ 214
-    const data = [
-      makeMonth(2025, 10, 100),
-      makeMonth(2025, 11, 100),
-      makeMonth(2025, 12, 200),
-      makeMonth(2026, 1, 200),
-      makeMonth(2026, 2, 200),
-      makeMonth(2026, 3, 300),
-    ]
-    const result = computeMovingAverageForecast(data)
-    const forecasted = result.filter(d => d.is_forecast)
-    // Expected WMA: (1*100+2*100+3*200+4*200+5*200+6*300) / 21 = 4500/21 ≈ 214
-    expect(forecasted[0].value).toBe(Math.round(4500 / 21))
+    // Forecast starts at May
+    expect(forecasted[0]).toMatchObject({ year: 2026, month: 5 })
   })
 
   it('forecast value is never negative', () => {
@@ -223,5 +184,48 @@ describe('computeMovingAverageForecast', () => {
       const curr = result[i].year * 12 + result[i].month
       expect(curr).toBeGreaterThan(prev)
     }
+  })
+
+  // SMA rolling behaviour
+  it('2-month SMA: May forecast = Math.round((Feb + Mar) / 2)', () => {
+    const data = [
+      makeMonth(2026, 2, 70),
+      makeMonth(2026, 3, 85),
+    ]
+    const result = computeMovingAverageForecast(data)
+    const forecasted = result.filter(d => d.is_forecast)
+    // May = (70 + 85) / 2 = 77.5 → Math.round → 78
+    expect(forecasted[0]).toMatchObject({ year: 2026, month: 5, value: 78 })
+  })
+
+  it('rolls forward: Jun uses [Mar_actual, May_forecast], not [Feb, Mar] repeated', () => {
+    const data = [
+      makeMonth(2026, 2, 70),
+      makeMonth(2026, 3, 85),
+    ]
+    const result = computeMovingAverageForecast(data)
+    const forecasted = result.filter(d => d.is_forecast)
+
+    const mayForecast = 78  // Math.round((70 + 85) / 2) = Math.round(77.5) = 78
+    const junForecast = 82  // Math.round((85 + 78) / 2) = Math.round(81.5) = 82
+
+    expect(forecasted[0]).toMatchObject({ month: 5, value: mayForecast })
+    expect(forecasted[1]).toMatchObject({ month: 6, value: junForecast })
+
+    // If NOT rolling (flat-line bug): Jun would also be 78 (same as May)
+    // Rolling produces a different value: 82 ≠ 78
+    expect(forecasted[1].value).not.toBe(mayForecast)
+  })
+
+  it('forecast line is not flat — values vary as window rolls forward', () => {
+    const data = [
+      makeMonth(2026, 2, 70),
+      makeMonth(2026, 3, 85),
+    ]
+    const result = computeMovingAverageForecast(data)
+    const forecasted = result.filter(d => d.is_forecast)
+
+    // May=78, Jun=82 → at least the first two differ
+    expect(forecasted[0].value).not.toBe(forecasted[1].value)
   })
 })
