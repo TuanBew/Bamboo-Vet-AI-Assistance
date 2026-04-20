@@ -1,24 +1,26 @@
 import { unstable_cache } from 'next/cache'
-import { createServiceClient } from '@/lib/supabase/server'
+import { query } from '@/lib/mysql/client'
+
+interface DpurRow {
+  site_code: string
+  site_name: string
+}
 
 async function _getNppOptions(): Promise<Array<{ site_code: string; site_name: string }>> {
-  const db = createServiceClient()
-  const { data, error } = await db
-    .from('dpur')
-    .select('site_code, site_name')
-    .order('site_name')
-    .limit(1000)
+  // LEGACY SUPABASE: const db = createServiceClient()
+  // LEGACY SUPABASE: const { data } = await db.from('dpur').select('site_code,site_name').order('site_name').limit(1000)
+  const rows = await query<DpurRow>(
+    'SELECT SiteCode AS site_code, SiteName AS site_name FROM `_dpur` ORDER BY SiteName LIMIT 1000',
+    []
+  )
 
-  if (error || !data) return []
-
-  // Deduplicate by site_code — keep first occurrence (alphabetically first by site_name due to .order())
   const seen = new Map<string, { site_code: string; site_name: string }>()
-  for (const row of data) {
-    const code = (row.site_code as string)?.trim()
+  for (const row of rows) {
+    const code = row.site_code?.trim()
     if (code && !seen.has(code)) {
       seen.set(code, {
         site_code: code,
-        site_name: (row.site_name as string)?.trim() || code,
+        site_name: row.site_name?.trim() || code,
       })
     }
   }
