@@ -68,156 +68,173 @@ export interface KhachHangData {
 }
 
 // ---------------------------------------------------------------------------
-// Row types
-// ---------------------------------------------------------------------------
-
-interface CustomerRow {
-  customer_key: string
-  customer_name: string
-  cust_class_key: string | null
-  cust_class_name: string | null
-  lat: number | null
-  lng: number | null
-  province_name: string | null
-  dist_province: string | null
-  address: string | null
-  ship_from_code: string | null
-  first_date: string
-  last_date: string
-}
-
-interface NppRow { code: string; name: string }
-
-// ---------------------------------------------------------------------------
-// Main service function
+// Main service function — all aggregations done in SQL (no full-table JS scan)
 // ---------------------------------------------------------------------------
 
 async function _getKhachHangData(filters: KhachHangFilters): Promise<KhachHangData> {
   // LEGACY SUPABASE: db.rpc('get_khach_hang_summary') + db.rpc('get_khach_hang_geo')
 
-  const nppFilter = filters.npp ? ' AND ShipFromCode = ?' : ''
-  const nppParam  = filters.npp ? [filters.npp] : []
+  const nppWhere = filters.npp ? 'WHERE ShipFromCode = ?' : ''
+  const nppParam = filters.npp ? [filters.npp] : []
 
-  const [customerRows, nppRows] = await Promise.all([
-    query<CustomerRow>(`
-      SELECT
-        CustomerKey         AS customer_key,
-        MAX(CustomerName)   AS customer_name,
-        MAX(CustClassKey)   AS cust_class_key,
-        MAX(CustClassName)  AS cust_class_name,
-        MAX(Lat)            AS lat,
-        MAX(\`Long\`)       AS lng,
-        MAX(ProvinceName)   AS province_name,
-        MAX(DistProvince)   AS dist_province,
-        MAX(Address)        AS address,
-        MAX(ShipFromCode)   AS ship_from_code,
-        MIN(OffDate)        AS first_date,
-        MAX(OffDate)        AS last_date
-      FROM \`_door\`
-      WHERE 1=1 ${nppFilter}
-      GROUP BY CustomerKey
-    `, nppParam),
-    query<NppRow>(
-      'SELECT DISTINCT ShipFromCode AS code, ShipFromName AS name FROM `_door` WHERE ShipFromCode IS NOT NULL ORDER BY ShipFromName',
-      []
-    ),
-  ])
-
-  const total = customerRows.length
   const twelveMonthsAgo = new Date()
   twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1)
   const cutoff = twelveMonthsAgo.toISOString().slice(0, 10)
 
-  const activeRows = customerRows.filter(r => r.last_date >= cutoff)
-  const mappedRows = customerRows.filter(r => r.cust_class_key && r.cust_class_key.toUpperCase() !== 'OTHER')
-  const geoRows    = customerRows.filter(r => r.lat && r.lng)
+  // Limit to last 3 years to avoid full-scan of entire _door history
+  const threeYearsAgo = new Date()
+  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3)
+  const scanFrom = threeYearsAgo.toISOString().slice(0, 10)
 
-  // new_by_month: first purchase month per customer
-  const monthCountMap = new Map<string, number>()
-  for (const r of customerRows) {
-    const mo = r.first_date.slice(0, 7)
-    monthCountMap.set(mo, (monthCountMap.get(mo) ?? 0) + 1)
+  // Subquery: one row per customer, limited to 3-year window
+  const custSubSql = filters.npp
+    ? `SELECT CustomerKey, MAX(CustClassKey) AS ck, MAX(CustClassName) AS cn,
+              MAX(Lat) AS lat, MAX(\`Long\`) AS lng,
+              MIN(OffDate) AS first_date, MAX(OffDate) AS last_date
+       FROM \`_door\` WHERE OffDate >= ? AND ShipFromCode = ? GROUP BY CustomerKey`
+    : `SELECT CustomerKey, MAX(CustClassKey) AS ck, MAX(CustClassName) AS cn,
+              MAX(Lat) AS lat, MAX(\`Long\`) AS lng,
+              MIN(OffDate) AS first_date, MAX(OffDate) AS last_date
+       FROM \`_door\` WHERE OffDate >= ? GROUP BY CustomerKey`
+
+  // Params for custSubSql: always starts with scanFrom, then optionally npp
+  const custSubParam = filters.npp ? [scanFrom, filters.npp] : [scanFrom]
+
+  interface KpiRow {
+    total: number
+    active_count: number
+    geo_count: number
+    mapped_count: number
   }
-  const new_by_month = Array.from(monthCountMap.entries())
-    .map(([month, count]) => ({ month, count }))
-    .sort((a, b) => a.month.localeCompare(b.month))
+  interface MonthRow { month: string; count: number }
+  interface NameCountRow { name: string; count: number }
+  interface TypeBreakRow { type_code: string | null; type_name: string | null; count: number }
+  interface ActiveTypeRow { type_code: string | null; type_name: string | null; active_count: number; total_count: number; geo_count: number; mapped_count: number }
+  interface GeoRow { customer_key: string; customer_name: string; cust_class_key: string | null; cust_class_name: string | null; lat: number; lng: number; province_name: string | null; address: string | null; ship_from_code: string | null }
+  interface NppRow { code: string; name: string }
 
-  // by_province
-  const provinceCounts = new Map<string, number>()
-  for (const r of customerRows) {
-    const p = r.province_name || 'Khác'
-    provinceCounts.set(p, (provinceCounts.get(p) ?? 0) + 1)
-  }
-  const by_province = Array.from(provinceCounts.entries())
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
+  const [kpiRows, monthRows, provinceRows, districtRows, typeRows, activeTypeRows, geoRows, nppRows] = await Promise.all([
+    // KPIs: total, active (last 12m), geo, mapped — all in one pass over the subquery
+    query<KpiRow>(`
+      SELECT COUNT(*) AS total,
+             SUM(last_date >= ?) AS active_count,
+             SUM(lat IS NOT NULL AND lng IS NOT NULL) AS geo_count,
+             SUM(ck IS NOT NULL AND ck != 'OTHER') AS mapped_count
+      FROM (${custSubSql}) c
+    `, [cutoff, ...custSubParam]),
 
-  // by_district
-  const districtCounts = new Map<string, number>()
-  for (const r of customerRows) {
-    const d = r.dist_province || 'Khác'
-    districtCounts.set(d, (districtCounts.get(d) ?? 0) + 1)
-  }
-  const by_district = Array.from(districtCounts.entries())
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
+    // New customers per month (by first purchase month)
+    query<MonthRow>(`
+      SELECT DATE_FORMAT(first_date, '%Y-%m') AS month, COUNT(*) AS count
+      FROM (${custSubSql}) c
+      GROUP BY month ORDER BY month
+    `, custSubParam),
 
-  // all_customers breakdown by type
-  const typeMap = new Map<string, { code: string; name: string; count: number }>()
-  for (const r of customerRows) {
-    const code = r.cust_class_key || 'OTHER'
-    const name = r.cust_class_name || 'Khác'
-    const cur = typeMap.get(code)
-    if (cur) cur.count++
-    else typeMap.set(code, { code, name, count: 1 })
-  }
-  const allBreakdown: CustomerBreakdown[] = Array.from(typeMap.values()).map(t => ({
-    type_code: t.code,
-    type_name: t.name,
-    count: t.count,
-    pct: total > 0 ? Math.round((t.count / total) * 100) : 0,
-  })).sort((a, b) => b.count - a.count)
+    // By province (3-year window)
+    query<NameCountRow>(`
+      SELECT ProvinceName AS name, COUNT(DISTINCT CustomerKey) AS count
+      FROM \`_door\`
+      WHERE OffDate >= ? AND ProvinceName IS NOT NULL ${filters.npp ? 'AND ShipFromCode = ?' : ''}
+      GROUP BY ProvinceName ORDER BY count DESC
+    `, [scanFrom, ...nppParam]),
 
-  // purchasing_customers breakdown (active = purchased in last 12 months)
-  const activeTotal = activeRows.length
-  const activeTypeMap = new Map<string, { code: string; name: string; count: number }>()
-  for (const r of activeRows) {
-    const code = r.cust_class_key || 'OTHER'
-    const name = r.cust_class_name || 'Khác'
-    const cur = activeTypeMap.get(code)
-    if (cur) cur.count++
-    else activeTypeMap.set(code, { code, name, count: 1 })
-  }
-  const purchasingBreakdown: PurchasingBreakdown[] = Array.from(activeTypeMap.values()).map(t => ({
-    type_code: t.code,
-    type_name: t.name,
-    count: t.count,
-    pct_of_total:  total       > 0 ? Math.round((t.count / total)       * 100) : 0,
-    pct_of_active: activeTotal > 0 ? Math.round((t.count / activeTotal) * 100) : 0,
-  })).sort((a, b) => b.count - a.count)
+    // By district (3-year window)
+    query<NameCountRow>(`
+      SELECT DistProvince AS name, COUNT(DISTINCT CustomerKey) AS count
+      FROM \`_door\`
+      WHERE OffDate >= ? AND DistProvince IS NOT NULL ${filters.npp ? 'AND ShipFromCode = ?' : ''}
+      GROUP BY DistProvince ORDER BY count DESC
+    `, [scanFrom, ...nppParam]),
 
-  // geo_points
+    // All-customers breakdown by type
+    query<TypeBreakRow>(`
+      SELECT ck AS type_code, cn AS type_name, COUNT(*) AS count
+      FROM (${custSubSql}) c
+      GROUP BY ck, cn ORDER BY count DESC
+    `, custSubParam),
+
+    // Active-customers: type breakdown + geo/mapped counts per type
+    query<ActiveTypeRow>(`
+      SELECT ck AS type_code, cn AS type_name,
+             COUNT(*) AS active_count,
+             COUNT(*) AS total_count,
+             SUM(lat IS NOT NULL AND lng IS NOT NULL) AS geo_count,
+             SUM(ck IS NOT NULL AND ck != 'OTHER') AS mapped_count
+      FROM (${custSubSql}) c
+      WHERE last_date >= ?
+      GROUP BY ck, cn ORDER BY active_count DESC
+    `, [...custSubParam, cutoff]),
+
+    // Geo points — only customers with lat/lng (much smaller set)
+    query<GeoRow>(`
+      SELECT CustomerKey AS customer_key, MAX(CustomerName) AS customer_name,
+             MAX(CustClassKey) AS cust_class_key, MAX(CustClassName) AS cust_class_name,
+             MAX(Lat) AS lat, MAX(\`Long\`) AS lng,
+             MAX(ProvinceName) AS province_name, MAX(Address) AS address,
+             MAX(ShipFromCode) AS ship_from_code
+      FROM \`_door\`
+      WHERE OffDate >= ? AND Lat IS NOT NULL AND \`Long\` IS NOT NULL ${filters.npp ? 'AND ShipFromCode = ?' : ''}
+      GROUP BY CustomerKey
+    `, [scanFrom, ...nppParam]),
+
+    // NPP options
+    query<NppRow>(
+      'SELECT DISTINCT ShipFromCode AS code, ShipFromName AS name FROM `_door` WHERE ShipFromCode IS NOT NULL ORDER BY name',
+      []
+    ),
+  ])
+
+  const kpi = kpiRows[0]
+  const total        = Number(kpi?.total        ?? 0)
+  const activeCount  = Number(kpi?.active_count ?? 0)
+  const geoCount     = Number(kpi?.geo_count    ?? 0)
+  const mappedCount  = Number(kpi?.mapped_count ?? 0)
+
+  const new_by_month = monthRows.map(r => ({ month: r.month, count: Number(r.count) }))
+
+  const by_province = provinceRows.map(r => ({ name: r.name || 'Khác', count: Number(r.count) }))
+  const by_district = districtRows.map(r => ({ name: r.name || 'Khác', count: Number(r.count) }))
+
+  // all_customers breakdown
+  const allBreakdown: CustomerBreakdown[] = typeRows.map(r => ({
+    type_code: r.type_code || 'OTHER',
+    type_name: r.type_name || 'Khác',
+    count: Number(r.count),
+    pct: total > 0 ? Math.round((Number(r.count) / total) * 100) : 0,
+  }))
+  const typeCount = new Set(typeRows.map(r => r.type_code || 'OTHER')).size
+
+  // purchasing_customers breakdown (active in last 12 months)
+  const activeTotalCount = activeTypeRows.reduce((s, r) => s + Number(r.active_count), 0)
+  const activeMapped = activeTypeRows.reduce((s, r) => s + Number(r.mapped_count), 0)
+  const activeGeo    = activeTypeRows.reduce((s, r) => s + Number(r.geo_count), 0)
+  const activeTypeCount = activeTypeRows.length
+
+  const purchasingBreakdown: PurchasingBreakdown[] = activeTypeRows.map(r => ({
+    type_code: r.type_code || 'OTHER',
+    type_name: r.type_name || 'Khác',
+    count: Number(r.active_count),
+    pct_of_total:  total            > 0 ? Math.round((Number(r.active_count) / total)            * 100) : 0,
+    pct_of_active: activeTotalCount > 0 ? Math.round((Number(r.active_count) / activeTotalCount) * 100) : 0,
+  }))
+
   const geo_points: CustomerGeoPoint[] = geoRows.map(r => ({
     customer_key:    r.customer_key,
     customer_name:   r.customer_name,
-    cust_class_key:  r.cust_class_key || 'OTHER',
+    cust_class_key:  r.cust_class_key  || 'OTHER',
     cust_class_name: r.cust_class_name || 'Khác',
     lat:      Number(r.lat),
     lng:      Number(r.lng),
     province: r.province_name || '',
-    address:  r.address || '',
+    address:  r.address       || '',
     site_code: r.ship_from_code || '',
   }))
 
-  // npp_options dedup
   const nppSeen = new Map<string, string>()
   for (const r of nppRows) {
     if (r.code && !nppSeen.has(r.code)) nppSeen.set(r.code, r.name || r.code)
   }
   const npp_options = Array.from(nppSeen.entries()).map(([code, name]) => ({ code, name }))
-
-  const activeMappedRows = activeRows.filter(r => r.cust_class_key && r.cust_class_key.toUpperCase() !== 'OTHER')
-  const activeGeoRows    = activeRows.filter(r => r.lat && r.lng)
 
   return {
     new_by_month,
@@ -227,20 +244,20 @@ async function _getKhachHangData(filters: KhachHangFilters): Promise<KhachHangDa
     all_customers: {
       kpis: {
         total,
-        active_count: activeRows.length,
-        mapped_pct:   total > 0 ? Math.round((mappedRows.length / total) * 100) : 0,
-        geo_pct:      total > 0 ? Math.round((geoRows.length   / total) * 100) : 0,
-        type_count:   typeMap.size,
+        active_count:  activeCount,
+        mapped_pct:    total > 0 ? Math.round((mappedCount / total) * 100) : 0,
+        geo_pct:       total > 0 ? Math.round((geoCount   / total) * 100) : 0,
+        type_count:    typeCount,
       },
       breakdown: allBreakdown,
     },
     purchasing_customers: {
       kpis: {
-        total_count:  activeTotal,
-        active_count: activeTotal,
-        mapped_pct:   activeTotal > 0 ? Math.round((activeMappedRows.length / activeTotal) * 100) : 0,
-        geo_pct:      activeTotal > 0 ? Math.round((activeGeoRows.length    / activeTotal) * 100) : 0,
-        type_count:   activeTypeMap.size,
+        total_count:   activeTotalCount,
+        active_count:  activeTotalCount,
+        mapped_pct:    activeTotalCount > 0 ? Math.round((activeMapped / activeTotalCount) * 100) : 0,
+        geo_pct:       activeTotalCount > 0 ? Math.round((activeGeo    / activeTotalCount) * 100) : 0,
+        type_count:    activeTypeCount,
       },
       breakdown: purchasingBreakdown,
     },

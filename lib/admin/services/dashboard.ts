@@ -287,7 +287,7 @@ export async function getDashboardData(
       Product        AS product,         OffDate        AS off_date,
       OffQty         AS off_qty,         OffAmt         AS off_amt,
       OffDsc         AS off_dsc,         OffTaxAmt      AS off_tax_amt,
-      Lat            AS lat,             \`Long\`        AS long
+      Lat            AS lat,             \`Long\`        AS \`long\`
     FROM \`_door\`
     ${whereAnd(['OffDate >= ?', 'OffDate <= ?'], doorOpt.clauses)}
   `

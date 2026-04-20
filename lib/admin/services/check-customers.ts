@@ -164,7 +164,7 @@ async function _getCheckCustomersData(
       MAX(DistProvince) AS dist_province,
       MAX(ProvinceName) AS province_name,
       MAX(Lat)          AS lat,
-      MAX(\`Long\`)     AS long,
+      MAX(\`Long\`)     AS \`long\`,
       MAX(ShipFromCode) AS ship_from_code,
       MAX(ShipFromName) AS ship_from_name
     FROM \`_door\`
@@ -185,7 +185,7 @@ async function _getCheckCustomersData(
       MAX(CustClassKey)  AS cust_class_key,
       MAX(CustClassName) AS cust_class_name,
       MAX(Lat)           AS lat,
-      MAX(\`Long\`)      AS long
+      MAX(\`Long\`)      AS \`long\`
     FROM \`_door\`
     WHERE Lat IS NOT NULL AND \`Long\` IS NOT NULL
     ${filters.distributor_id ? 'AND ShipFromCode = ?' : ''}
