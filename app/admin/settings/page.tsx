@@ -15,6 +15,7 @@ export default async function AdminSettingsPage() {
     )
   }
 
+  // Supabase Auth + profiles table stay unchanged (auth is not migrated to MySQL)
   const svc = createServiceClient()
   const { data: profile } = await svc
     .from('profiles')
@@ -22,14 +23,9 @@ export default async function AdminSettingsPage() {
     .eq('id', user.id)
     .single()
 
-  const { data: kpis } = await svc
-    .from('mv_dashboard_kpis')
-    .select('refreshed_at')
-    .single()
-
-  const refreshedAt = kpis?.refreshed_at
-    ? new Date(kpis.refreshed_at).toLocaleString('vi-VN')
-    : 'Chua co du lieu'
+  // LEGACY SUPABASE: svc.from('mv_dashboard_kpis').select('refreshed_at').single()
+  // MySQL migration uses live tables — no materialized views to refresh
+  const refreshedAt = 'MySQL migration active'
 
   return (
     <div>
