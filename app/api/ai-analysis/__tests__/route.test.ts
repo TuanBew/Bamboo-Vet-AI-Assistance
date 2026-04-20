@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/lib/admin/auth', () => ({ requireAdmin: vi.fn() }))
-vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
+vi.mock('@/lib/mysql/client', () => ({ query: vi.fn() }))
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
 
 import { requireAdmin } from '@/lib/admin/auth'
-import { createServiceClient } from '@/lib/supabase/server'
+import { query } from '@/lib/mysql/client'
 import { POST } from '@/app/api/ai-analysis/route'
 import { NextRequest } from 'next/server'
 
 const mockRequireAdmin = vi.mocked(requireAdmin)
-const mockCreateServiceClient = vi.mocked(createServiceClient)
+const mockQuery = vi.mocked(query)
 
 function makeRequest() {
   return new NextRequest('http://localhost/api/ai-analysis', {
@@ -35,8 +35,7 @@ describe('POST /api/ai-analysis', () => {
 
   it('returns HTML from Gemini on success', async () => {
     mockRequireAdmin.mockResolvedValue({ id: 'user-1' } as never)
-    const mockRpc = vi.fn().mockResolvedValue({ data: [], error: null })
-    mockCreateServiceClient.mockReturnValue({ rpc: mockRpc } as never)
+    mockQuery.mockResolvedValue([])
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -51,8 +50,7 @@ describe('POST /api/ai-analysis', () => {
 
   it('strips markdown wrapper from Gemini response', async () => {
     mockRequireAdmin.mockResolvedValue({ id: 'user-1' } as never)
-    const mockRpc = vi.fn().mockResolvedValue({ data: [], error: null })
-    mockCreateServiceClient.mockReturnValue({ rpc: mockRpc } as never)
+    mockQuery.mockResolvedValue([])
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -67,8 +65,7 @@ describe('POST /api/ai-analysis', () => {
 
   it('returns 500 when Gemini API fails', async () => {
     mockRequireAdmin.mockResolvedValue({ id: 'user-1' } as never)
-    const mockRpc = vi.fn().mockResolvedValue({ data: [], error: null })
-    mockCreateServiceClient.mockReturnValue({ rpc: mockRpc } as never)
+    mockQuery.mockResolvedValue([])
     mockFetch.mockResolvedValue({ ok: false, status: 429 })
     const res = await POST(makeRequest())
     expect(res.status).toBe(500)
@@ -76,8 +73,7 @@ describe('POST /api/ai-analysis', () => {
 
   it('returns 500 when GEMINI_API_KEY is not set', async () => {
     mockRequireAdmin.mockResolvedValue({ id: 'user-1' } as never)
-    const mockRpc = vi.fn().mockResolvedValue({ data: [], error: null })
-    mockCreateServiceClient.mockReturnValue({ rpc: mockRpc } as never)
+    mockQuery.mockResolvedValue([])
     const originalKey = process.env.GEMINI_API_KEY
     delete process.env.GEMINI_API_KEY
     const res = await POST(makeRequest())

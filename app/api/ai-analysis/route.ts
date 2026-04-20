@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin/auth'
-import { createServiceClient } from '@/lib/supabase/server'
+import { query } from '@/lib/mysql/client'
 import {
   aggregateForGemini,
   buildGeminiPrompt,
@@ -18,20 +18,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const db = createServiceClient()
+    // LEGACY SUPABASE: db.rpc('dashboard_door_monthly', { p_npp: '', p_nganh: '', p_thuong_hieu: '', p_kenh: '' })
+    // LEGACY SUPABASE: db.rpc('dashboard_dpur_monthly', { p_npp: '', p_nganh: '', p_thuong_hieu: '' })
 
     // Always query ALL data — no NPP or category filters for AI analysis
+    interface SalesRow { year: number; month: number; ban_hang: number }
+    interface PurchaseRow { year: number; month: number; nhap_hang: number }
+
     const [salesResult, purchaseResult] = await Promise.all([
-      db.rpc('dashboard_door_monthly', { p_npp: '', p_nganh: '', p_thuong_hieu: '', p_kenh: '' }),
-      db.rpc('dashboard_dpur_monthly', { p_npp: '', p_nganh: '', p_thuong_hieu: '' }),
+      query<SalesRow>(`
+        SELECT YEAR(OffDate) AS year, MONTH(OffDate) AS month,
+               SUM(OffAmt + OffTaxAmt - IFNULL(OffDsc, 0)) AS ban_hang
+        FROM \`_door\`
+        GROUP BY YEAR(OffDate), MONTH(OffDate)
+        ORDER BY year, month
+      `, []),
+      query<PurchaseRow>(`
+        SELECT YEAR(PurDate) AS year, MONTH(PurDate) AS month,
+               SUM(PRAmt + PRTaxAmt) AS nhap_hang
+        FROM \`_dpur\`
+        WHERE Trntyp = 'I' AND Program_ID = '0'
+        GROUP BY YEAR(PurDate), MONTH(PurDate)
+        ORDER BY year, month
+      `, []),
     ])
 
-    const salesRows: MonthlyRow[] = ((salesResult.data as Array<{ year: number; month: number; ban_hang: number }> | null) ?? []).map(
-      r => ({ year: r.year, month: r.month, value: r.ban_hang ?? 0 })
+    const salesRows: MonthlyRow[] = salesResult.map(
+      r => ({ year: Number(r.year), month: Number(r.month), value: Number(r.ban_hang ?? 0) })
     )
 
-    const purchaseRows: MonthlyRow[] = ((purchaseResult.data as Array<{ year: number; month: number; nhap_hang: number }> | null) ?? []).map(
-      r => ({ year: r.year, month: r.month, value: r.nhap_hang ?? 0 })
+    const purchaseRows: MonthlyRow[] = purchaseResult.map(
+      r => ({ year: Number(r.year), month: Number(r.month), value: Number(r.nhap_hang ?? 0) })
     )
 
     const currentDate = new Date().toISOString().slice(0, 10)
