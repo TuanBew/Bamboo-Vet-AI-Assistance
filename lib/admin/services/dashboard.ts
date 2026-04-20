@@ -1,5 +1,5 @@
 import { unstable_cache } from 'next/cache'
-import { createServiceClient } from '@/lib/supabase/server'
+import { query } from '@/lib/mysql/client'
 import { computeMovingAverageForecast } from '@/lib/admin/forecast'
 
 // ---------------------------------------------------------------------------
@@ -194,13 +194,41 @@ interface DpurRow {
 }
 
 // ---------------------------------------------------------------------------
+// WHERE clause builders
+// ---------------------------------------------------------------------------
+
+function doorOptionalFilters(f: DashboardFilters): { clauses: string[]; params: unknown[] } {
+  const clauses: string[] = []
+  const params: unknown[] = []
+  if (f.npp)        { clauses.push('ShipFromCode = ?'); params.push(f.npp) }
+  if (f.nganhHang)  { clauses.push('Category = ?');     params.push(f.nganhHang) }
+  if (f.thuongHieu) { clauses.push('Brand = ?');        params.push(f.thuongHieu) }
+  if (f.kenh)       { clauses.push('V_Chanel = ?');     params.push(f.kenh) }
+  return { clauses, params }
+}
+
+function dpurOptionalFilters(f: DashboardFilters): { clauses: string[]; params: unknown[] } {
+  const clauses: string[] = []
+  const params: unknown[] = []
+  if (f.npp)        { clauses.push('SiteCode = ?');  params.push(f.npp) }
+  if (f.nganhHang)  { clauses.push('Category = ?');  params.push(f.nganhHang) }
+  if (f.thuongHieu) { clauses.push('Brand = ?');     params.push(f.thuongHieu) }
+  return { clauses, params }
+}
+
+function whereAnd(base: string[], extra: string[]): string {
+  return 'WHERE ' + [...base, ...extra].join(' AND ')
+}
+
+// ---------------------------------------------------------------------------
 // Main service function
 // ---------------------------------------------------------------------------
 
 export async function getDashboardData(
   filters: DashboardFilters
 ): Promise<DashboardData> {
-  const db = createServiceClient()
+  // LEGACY SUPABASE: createServiceClient() + chained query builder + 9 db.rpc() calls
+
   const { year, month } = parseMonth(filters.month)
   const startOfMonth = `${year}-${String(month).padStart(2, '0')}-01`
   const endOfMonth = `${year}-${String(month).padStart(2, '0')}-${lastDayOfMonth(year, month)}`
@@ -209,122 +237,167 @@ export async function getDashboardData(
   const prevStartOfMonth = `${prevYear}-${String(month).padStart(2, '0')}-01`
   const prevEndOfMonth = `${prevYear}-${String(month).padStart(2, '0')}-${lastDayOfMonth(prevYear, month)}`
 
-  const npp = filters.npp
-  const nganh = filters.nganhHang
-  const th = filters.thuongHieu
-  const kenh = filters.kenh
+  const doorOpt  = doorOptionalFilters(filters)
+  const dpurOpt  = dpurOptionalFilters(filters)
 
   // -----------------------------------------------------------------------
-  // 1. Build month-scoped queries with conditional filters
+  // 1. Build all queries
   // -----------------------------------------------------------------------
-  let monthDoorQ = db.from('door')
-    .select('saleperson_key,saleperson_name,customer_key,customer_name,cust_class_key,cust_class_name,sku_code,sku_name,category,brand,product,off_date,off_qty,off_amt,off_dsc,off_tax_amt,lat,long')
-    .gte('off_date', startOfMonth)
-    .lte('off_date', endOfMonth)
-  if (npp)   monthDoorQ = monthDoorQ.eq('ship_from_code', npp)
-  if (nganh) monthDoorQ = monthDoorQ.eq('category', nganh)
-  if (th)    monthDoorQ = monthDoorQ.eq('brand', th)
-  if (kenh)  monthDoorQ = monthDoorQ.eq('v_chanel', kenh)
-  const monthDoorFetch = monthDoorQ.range(0, 49999)
 
-  let monthDpurQ = db.from('dpur')
-    .select('pur_date,pr_qty,pr_amt,pr_tax_amt,trntyp,sku_code,sku_name,category,brand,product')
-    .gte('pur_date', startOfMonth)
-    .lte('pur_date', endOfMonth)
-  if (npp)   monthDpurQ = monthDpurQ.eq('site_code', npp)
-  if (nganh) monthDpurQ = monthDpurQ.eq('category', nganh)
-  if (th)    monthDpurQ = monthDpurQ.eq('brand', th)
-  const monthDpurFetch = monthDpurQ.range(0, 49999)
+  // Yearly aggregates
+  const doorYearlySql = `
+    SELECT YEAR(OffDate) AS yr,
+           SUM(OffAmt + OffTaxAmt - IFNULL(OffDsc, 0)) AS ban_hang
+    FROM \`_door\`
+    ${doorOpt.clauses.length ? whereAnd([], doorOpt.clauses) : ''}
+    GROUP BY YEAR(OffDate) ORDER BY yr
+  `
+  const dpurYearlySql = `
+    SELECT YEAR(PurDate) AS yr,
+           SUM(CASE WHEN Trntyp = 'I' THEN PRAmt + PRTaxAmt ELSE -(PRAmt + PRTaxAmt) END) AS nhap_hang
+    FROM \`_dpur\`
+    ${dpurOpt.clauses.length ? whereAnd([], dpurOpt.clauses) : ''}
+    GROUP BY YEAR(PurDate) ORDER BY yr
+  `
 
-  let prevDoorQ = db.from('door')
-    .select('off_date,off_qty,off_amt,off_dsc,off_tax_amt')
-    .gte('off_date', prevStartOfMonth)
-    .lte('off_date', prevEndOfMonth)
-  if (npp)   prevDoorQ = prevDoorQ.eq('ship_from_code', npp)
-  if (nganh) prevDoorQ = prevDoorQ.eq('category', nganh)
-  if (th)    prevDoorQ = prevDoorQ.eq('brand', th)
-  if (kenh)  prevDoorQ = prevDoorQ.eq('v_chanel', kenh)
-  const prevDoorFetch = prevDoorQ.range(0, 49999)
+  // Monthly aggregates
+  const doorMonthlySql = `
+    SELECT YEAR(OffDate) AS yr, MONTH(OffDate) AS mo,
+           SUM(OffAmt + OffTaxAmt - IFNULL(OffDsc, 0)) AS ban_hang
+    FROM \`_door\`
+    ${doorOpt.clauses.length ? whereAnd([], doorOpt.clauses) : ''}
+    GROUP BY YEAR(OffDate), MONTH(OffDate) ORDER BY yr, mo
+  `
+  const dpurMonthlySql = `
+    SELECT YEAR(PurDate) AS yr, MONTH(PurDate) AS mo,
+           SUM(CASE WHEN Trntyp = 'I' THEN PRAmt + PRTaxAmt ELSE -(PRAmt + PRTaxAmt) END) AS nhap_hang
+    FROM \`_dpur\`
+    ${dpurOpt.clauses.length ? whereAnd([], dpurOpt.clauses) : ''}
+    GROUP BY YEAR(PurDate), MONTH(PurDate) ORDER BY yr, mo
+  `
 
-  let prevDpurQ = db.from('dpur')
-    .select('pur_date,pr_amt,pr_tax_amt,trntyp')
-    .gte('pur_date', prevStartOfMonth)
-    .lte('pur_date', prevEndOfMonth)
-  if (npp)   prevDpurQ = prevDpurQ.eq('site_code', npp)
-  if (nganh) prevDpurQ = prevDpurQ.eq('category', nganh)
-  if (th)    prevDpurQ = prevDpurQ.eq('brand', th)
-  const prevDpurFetch = prevDpurQ.range(0, 49999)
+  // Month-scoped door rows
+  const monthDoorSql = `
+    SELECT
+      SalepersonKey  AS saleperson_key,  SalepersonName AS saleperson_name,
+      CustomerKey    AS customer_key,    CustomerName   AS customer_name,
+      CustClassKey   AS cust_class_key,  CustClassName  AS cust_class_name,
+      SKUCode        AS sku_code,        SKUName        AS sku_name,
+      Category       AS category,        Brand          AS brand,
+      Product        AS product,         OffDate        AS off_date,
+      OffQty         AS off_qty,         OffAmt         AS off_amt,
+      OffDsc         AS off_dsc,         OffTaxAmt      AS off_tax_amt,
+      Lat            AS lat,             \`Long\`        AS long
+    FROM \`_door\`
+    ${whereAnd(['OffDate >= ?', 'OffDate <= ?'], doorOpt.clauses)}
+  `
+  const monthDpurSql = `
+    SELECT
+      PurDate   AS pur_date,   PRQty    AS pr_qty,
+      PRAmt     AS pr_amt,     PRTaxAmt AS pr_tax_amt,
+      Trntyp    AS trntyp,     SKUCode  AS sku_code,
+      SKUName   AS sku_name,   Category AS category,
+      Brand     AS brand,      Product  AS product
+    FROM \`_dpur\`
+    ${whereAnd(['PurDate >= ?', 'PurDate <= ?'], dpurOpt.clauses)}
+  `
+
+  // Prev-year minimal rows
+  const prevDoorSql = `
+    SELECT OffDate AS off_date, OffQty AS off_qty, OffAmt AS off_amt,
+           OffDsc AS off_dsc, OffTaxAmt AS off_tax_amt
+    FROM \`_door\`
+    ${whereAnd(['OffDate >= ?', 'OffDate <= ?'], doorOpt.clauses)}
+  `
+  const prevDpurSql = `
+    SELECT PurDate AS pur_date, PRAmt AS pr_amt, PRTaxAmt AS pr_tax_amt, Trntyp AS trntyp
+    FROM \`_dpur\`
+    ${whereAnd(['PurDate >= ?', 'PurDate <= ?'], dpurOpt.clauses)}
+  `
 
   // -----------------------------------------------------------------------
-  // 2. Run all queries in parallel: RPC aggregates + month-scoped row fetches
+  // 2. Run all queries in parallel
   // -----------------------------------------------------------------------
+  interface YrRow      { yr: number; ban_hang?: number; nhap_hang?: number }
+  interface YrMoRow    { yr: number; mo: number; ban_hang?: number; nhap_hang?: number }
+  interface NppRow     { ship_from_code: string; ship_from_name: string }
+  interface OptRow     { val: string }
+  interface SkuRow     { total: number }
+  interface CustRow    { total: number }
+  interface PrevDoorRow { off_date: string; off_qty: number; off_amt: number; off_dsc: number | null; off_tax_amt: number }
+  interface PrevDpurRow { pur_date: string; pr_amt: number; pr_tax_amt: number; trntyp: string }
+
   const [
-    nppListResult,
-    categoriesResult,
-    brandsResult,
-    channelsResult,
-    doorYearlyResult,
-    doorMonthlyResult,
-    dpurYearlyResult,
-    dpurMonthlyResult,
-    monthDoorResult,
-    monthDpurResult,
-    prevDoorResult,
-    prevDpurResult,
-    skuTotalResult,
-    totalCustomersResult,
+    nppRows,
+    catRows,
+    brandRows,
+    channelRows,
+    doorYearlyRows,
+    doorMonthlyRows,
+    dpurYearlyRows,
+    dpurMonthlyRows,
+    monthDoorRows,
+    monthDpurRows,
+    prevDoorRows,
+    prevDpurRows,
+    skuTotalRows,
+    totalCustRows,
   ] = await Promise.all([
-    // Filter option lookups (distinct values from DB)
-    db.rpc('dashboard_npp_list'),
-    db.rpc('dashboard_categories'),
-    db.rpc('dashboard_brands'),
-    db.rpc('dashboard_channels'),
-
-    // Yearly/monthly series — server-side GROUP BY aggregation
-    db.rpc('dashboard_door_yearly',   { p_npp: npp, p_nganh: nganh, p_thuong_hieu: th, p_kenh: kenh }),
-    db.rpc('dashboard_door_monthly',  { p_npp: npp, p_nganh: nganh, p_thuong_hieu: th, p_kenh: kenh }),
-    db.rpc('dashboard_dpur_yearly',   { p_npp: npp, p_nganh: nganh, p_thuong_hieu: th }),
-    db.rpc('dashboard_dpur_monthly',  { p_npp: npp, p_nganh: nganh, p_thuong_hieu: th }),
-
-    // Month-scoped row queries (date-filtered, manageable size)
-    monthDoorFetch,
-    monthDpurFetch,
-    prevDoorFetch,
-    prevDpurFetch,
-
-    // Total SKU count
-    db.from('product').select('sku_code', { count: 'exact', head: true }),
-
-    // Total distinct customer count (all-time)
-    db.rpc('dashboard_total_customer_count', { p_npp: npp, p_nganh: nganh, p_thuong_hieu: th, p_kenh: kenh }),
-    // Note: map pins are now computed from monthDoorRows (no separate RPC needed)
+    // LEGACY SUPABASE: db.rpc('dashboard_npp_list')
+    query<NppRow>('SELECT DISTINCT ShipFromCode AS ship_from_code, ShipFromName AS ship_from_name FROM `_door` WHERE ShipFromCode IS NOT NULL ORDER BY ship_from_name', []),
+    // LEGACY SUPABASE: db.rpc('dashboard_categories')
+    query<OptRow>('SELECT DISTINCT Category AS val FROM `_door` WHERE Category IS NOT NULL ORDER BY val', []),
+    // LEGACY SUPABASE: db.rpc('dashboard_brands')
+    query<OptRow>('SELECT DISTINCT Brand AS val FROM `_door` WHERE Brand IS NOT NULL ORDER BY val', []),
+    // LEGACY SUPABASE: db.rpc('dashboard_channels')
+    query<OptRow>('SELECT DISTINCT V_Chanel AS val FROM `_door` WHERE V_Chanel IS NOT NULL ORDER BY val', []),
+    // LEGACY SUPABASE: db.rpc('dashboard_door_yearly', {...})
+    query<YrRow>(doorYearlySql, doorOpt.params),
+    // LEGACY SUPABASE: db.rpc('dashboard_door_monthly', {...})
+    query<YrMoRow>(doorMonthlySql, doorOpt.params),
+    // LEGACY SUPABASE: db.rpc('dashboard_dpur_yearly', {...})
+    query<YrRow>(dpurYearlySql, dpurOpt.params),
+    // LEGACY SUPABASE: db.rpc('dashboard_dpur_monthly', {...})
+    query<YrMoRow>(dpurMonthlySql, dpurOpt.params),
+    // LEGACY SUPABASE: db.from('door').select(...).gte().lte() + filters
+    query<DoorRow>(monthDoorSql, [startOfMonth, endOfMonth, ...doorOpt.params]),
+    // LEGACY SUPABASE: db.from('dpur').select(...).gte().lte() + filters
+    query<DpurRow>(monthDpurSql, [startOfMonth, endOfMonth, ...dpurOpt.params]),
+    // LEGACY SUPABASE: db.from('door').select('off_date,...').gte().lte() + filters (prev year)
+    query<PrevDoorRow>(prevDoorSql, [prevStartOfMonth, prevEndOfMonth, ...doorOpt.params]),
+    // LEGACY SUPABASE: db.from('dpur').select('pur_date,...').gte().lte() + filters (prev year)
+    query<PrevDpurRow>(prevDpurSql, [prevStartOfMonth, prevEndOfMonth, ...dpurOpt.params]),
+    // LEGACY SUPABASE: db.from('product').select('sku_code', { count: 'exact', head: true })
+    query<SkuRow>('SELECT COUNT(DISTINCT SKUCode) AS total FROM `_product`', []),
+    // LEGACY SUPABASE: db.rpc('dashboard_total_customer_count', {...})
+    query<CustRow>(`SELECT COUNT(DISTINCT CustomerKey) AS total FROM \`_door\` ${doorOpt.clauses.length ? whereAnd([], doorOpt.clauses) : ''}`, doorOpt.params),
   ])
 
   // -----------------------------------------------------------------------
   // 2. Process filter options
   // -----------------------------------------------------------------------
   const nppMap = new Map<string, string>()
-  for (const row of (nppListResult.data ?? []) as Array<{ ship_from_code: string; ship_from_name: string }>) {
+  for (const row of nppRows) {
     nppMap.set(row.ship_from_code, row.ship_from_name || row.ship_from_code)
   }
   const npp_list = Array.from(nppMap.entries()).map(([id, name]) => ({ id, name }))
 
-  const nganh_hang = (categoriesResult.data ?? []).map((r: { category: string }) => r.category)
-  const thuong_hieu = (brandsResult.data ?? []).map((r: { brand: string }) => r.brand)
-  const kenh_list = (channelsResult.data ?? []).map((r: { v_chanel: string }) => r.v_chanel)
+  const nganh_hang = catRows.map(r => r.val)
+  const thuong_hieu = brandRows.map(r => r.val)
+  const kenh_list = channelRows.map(r => r.val)
   const filter_options = { nganh_hang, thuong_hieu, kenh_list }
 
   // -----------------------------------------------------------------------
-  // 3. Yearly series from RPC results
+  // 3. Yearly series from aggregate query results
   // -----------------------------------------------------------------------
   const yearlyBanMap = new Map<number, number>()
-  for (const row of (doorYearlyResult.data ?? []) as Array<{ yr: number; ban_hang: number }>) {
-    if (row.yr) yearlyBanMap.set(row.yr, row.ban_hang ?? 0)
+  for (const row of doorYearlyRows) {
+    if (row.yr) yearlyBanMap.set(Number(row.yr), Number(row.ban_hang ?? 0))
   }
 
   const yearlyNhapMap = new Map<number, number>()
-  for (const row of (dpurYearlyResult.data ?? []) as Array<{ yr: number; nhap_hang: number }>) {
-    if (row.yr) yearlyNhapMap.set(row.yr, row.nhap_hang ?? 0)
+  for (const row of dpurYearlyRows) {
+    if (row.yr) yearlyNhapMap.set(Number(row.yr), Number(row.nhap_hang ?? 0))
   }
 
   const allYears = new Set([...yearlyBanMap.keys(), ...yearlyNhapMap.keys()])
@@ -339,19 +412,19 @@ export async function getDashboardData(
     }))
 
   // -----------------------------------------------------------------------
-  // 4. Monthly series + forecast from RPC results
+  // 4. Monthly series + forecast from aggregate query results
   // -----------------------------------------------------------------------
   const monthlyBanMap = new Map<string, number>()
-  for (const row of (doorMonthlyResult.data ?? []) as Array<{ yr: number; mo: number; ban_hang: number }>) {
+  for (const row of doorMonthlyRows) {
     if (row.yr && row.mo) {
-      monthlyBanMap.set(`${row.yr}-${row.mo}`, row.ban_hang ?? 0)
+      monthlyBanMap.set(`${row.yr}-${row.mo}`, Number(row.ban_hang ?? 0))
     }
   }
 
   const monthlyNhapMap = new Map<string, number>()
-  for (const row of (dpurMonthlyResult.data ?? []) as Array<{ yr: number; mo: number; nhap_hang: number }>) {
+  for (const row of dpurMonthlyRows) {
     if (row.yr && row.mo) {
-      monthlyNhapMap.set(`${row.yr}-${row.mo}`, row.nhap_hang ?? 0)
+      monthlyNhapMap.set(`${row.yr}-${row.mo}`, Number(row.nhap_hang ?? 0))
     }
   }
 
@@ -389,24 +462,50 @@ export async function getDashboardData(
     .sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month))
 
   // -----------------------------------------------------------------------
-  // 5. Month-scoped row data
+  // 5. Normalise row numbers from MySQL (returned as strings/decimals)
   // -----------------------------------------------------------------------
-  const monthDoorRows = (monthDoorResult.data ?? []) as DoorRow[]
-  const monthDpurRows = (monthDpurResult.data ?? []) as DpurRow[]
-  const prevDoorRows  = (prevDoorResult.data  ?? []) as Array<{ off_date: string; off_qty: number; off_amt: number; off_dsc: number | null; off_tax_amt: number }>
-  const prevDpurRows  = (prevDpurResult.data  ?? []) as Array<{ pur_date: string; pr_amt: number; pr_tax_amt: number; trntyp: string }>
+  const normDoor: DoorRow[] = monthDoorRows.map(r => ({
+    ...r,
+    off_qty:     Number(r.off_qty     ?? 0),
+    off_amt:     Number(r.off_amt     ?? 0),
+    off_dsc:     r.off_dsc != null ? Number(r.off_dsc) : null,
+    off_tax_amt: Number(r.off_tax_amt ?? 0),
+    lat:  r.lat  != null ? Number(r.lat)  : null,
+    long: r.long != null ? Number(r.long) : null,
+  }))
+
+  const normDpur: DpurRow[] = monthDpurRows.map(r => ({
+    ...r,
+    pr_qty:     Number(r.pr_qty     ?? 0),
+    pr_amt:     Number(r.pr_amt     ?? 0),
+    pr_tax_amt: Number(r.pr_tax_amt ?? 0),
+  }))
+
+  const normPrevDoor = prevDoorRows.map(r => ({
+    ...r,
+    off_qty:     Number(r.off_qty     ?? 0),
+    off_amt:     Number(r.off_amt     ?? 0),
+    off_dsc:     r.off_dsc != null ? Number(r.off_dsc) : null,
+    off_tax_amt: Number(r.off_tax_amt ?? 0),
+  }))
+
+  const normPrevDpur = prevDpurRows.map(r => ({
+    ...r,
+    pr_amt:     Number(r.pr_amt     ?? 0),
+    pr_tax_amt: Number(r.pr_tax_amt ?? 0),
+  }))
 
   // -----------------------------------------------------------------------
   // 6. Daily series for selected month
   // -----------------------------------------------------------------------
   const dailyBanMap = new Map<number, number>()
-  for (const row of monthDoorRows) {
+  for (const row of normDoor) {
     const day = new Date(row.off_date).getDate()
     dailyBanMap.set(day, (dailyBanMap.get(day) ?? 0) + calcRevenue(row))
   }
 
   const dailyNhapMap = new Map<number, number>()
-  for (const row of monthDpurRows) {
+  for (const row of normDpur) {
     const day = new Date(row.pur_date).getDate()
     const current = dailyNhapMap.get(day) ?? 0
     const val = calcPurchaseValue(row)
@@ -424,19 +523,19 @@ export async function getDashboardData(
   // -----------------------------------------------------------------------
   // 7. Metrics box (month-scoped)
   // -----------------------------------------------------------------------
-  const banHangMonth = monthDoorRows.reduce((s, r) => s + calcRevenue(r), 0)
+  const banHangMonth = normDoor.reduce((s, r) => s + calcRevenue(r), 0)
 
   let nhapHangMonth = 0
-  for (const row of monthDpurRows) {
+  for (const row of normDpur) {
     const val = calcPurchaseValue(row)
     if (row.trntyp === 'I') nhapHangMonth += val
     else if (row.trntyp === 'D') nhapHangMonth -= val
   }
 
-  const activeCustomerKeys = new Set(monthDoorRows.map(r => r.customer_key))
-  const soldSkuCodes = new Set(monthDoorRows.map(r => r.sku_code))
-  const nhanVienInMonth = new Set(monthDoorRows.map(r => r.saleperson_key))
-  const customers_total = Number(totalCustomersResult.data ?? 0)
+  const activeCustomerKeys = new Set(normDoor.map(r => r.customer_key))
+  const soldSkuCodes = new Set(normDoor.map(r => r.sku_code))
+  const nhanVienInMonth = new Set(normDoor.map(r => r.saleperson_key))
+  const customers_total = Number(totalCustRows[0]?.total ?? 0)
 
   const metrics_box: DashboardData['metrics_box'] = {
     nhap_hang: nhapHangMonth,
@@ -444,7 +543,7 @@ export async function getDashboardData(
     customers_active: activeCustomerKeys.size,
     customers_total,
     sku_sold: soldSkuCodes.size,
-    sku_total: skuTotalResult.count ?? 0,
+    sku_total: Number(skuTotalRows[0]?.total ?? 0),
     nhan_vien: nhanVienInMonth.size,
   }
 
@@ -455,7 +554,7 @@ export async function getDashboardData(
   const pieNhapNhom = new Map<string, number>()
   const pieNhapTH = new Map<string, number>()
 
-  for (const row of monthDpurRows) {
+  for (const row of normDpur) {
     const val = row.trntyp === 'I' ? calcPurchaseValue(row) : -calcPurchaseValue(row)
     pieNhapNganh.set(row.category || 'Khac', (pieNhapNganh.get(row.category || 'Khac') ?? 0) + val)
     pieNhapNhom.set(row.product || 'Khac',   (pieNhapNhom.get(row.product || 'Khac')   ?? 0) + val)
@@ -466,7 +565,7 @@ export async function getDashboardData(
   const pieBanNhom = new Map<string, number>()
   const pieBanTH = new Map<string, number>()
 
-  for (const row of monthDoorRows) {
+  for (const row of normDoor) {
     const val = calcRevenue(row)
     pieBanNganh.set(row.category || 'Khac', (pieBanNganh.get(row.category || 'Khac') ?? 0) + val)
     pieBanNhom.set(row.product || 'Khac',   (pieBanNhom.get(row.product || 'Khac')   ?? 0) + val)
@@ -487,15 +586,15 @@ export async function getDashboardData(
   // -----------------------------------------------------------------------
   // 9. KPI row (month-scoped, with YoY comparison)
   // -----------------------------------------------------------------------
-  const slBan = monthDoorRows.filter(r => !isFreePromo(r)).reduce((s, r) => s + r.off_qty, 0)
-  const slKm  = monthDoorRows.filter(r => isFreePromo(r)).reduce((s, r) => s + r.off_qty, 0)
+  const slBan = normDoor.filter(r => !isFreePromo(r)).reduce((s, r) => s + r.off_qty, 0)
+  const slKm  = normDoor.filter(r => isFreePromo(r)).reduce((s, r) => s + r.off_qty, 0)
 
-  const orderTransactions = new Set(monthDoorRows.map(r => `${r.customer_key}|${r.off_date}`))
+  const orderTransactions = new Set(normDoor.map(r => `${r.customer_key}|${r.off_date}`))
   const avgPerOrder = orderTransactions.size > 0 ? Math.round(banHangMonth / orderTransactions.size) : 0
 
-  const prevYearBan = prevDoorRows.reduce((s, r) => s + calcRevenue(r), 0)
+  const prevYearBan = normPrevDoor.reduce((s, r) => s + calcRevenue(r), 0)
   let prevYearNhap = 0
-  for (const row of prevDpurRows) {
+  for (const row of normPrevDpur) {
     const val = calcPurchaseValue(row)
     if (row.trntyp === 'I') prevYearNhap += val
     else if (row.trntyp === 'D') prevYearNhap -= val
@@ -515,7 +614,7 @@ export async function getDashboardData(
   // 10. Staff list (month-scoped)
   // -----------------------------------------------------------------------
   const staffKeyToName = new Map<string, string>()
-  for (const row of monthDoorRows) {
+  for (const row of normDoor) {
     if (!staffKeyToName.has(row.saleperson_key)) {
       staffKeyToName.set(row.saleperson_key, row.saleperson_name || row.saleperson_key)
     }
@@ -523,7 +622,7 @@ export async function getDashboardData(
 
   const staff_list: DashboardData['staff_list'] = []
   for (const [sid, sname] of staffKeyToName.entries()) {
-    const myRows = monthDoorRows.filter(r => r.saleperson_key === sid)
+    const myRows = normDoor.filter(r => r.saleperson_key === sid)
     const totalSales = myRows.reduce((s, r) => s + calcRevenue(r), 0)
     const transactions = new Set(myRows.map(r => `${r.customer_key}|${r.off_date}`))
     const orderCount = transactions.size
@@ -569,10 +668,10 @@ export async function getDashboardData(
 
   // -----------------------------------------------------------------------
   // 11. Customer section — uses cust_class_name (real store types)
-  //     Map pins computed directly from monthDoorRows (no separate RPC)
+  //     Map pins computed directly from normDoor (no separate RPC needed)
   // -----------------------------------------------------------------------
   const typeSalesMap = new Map<string, number>()
-  for (const row of monthDoorRows) {
+  for (const row of normDoor) {
     const type = row.cust_class_name || 'Khác'
     typeSalesMap.set(type, (typeSalesMap.get(type) ?? 0) + calcRevenue(row))
   }
@@ -581,7 +680,7 @@ export async function getDashboardData(
     .sort((a, b) => b.ban_hang - a.ban_hang)
 
   const typeCustomerMap = new Map<string, Set<string>>()
-  for (const row of monthDoorRows) {
+  for (const row of normDoor) {
     const type = row.cust_class_name || 'Khác'
     if (!typeCustomerMap.has(type)) typeCustomerMap.set(type, new Set())
     typeCustomerMap.get(type)!.add(row.customer_key)
@@ -590,10 +689,8 @@ export async function getDashboardData(
     .map(([type, keySet]) => ({ type, count: keySet.size }))
     .sort((a, b) => b.count - a.count)
 
-  // Map pins: one pin per distinct active customer this month (with lat/long)
-  // Using a Map to keep only the last seen lat/long per customer
   const customerInfoMap = new Map<string, { name: string; type: string; typeCode: string; lat: number; long: number; revenue: number }>()
-  for (const row of monthDoorRows) {
+  for (const row of normDoor) {
     if (row.lat && row.long) {
       const existing = customerInfoMap.get(row.customer_key)
       const rawKey = row.cust_class_key
@@ -627,7 +724,7 @@ export async function getDashboardData(
   // 12. Top 10 (month-scoped)
   // -----------------------------------------------------------------------
   const custTotals = new Map<string, { name: string; total: number }>()
-  for (const row of monthDoorRows) {
+  for (const row of normDoor) {
     const existing = custTotals.get(row.customer_key)
     if (existing) existing.total += calcRevenue(row)
     else custTotals.set(row.customer_key, { name: row.customer_name, total: calcRevenue(row) })
@@ -638,7 +735,7 @@ export async function getDashboardData(
     .map(c => ({ name: c.name, total_value: c.total }))
 
   const prodTotals = new Map<string, { name: string; total: number }>()
-  for (const row of monthDoorRows) {
+  for (const row of normDoor) {
     const existing = prodTotals.get(row.sku_code)
     if (existing) existing.total += calcRevenue(row)
     else prodTotals.set(row.sku_code, { name: row.sku_name, total: calcRevenue(row) })
@@ -670,7 +767,7 @@ export async function getDashboardData(
 }
 
 // ---------------------------------------------------------------------------
-// Fast data: RPC-based aggregates + bounded month-scoped row fetches
+// Fast data: aggregate queries + bounded month-scoped row fetches
 // (everything except heavy JS aggregation over large row sets)
 // ---------------------------------------------------------------------------
 
