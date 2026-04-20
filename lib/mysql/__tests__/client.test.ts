@@ -33,7 +33,7 @@ describe('query()', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    mockConn = await getPool().getConnection() as typeof mockConn
+    mockConn = await getPool().getConnection() as unknown as typeof mockConn
     mockConn.query.mockResolvedValue([])
     mockConn.execute.mockResolvedValue([[{ id: 1, name: 'test' }], []])
   })
@@ -91,7 +91,7 @@ describe('callSp()', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    mockConn = await getPool().getConnection() as typeof mockConn
+    mockConn = await getPool().getConnection() as unknown as typeof mockConn
     mockConn.query.mockResolvedValue([])
   })
 

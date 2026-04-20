@@ -246,7 +246,7 @@ export async function getDistributorDetail(
     daily_data: Array.from({ length: lastDay }, (_, i) => {
       const d = i + 1
       const day = s.days.get(d)
-      return { day, revenue: day?.revenue ?? 0, customer_count: day?.customer_count ?? 0 }
+      return { day: d, revenue: day?.revenue ?? 0, customer_count: day?.customer_count ?? 0 }
     }),
   }))
 

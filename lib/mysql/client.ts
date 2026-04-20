@@ -9,7 +9,7 @@ export async function query<T>(sql: string, params: unknown[]): Promise<T[]> {
   const conn = await getPool().getConnection()
   try {
     await conn.query('SET SESSION TRANSACTION READ ONLY')
-    const [rows] = await conn.execute<RowDataPacket[]>(sql, params)
+    const [rows] = await conn.execute<RowDataPacket[]>(sql, params as never)
     logQuery(sql, Math.round(performance.now() - start))
     return rows as T[]
   } finally {
@@ -25,7 +25,7 @@ export async function callSp<T>(name: string, params: unknown[]): Promise<T[]> {
   const conn = await getPool().getConnection()
   try {
     await conn.query('SET SESSION TRANSACTION READ ONLY')
-    const [raw] = await conn.execute(sql, params)
+    const [raw] = await conn.execute(sql, params as never)
     logQuery(sql, Math.round(performance.now() - start))
     if (Array.isArray(raw) && raw.length > 0 && Array.isArray(raw[0])) {
       return raw[0] as T[]
