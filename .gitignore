@@ -103,3 +103,6 @@ supabase/.temp/
 
 # TypeScript build artefacts
 tsconfig.tsbuildinfo
+
+# MySQL audit log (runtime-generated, may contain query data)
+.mysql-audit.log
