@@ -1,6 +1,5 @@
-// lib/admin/services/dpur-geo.ts
 import { unstable_cache } from 'next/cache'
-import { createServiceClient } from '@/lib/supabase/server'
+import { query } from '@/lib/mysql/client'
 
 export interface DpurGeoEntry {
   site_name: string
@@ -9,26 +8,32 @@ export interface DpurGeoEntry {
   dist_province: string
 }
 
+interface DpurGeoRow {
+  site_name: string
+  region: string
+  area: string
+  dist_province: string
+}
+
 async function _getDpurGeoLookup(): Promise<DpurGeoEntry[]> {
-  const db = createServiceClient()
-  const { data, error } = await db
-    .from('dpur')
-    .select('site_name, region, area, dist_province')
+  // LEGACY SUPABASE: const db = createServiceClient()
+  // LEGACY SUPABASE: const { data } = await db.from('dpur').select('site_name,region,area,dist_province')
+  const rows = await query<DpurGeoRow>(
+    'SELECT SiteName AS site_name, Region AS region, Area AS area, DistProvince AS dist_province FROM `_dpur`',
+    []
+  )
 
-  if (error || !data) return []
-
-  // Deduplicate by site_name (trim whitespace)
   const seen = new Set<string>()
   const result: DpurGeoEntry[] = []
-  for (const r of data) {
-    const name = (r.site_name as string)?.trim() || ''
+  for (const r of rows) {
+    const name = r.site_name?.trim() || ''
     if (!name || seen.has(name)) continue
     seen.add(name)
     result.push({
       site_name:     name,
-      region:        (r.region as string)        || '',
-      area:          (r.area as string)          || '',
-      dist_province: (r.dist_province as string) || '',
+      region:        r.region        || '',
+      area:          r.area          || '',
+      dist_province: r.dist_province || '',
     })
   }
   return result

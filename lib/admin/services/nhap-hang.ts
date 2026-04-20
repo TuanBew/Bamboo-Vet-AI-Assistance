@@ -1,5 +1,5 @@
 import { unstable_cache } from 'next/cache'
-import { createServiceClient } from '@/lib/supabase/server'
+import { query } from '@/lib/mysql/client'
 import { getNppOptions } from './npp-options'
 
 // ---------------------------------------------------------------------------
@@ -81,8 +81,6 @@ function calcRowRevenue(row: DpurRow): number {
 async function _getNhapHangData(
   filters: NhapHangFilters
 ): Promise<NhapHangData> {
-  const db = createServiceClient()
-
   const startOfMonth = `${filters.year}-${String(filters.month).padStart(2, '0')}-01`
   const lastDay = new Date(filters.year, filters.month, 0).getDate()
   const endOfMonth = `${filters.year}-${String(filters.month).padStart(2, '0')}-${lastDay}`
@@ -91,19 +89,26 @@ async function _getNhapHangData(
   const nppOptions = await getNppOptions()
   const suppliers = nppOptions.map(o => ({ id: o.site_code, name: o.site_name }))
 
-  // 2. Fetch month rows from dpur
-  let query = db
-    .from('dpur')
-    .select('docno,site_code,site_name,sku_code,sku_name,pur_date,trntyp,pr_qty,pr_amt,pr_tax_amt,program_id,category,brand,product')
-    .gte('pur_date', startOfMonth)
-    .lte('pur_date', endOfMonth)
-
+  // 2. Fetch month rows from _dpur
+  // LEGACY SUPABASE: const db = createServiceClient()
+  // LEGACY SUPABASE: let q = db.from('dpur').select(...).gte('pur_date', ...).lte('pur_date', ...)
+  const conditions: string[] = ['PurDate >= ?', 'PurDate <= ?']
+  const sqlParams: unknown[] = [startOfMonth, endOfMonth]
   if (filters.npp) {
-    query = query.eq('site_code', filters.npp)
+    conditions.push('SiteCode = ?')
+    sqlParams.push(filters.npp)
   }
-
-  const { data: rawRows } = await query
-  const rows: DpurRow[] = (rawRows ?? []).map(r => ({
+  const sql = `
+    SELECT Docno AS docno, SiteCode AS site_code, SiteName AS site_name,
+           SKUCode AS sku_code, SKUName AS sku_name, PurDate AS pur_date,
+           Trntyp AS trntyp, PRQty AS pr_qty, PRAmt AS pr_amt,
+           PRTaxAmt AS pr_tax_amt, Program_ID AS program_id,
+           Category AS category, Brand AS brand, Product AS product
+    FROM \`_dpur\`
+    WHERE ${conditions.join(' AND ')}
+  `
+  const rawRows = await query<DpurRow>(sql, sqlParams)
+  const rows: DpurRow[] = rawRows.map(r => ({
     docno: r.docno as string,
     site_code: r.site_code as string,
     site_name: r.site_name as string,
