@@ -148,21 +148,21 @@ async function _getKhachHangData(filters: KhachHangFilters): Promise<KhachHangDa
 
     // All-customers breakdown by type
     query<TypeBreakRow>(`
-      SELECT ck AS type_code, cn AS type_name, COUNT(*) AS count
+      SELECT ck AS type_code, MAX(cn) AS type_name, COUNT(*) AS count
       FROM (${custSubSql}) c
-      GROUP BY ck, cn ORDER BY count DESC
+      GROUP BY ck ORDER BY count DESC
     `, custSubParam),
 
     // Active-customers: type breakdown + geo/mapped counts per type
     query<ActiveTypeRow>(`
-      SELECT ck AS type_code, cn AS type_name,
+      SELECT ck AS type_code, MAX(cn) AS type_name,
              COUNT(*) AS active_count,
              COUNT(*) AS total_count,
              SUM(lat IS NOT NULL AND lng IS NOT NULL) AS geo_count,
              SUM(ck IS NOT NULL AND ck != 'OTHER') AS mapped_count
       FROM (${custSubSql}) c
       WHERE last_date >= ?
-      GROUP BY ck, cn ORDER BY active_count DESC
+      GROUP BY ck ORDER BY active_count DESC
     `, [...custSubParam, cutoff]),
 
     // Geo points — only customers with lat/lng (much smaller set)

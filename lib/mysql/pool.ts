@@ -16,8 +16,6 @@ export function getPool(): Pool {
       password: process.env.MYSQL_PASSWORD,
       connectionLimit: 5,
       connectTimeout: 10_000,
-      // Kill queries that run longer than 30s to prevent server hangs
-      timeout: 30_000,
       ssl: process.env.MYSQL_SSL === 'true'
         ? { rejectUnauthorized: true }
         : undefined,

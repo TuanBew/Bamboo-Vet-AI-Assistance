@@ -73,7 +73,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (!geminiRes.ok) {
       console.error('[ai-analysis] Gemini API error:', geminiRes.status)
-      return NextResponse.json({ error: 'Gemini API error' }, { status: 500 })
+      const status = geminiRes.status === 429 ? 429 : 500
+      const error = geminiRes.status === 429 ? 'Rate limit exceeded, please try again later' : 'Gemini API error'
+      return NextResponse.json({ error }, { status })
     }
 
     const geminiData = await geminiRes.json() as {
