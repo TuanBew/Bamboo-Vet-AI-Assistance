@@ -80,8 +80,9 @@ scripts/reset-admin-pw.mjs
 # GSD planning documents (local planning context, not for repo)
 .planning/
 
-# Internal docs and design specs (not for public repo)
+# Internal docs, design specs, and dev utility scripts (not for public repo)
 docs/
+scripts/
 CLAUDE.md
 
 # Samples — may contain real company data
