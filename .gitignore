@@ -101,6 +101,13 @@ supabase/.gitignore
 supabase/config.toml
 supabase/.temp/
 
+# Screenshots captured by automated browser sessions
+screenshots/
+
+# Ad-hoc debug logs and snapshots generated during dev
+*.log
+page-snapshot.md
+
 # TypeScript build artefacts
 tsconfig.tsbuildinfo
 
