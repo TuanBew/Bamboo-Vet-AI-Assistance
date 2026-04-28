@@ -10,6 +10,7 @@ Bamboo Vet is a full-stack web application built for **Công ty Cổ phần thư
 
 - **AI Chat Interface** — RAGflow-powered assistant that answers drug lookup, dosage, and treatment questions for veterinarians and distributors
 - **Admin Analytics Dashboard** — Role-gated business intelligence panel with real-time sales data, inventory, customer maps, and revenue pivots drawn from live corporate ERP data
+- **MCP Server** — Standalone Model Context Protocol HTTP server that exposes the RAGflow AI as a tool endpoint, enabling Claude and other MCP-compatible clients to query the veterinary knowledge base directly
 
 ---
 
@@ -40,6 +41,21 @@ Access is restricted to users with `is_admin: true` in Supabase `app_metadata`.
 - `SectionHeader` — collapsible sections with chevron toggle
 - `AIAnalysisBoard` — Gemini-powered AI insight panel with streaming analysis
 
+### MCP Server (`/mcp-server`)
+
+A standalone Node.js HTTP server that implements the [Model Context Protocol](https://modelcontextprotocol.io/) over HTTP, enabling any MCP-compatible client (Claude Desktop, Claude Code, etc.) to call the RAGflow veterinary knowledge base as a native tool.
+
+| Feature | Detail |
+|---|---|
+| Protocol | MCP over HTTP (JSON-RPC 2.0) |
+| Authentication | Bearer token (HMAC-SHA256, configurable expiry) |
+| Rate limiting | 60 requests/minute per token (in-memory) |
+| Tools exposed | `ask_bamboo_vet` — query the RAGflow knowledge base |
+| Logging | Structured JSON via `logger.ts` |
+| Tunnel support | ngrok-compatible (for remote MCP client access) |
+
+See [`mcp-server/README.md`](mcp-server/README.md) for setup, token generation, and tunnel instructions.
+
 ---
 
 ## Tech Stack
@@ -57,7 +73,8 @@ Access is restricted to users with `is_admin: true` in Supabase `app_metadata`.
 | Tables | TanStack React Table v8 |
 | Rate Limiting | Upstash Redis (`@upstash/ratelimit`) |
 | Export | xlsx + jsPDF + jspdf-autotable (Vietnamese font embedded) |
-| Testing | Vitest (unit) + Playwright (E2E) |
+| Testing | Vitest (unit) + Playwright (E2E — port 3001) |
+| MCP Server | Node.js HTTP server, TypeScript, Vitest |
 
 ---
 
@@ -88,6 +105,21 @@ Access is restricted to users with `is_admin: true` in Supabase `app_metadata`.
 │   ├── mysql/                 # MySQL connection pool + read-only query client
 │   ├── supabase/              # Supabase client factories (browser / server / middleware)
 │   └── ragflow.ts             # RAGflow API client + SSE parser
+├── mcp-server/                # Standalone MCP HTTP server
+│   ├── src/
+│   │   ├── index.ts           # HTTP entry point (port 3002)
+│   │   ├── server.ts          # MCP server + tool registration
+│   │   ├── ragflow-client.ts  # RAGflow API bridge
+│   │   ├── auth.ts            # Bearer token validation
+│   │   ├── rate-limiter.ts    # Per-token rate limiting
+│   │   └── logger.ts          # Structured JSON logger
+│   ├── scripts/generate-token.ts  # CLI to issue signed tokens
+│   └── tests/                 # Vitest unit tests for all modules
+├── tests/
+│   ├── e2e/                   # Playwright E2E specs (auth, all admin pages)
+│   └── performance/
+│       └── global-setup.ts    # Admin login + storageState for E2E
+├── TESTING.md                 # Formal QA Test Execution Report (QA-2026-001)
 └── supabase/migrations/       # Supabase schema migration files (reference)
 ```
 
@@ -215,10 +247,36 @@ Key ERP tables:
 ## Testing
 
 ```bash
-npm test              # Unit tests (Vitest)
-npm run test:e2e      # E2E tests (Playwright, requires dev server on :3000)
-npm run test:all      # Both
+npm test              # Unit tests (Vitest) — all API route + service unit tests
+npm run test:e2e      # E2E tests (Playwright, requires dev server on :3001)
+npm run test:all      # Both suites in sequence
 ```
+
+The Playwright E2E suite covers auth guards, admin shell, and all six admin pages. Authenticated tests require `TEST_ADMIN_EMAIL` and `TEST_ADMIN_PASSWORD` env vars (see `tests/performance/global-setup.ts`). Unauthenticated auth-guard tests run without credentials.
+
+Full test execution results are documented in [`TESTING.md`](TESTING.md) (Report QA-2026-001 — 134 tests executed, 134 passed, 0 failed).
+
+### MCP Server Tests
+
+```bash
+cd mcp-server && npm test     # Vitest unit tests for auth, rate limiter, server, RAGflow client
+```
+
+---
+
+## MCP Server Setup
+
+The MCP server runs as a separate process alongside the Next.js app.
+
+```bash
+cd mcp-server
+cp .env.example .env          # fill RAGFLOW_BASE_URL, RAGFLOW_API_KEY, RAGFLOW_CHAT_ID, MCP_TOKEN_SECRET
+npm install
+npm run generate-token        # prints a signed Bearer token to use in your MCP client
+npm start                     # starts on port 3002
+```
+
+Configure Claude Desktop or Claude Code to point at `http://localhost:3002` with the generated token. See [`mcp-server/README.md`](mcp-server/README.md) for tunnel setup (ngrok) and full configuration examples.
 
 ---
 
