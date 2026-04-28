@@ -1,6 +1,5 @@
-# start-tunnel.ps1 — Start MCP server + Cloudflare tunnel together
+# start-tunnel.ps1 — Start MCP server + ngrok tunnel together
 # Usage: .\start-tunnel.ps1
-# Stop: Ctrl+C in both windows, or close them
 
 $mcpDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $mcpPort = 3100
@@ -13,30 +12,53 @@ if ($existing) {
     Start-Sleep 1
 }
 
-# 2. Start MCP server in a new window
-Write-Host "[MCP] Starting MCP server on port $mcpPort..."
-$mcpWindow = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$mcpDir'; npm start" -PassThru -WindowStyle Normal
-Start-Sleep 3
+# 2. Kill any leftover ngrok process
+Get-Process ngrok -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
-# 3. Verify MCP server is up
+# 3. Start MCP server in a new window
+Write-Host "[MCP] Starting MCP server on port $mcpPort..."
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$mcpDir'; npm start" -WindowStyle Normal
+Start-Sleep 5
+
+# 4. Verify MCP server is up
 $up = Get-NetTCPConnection -LocalPort $mcpPort -ErrorAction SilentlyContinue
 if (-not $up) {
     Write-Error "[MCP] Server failed to start on port $mcpPort. Check the MCP window for errors."
     exit 1
 }
-Write-Host "[MCP] Server running (PID $($mcpWindow.Id))" -ForegroundColor Green
+Write-Host "[MCP] Server running." -ForegroundColor Green
 
-# 4. Start Cloudflare tunnel in a new window
-Write-Host "[CF]  Starting Cloudflare tunnel -> http://localhost:$mcpPort"
-Write-Host "[CF]  Watch the new window for your tunnel URL (trycloudflare.com)"
-Write-Host ""
-Write-Host "EXPECTED log lines (all normal, not errors):" -ForegroundColor Yellow
-Write-Host "  ERR Cannot determine default origin certificate path  <- HARMLESS, ignore" -ForegroundColor DarkYellow
-Write-Host "  INF cloudflared does not support loading the system root certificate pool  <- HARMLESS" -ForegroundColor DarkYellow
-Write-Host "  INF Registered tunnel connection ... protocol=http2  <- THIS MEANS IT WORKED" -ForegroundColor Green
-Write-Host ""
-Start-Process cloudflared -ArgumentList "tunnel --url http://localhost:$mcpPort" -WindowStyle Normal
+# 5. Start ngrok tunnel
+Write-Host "[ngrok] Starting tunnel on port $mcpPort..."
+$ngrok = Start-Process -FilePath "ngrok" -ArgumentList "http", "$mcpPort" -PassThru -WindowStyle Normal
+Start-Sleep 4
 
-Write-Host "[CF]  Tunnel window opened. Copy the https://*.trycloudflare.com URL from it." -ForegroundColor Cyan
-Write-Host ""
-Write-Host "To stop everything: close both windows, or run Stop-Process -Name cloudflared,node" -ForegroundColor Gray
+# 6. Get the public URL from ngrok's local API
+$tunnelUrl = $null
+for ($i = 0; $i -lt 5; $i++) {
+    try {
+        $resp = Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels" -ErrorAction Stop
+        $tunnelUrl = ($resp.tunnels | Where-Object { $_.proto -eq "https" } | Select-Object -First 1).public_url
+        if ($tunnelUrl) { break }
+    } catch { }
+    Start-Sleep 2
+}
+
+if ($tunnelUrl) {
+    Write-Host ""
+    Write-Host "============================================================" -ForegroundColor Green
+    Write-Host "  TUNNEL ACTIVE" -ForegroundColor Green
+    Write-Host "============================================================" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  Public URL: $tunnelUrl" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "  Update .env.local:" -ForegroundColor Yellow
+    Write-Host "    MCP_SERVER_URL=$tunnelUrl" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  Then restart the Next.js dev server (Ctrl+C then npm run dev)." -ForegroundColor Gray
+    Write-Host "============================================================" -ForegroundColor Green
+} else {
+    Write-Host ""
+    Write-Host "[ngrok] Could not auto-detect URL. Check the ngrok window." -ForegroundColor Yellow
+    Write-Host "[ngrok] Or visit http://localhost:4040 in your browser." -ForegroundColor Gray
+}

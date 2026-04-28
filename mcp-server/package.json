@@ -4,6 +4,7 @@
   "description": "MCP server proxying RAGflow over Cloudflare Tunnel",
   "type": "module",
   "scripts": {
+    "prestart": "node scripts/kill-port.cjs",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",

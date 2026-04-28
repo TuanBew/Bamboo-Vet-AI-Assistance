@@ -73,7 +73,16 @@ async function handleRequest(
 
   logger.info('request', { sub: auth.sub, method: req.method, url: req.url })
 
-  // 3. Parse body JSON (SDK expects a plain object, not a raw Buffer)
+  // Anti-buffering header (prevents Cloudflare from buffering SSE)
+  res.setHeader('X-Accel-Buffering', 'no')
+
+  // 3. Route: /relay — SSE proxy for Next.js app streaming chat
+  if (req.method === 'POST' && req.url === '/relay') {
+    await handleRelay(res, body)
+    return
+  }
+
+  // 4. Default: MCP protocol (for Claude Desktop / Claude Code / MCP clients)
   let parsedBody: unknown
   try {
     parsedBody = JSON.parse(body.toString('utf8'))
@@ -83,16 +92,98 @@ async function handleRequest(
     return
   }
 
-  // 4. Anti-buffering header (prevents Cloudflare from buffering SSE)
-  res.setHeader('X-Accel-Buffering', 'no')
-
-  // 5. MCP handler (fresh server+transport per stateless request)
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
   })
   const server = createMcpServer()
   await server.connect(transport)
   await transport.handleRequest(req, res, parsedBody)
+}
+
+// /relay — authenticated SSE proxy to RAGflow for Next.js app.
+// Accepts { messages, chat_id }, streams OpenAI-compatible SSE back.
+// Same JWT auth + rate limiting as the MCP endpoint (applied in handleRequest).
+async function handleRelay(
+  res: http.ServerResponse,
+  body: Buffer
+): Promise<void> {
+  interface RelayBody {
+    messages: Array<{ role: string; content: string }>
+    chat_id: string
+  }
+
+  let parsed: RelayBody
+  try {
+    parsed = JSON.parse(body.toString('utf8')) as RelayBody
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'invalid_json' }))
+    return
+  }
+
+  const { messages, chat_id } = parsed
+  if (!Array.isArray(messages) || typeof chat_id !== 'string' || !chat_id) {
+    res.writeHead(400, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'missing_fields' }))
+    return
+  }
+
+  const baseUrl = process.env.RAGFLOW_BASE_URL ?? 'http://127.0.0.1'
+  const apiKey  = process.env.RAGFLOW_API_KEY ?? ''
+
+  let ragflowRes: Response
+  try {
+    ragflowRes = await fetch(
+      `${baseUrl}/api/v1/chats_openai/${chat_id}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ model: 'ragflow', messages, stream: true }),
+      }
+    )
+  } catch (err) {
+    logger.error('relay: ragflow fetch failed', { err: String(err) })
+    res.writeHead(502, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'ragflow_unavailable' }))
+    return
+  }
+
+  if (!ragflowRes.ok || !ragflowRes.body) {
+    logger.error('relay: ragflow error', { status: ragflowRes.status })
+    res.writeHead(502, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'ragflow_unavailable' }))
+    return
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  })
+
+  // Pipe raw SSE bytes from RAGflow directly to client — zero transformation,
+  // same OpenAI-compatible format that app/api/chat/route.ts already parses.
+  const reader = ragflowRes.body.getReader()
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      const ok = res.write(value)
+      if (!ok) {
+        // Client disconnected — stop reading upstream
+        await reader.cancel('client_disconnect').catch(() => {})
+        break
+      }
+    }
+  } catch (err) {
+    logger.error('relay: stream error', { err: String(err) })
+  } finally {
+    reader.releaseLock()
+    res.end()
+  }
 }
 
 // Start server when run directly (not during tests)

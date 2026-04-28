@@ -2,7 +2,8 @@ import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 import { stripHtml } from 'string-strip-html'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { callRagflow, parseSseLine, type Message } from '@/lib/ragflow'
+// LEGACY RAGFLOW DIRECT: import { callRagflow, parseSseLine, type Message } from '@/lib/ragflow'
+import { callMcpRelay, parseSseLine, type Message } from '@/lib/mcp-client'
 
 const redis      = new Redis({ url: process.env.UPSTASH_REDIS_REST_URL!, token: process.env.UPSTASH_REDIS_REST_TOKEN! })
 const guestLimit = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(30, '60 s'), prefix: 'bv:guest' })
@@ -57,7 +58,8 @@ export async function POST(request: Request) {
   // 5. Call RAGflow + relay SSE stream
   let ragflowStream: ReadableStream<Uint8Array>
   try {
-    ragflowStream = await callRagflow(sanitizedMessages)
+    // LEGACY RAGFLOW DIRECT: ragflowStream = await callRagflow(sanitizedMessages)
+    ragflowStream = await callMcpRelay(sanitizedMessages)
   } catch {
     return Response.json({ error: 'ragflow_unavailable' }, { status: 502 })
   }
