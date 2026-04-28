@@ -1,0 +1,32 @@
+# The MCP server is a separate local project — it does NOT deploy to Vercel
+mcp-server/
+
+# Dependencies (built on Vercel's servers)
+node_modules/
+
+# Next.js build cache (rebuilt on Vercel)
+.next/
+
+# Test artifacts
+test-results/
+coverage/
+tests/.auth/
+.playwright-mcp/
+
+# Dev data and samples (may contain real company data)
+samples/
+screenshots/
+*.xlsx
+*.xls
+*.png
+*.jpg
+*.jpeg
+
+# Dev logs
+*.log
+.mysql-audit.log
+
+# Planning and design docs (local only)
+docs/
+.planning/
+.superpowers/
