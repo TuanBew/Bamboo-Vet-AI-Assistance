@@ -9,6 +9,11 @@ export function logQuery(sql: string, durationMs: number): void {
     sql,
     duration_ms: durationMs,
   })
+  // Vercel's filesystem is read-only — use console.log instead (captured in function logs)
+  if (process.env.VERCEL) {
+    console.log('[mysql-audit]', entry)
+    return
+  }
   try {
     appendFileSync(LOG_PATH, entry + '\n')
   } catch {
