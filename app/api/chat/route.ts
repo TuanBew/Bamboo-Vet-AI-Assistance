@@ -18,9 +18,14 @@ export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? '127.0.0.1'
   const identifier = user ? `user_${user.id}` : `ip_${ip}`
   const limiter    = user ? authLimit : guestLimit
-  const { success } = await limiter.limit(identifier)
-  if (!success) {
-    return Response.json({ error: 'rate_limited' }, { status: 429 })
+  try {
+    const { success } = await limiter.limit(identifier)
+    if (!success) {
+      return Response.json({ error: 'rate_limited' }, { status: 429 })
+    }
+  } catch {
+    // Upstash unreachable — fail open so chat still works
+    console.warn('[chat] Rate limiter unavailable, skipping')
   }
 
   // 3. Parse body
