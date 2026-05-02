@@ -14,6 +14,22 @@ Bamboo Vet is a full-stack web application built for **Công ty Cổ phần thư
 
 ---
 
+## Live Deployment
+
+The application is live at **[https://bamboo-vet-ai.vercel.app](https://bamboo-vet-ai.vercel.app)**.
+
+| Feature | Status |
+|---|---|
+| Public AI chat — streaming responses via MCP + ngrok | ✅ Live |
+| Supabase authentication (login, session, admin JWT) | ✅ Live |
+| Admin shell (sidebar + topbar) | ✅ Live |
+| Admin analytics data (MySQL ERP) | ⏳ Pending — corporate database not yet reachable from Vercel serverless IPs |
+| API security (401/403 on all admin routes) | ✅ Live |
+
+Admin dashboard pages display a graceful "Không thể tải dữ liệu" error state until MySQL connectivity is resolved. All other features are fully operational on the live URL.
+
+---
+
 ## Features
 
 ### AI Chat (Public)
@@ -50,9 +66,9 @@ A standalone Node.js HTTP server that implements the [Model Context Protocol](ht
 | Protocol | MCP over HTTP (JSON-RPC 2.0) |
 | Authentication | Bearer token (HMAC-SHA256, configurable expiry) |
 | Rate limiting | 60 requests/minute per token (in-memory) |
-| Tools exposed | `ask_bamboo_vet` — query the RAGflow knowledge base |
+| Tools exposed | `ragflow_chat`, `ragflow_list_chats` — query the RAGflow knowledge base |
 | Logging | Structured JSON via `logger.ts` |
-| Tunnel support | ngrok-compatible (for remote MCP client access) |
+| Tunnel support | ngrok via `start-tunnel.ps1` — one-command server + tunnel launcher (Windows) |
 
 See [`mcp-server/README.md`](mcp-server/README.md) for setup, token generation, and tunnel instructions.
 
@@ -107,13 +123,14 @@ See [`mcp-server/README.md`](mcp-server/README.md) for setup, token generation, 
 │   └── ragflow.ts             # RAGflow API client + SSE parser
 ├── mcp-server/                # Standalone MCP HTTP server
 │   ├── src/
-│   │   ├── index.ts           # HTTP entry point (port 3002)
+│   │   ├── index.ts           # HTTP entry point (port 3100)
 │   │   ├── server.ts          # MCP server + tool registration
 │   │   ├── ragflow-client.ts  # RAGflow API bridge
 │   │   ├── auth.ts            # Bearer token validation
 │   │   ├── rate-limiter.ts    # Per-token rate limiting
 │   │   └── logger.ts          # Structured JSON logger
 │   ├── scripts/generate-token.ts  # CLI to issue signed tokens
+│   ├── start-tunnel.ps1       # One-command MCP server + ngrok tunnel launcher (Windows)
 │   └── tests/                 # Vitest unit tests for all modules
 ├── tests/
 │   ├── e2e/                   # Playwright E2E specs (auth, all admin pages)
@@ -256,15 +273,16 @@ The Playwright E2E suite covers auth guards, admin shell, and all six admin page
 
 Full test execution results are documented in [`TESTING.md`](TESTING.md) (Report QA-2026-001 — 134 tests executed, 134 passed, 0 failed).
 
-### Production Deployment Tests — Phase 3.1
+### Production Deployment Tests
 
-Tests targeting the live Vercel deployment at `https://bamboo-vet-ai.vercel.app`. Full test plan: [`docs/test-plan-v1.0.md`](docs/test-plan-v1.0.md).
+Tests targeting the live Vercel deployment at `https://bamboo-vet-ai.vercel.app`.
 
 **Playwright — 9 tests (VRC-01 to VRC-09):**
 ```bash
 VERCEL_TEST_EMAIL="admin@bamboovet.com" VERCEL_TEST_PASSWORD="123456789" \
   npx playwright test --config=playwright.vercel.config.ts tests/vercel/vercel-verify.spec.ts
 ```
+Config: `playwright.vercel.config.ts` — must use `--config` flag explicitly (default config targets localhost).
 
 **Selenium — 8 tests (SEL-01 to SEL-08):**
 ```bash
@@ -272,9 +290,9 @@ python -X utf8 tests/selenium/test_vercel_production.py
 ```
 Requires: Python 3, `pip install selenium requests`, ChromeDriver on PATH.
 
-**Chat tests (VRC-09, SEL-08) require local stack:** ngrok tunnel + `cd mcp-server && npm start` + RAGflow Docker running. If the ngrok URL changes, update `MCP_SERVER_URL` in Vercel env and redeploy.
+**Chat tests (VRC-09, SEL-08) require local stack:** ngrok tunnel running + `cd mcp-server && .\start-tunnel.ps1` + RAGflow Docker running. If the ngrok URL changes, update `MCP_SERVER_URL` in Vercel env and redeploy.
 
-**Phase 3.1 status: COMPLETE** — 17 / 17 tests pass (9 Playwright + 8 Selenium).
+**Production deployment status: COMPLETE** — 17 / 17 tests pass (9 Playwright + 8 Selenium).
 
 ### MCP Server Tests
 
@@ -290,13 +308,14 @@ The MCP server runs as a separate process alongside the Next.js app.
 
 ```bash
 cd mcp-server
-cp .env.example .env          # fill RAGFLOW_BASE_URL, RAGFLOW_API_KEY, RAGFLOW_CHAT_ID, MCP_TOKEN_SECRET
+cp .env.example .env          # fill RAGFLOW_BASE_URL, RAGFLOW_API_KEY, MCP_JWT_SECRET
 npm install
 npm run generate-token        # prints a signed Bearer token to use in your MCP client
-npm start                     # starts on port 3002
+.\start-tunnel.ps1            # starts server on port 3100 + launches ngrok tunnel (Windows)
+# or: npm start               # server only, no tunnel
 ```
 
-Configure Claude Desktop or Claude Code to point at `http://localhost:3002` with the generated token. See [`mcp-server/README.md`](mcp-server/README.md) for tunnel setup (ngrok) and full configuration examples.
+`start-tunnel.ps1` prints the live ngrok URL and the exact `MCP_SERVER_URL=...` line to add to `.env.local`. Configure Claude Desktop or Claude Code to point at the ngrok URL with the generated token. See [`mcp-server/README.md`](mcp-server/README.md) for full configuration examples.
 
 ---
 

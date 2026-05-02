@@ -9,7 +9,7 @@
 | **Report ID** | QA-2026-001 |
 | **Project** | Bamboo Vet Admin Dashboard |
 | **Version** | Production (branch: `main`) |
-| **Test Branch** | `test/phase-2-1-mcp-e2e` |
+| **Test Branch** | `main` |
 | **Report Date** | 2026-04-28 |
 | **Prepared by** | QA Engineering — TuanBew |
 | **Report Status** | FINAL |
@@ -66,7 +66,7 @@
 - Google OAuth login flow — requires live OAuth redirect
 - PDF and Excel binary content validation — extension opportunity
 - Mobile/tablet responsive layout — desktop only in this cycle
-- Performance benchmarking — separate phase
+- Performance benchmarking
 
 ---
 
@@ -371,7 +371,7 @@ npm run test:all
 ---
 
 # PRODUCTION DEPLOYMENT TEST REPORT
-## Phase 3.1 — Vercel Deployment Proof of Concept
+## Vercel Production Deployment
 
 ---
 
@@ -380,7 +380,7 @@ npm run test:all
 | **Report ID** | QA-2026-002 |
 | **Project** | Bamboo Vet AI — Vercel Production |
 | **Live URL** | `https://bamboo-vet-ai.vercel.app` |
-| **Version** | Phase 3.1 |
+| **Version** | v1.0 Production |
 | **Report Date** | 2026-05-02 |
 | **Prepared by** | TuanBew |
 | **Report Status** | FINAL |
@@ -401,11 +401,9 @@ npm run test:all
 
 **Verdict:** All 17 production tests pass. The Vercel deployment is live and verified end-to-end — auth, API security, admin shell, and AI chat streaming all confirmed working against the public production URL.
 
-Full test plan: [`docs/test-plan-v1.0.md`](docs/test-plan-v1.0.md)
-
 ---
 
-## WHAT IS PROVEN (Phase 3.1)
+## WHAT IS PROVEN
 
 | Goal | Evidence |
 |---|---|
@@ -416,14 +414,14 @@ Full test plan: [`docs/test-plan-v1.0.md`](docs/test-plan-v1.0.md)
 | Admin shell renders (sidebar + topbar) | VRC-07 passes; screenshot confirms shell with graceful DB error |
 | Live `*.vercel.app` URL obtained | `https://bamboo-vet-ai.vercel.app` is live |
 
-## WHAT IS NOT YET PROVEN (Phase 3.2)
+## WHAT IS NOT YET PROVEN
 
 | Goal | Reason |
 |---|---|
 | Admin dashboard data (KPIs, charts) | Corporate MySQL IP blocked from Vercel serverless IPs |
 | Nhập hàng / Tồn kho / Khách hàng with data | Same MySQL blocker |
 
-The dashboard currently shows a graceful error state — sidebar + topbar render correctly, content area shows "Không thể tải dữ liệu" via `app/admin/dashboard/error.tsx`. This is the expected behaviour until Phase 3.2 (MySQL whitelist or Vercel Secure Compute).
+The dashboard currently shows a graceful error state — sidebar + topbar render correctly, content area shows "Không thể tải dữ liệu" via `app/admin/dashboard/error.tsx`. This is the expected behaviour until MySQL connectivity from Vercel serverless is resolved (IP whitelist or Vercel Secure Compute).
 
 ---
 
@@ -476,7 +474,7 @@ python -X utf8 tests/selenium/test_vercel_production.py
 | ngrok tunnel | VRC-09, SEL-08 (chat streaming) | Running |
 | MCP server (`cd mcp-server && npm start`) | VRC-09, SEL-08 | Running |
 | RAGflow Docker | VRC-09, SEL-08 (AI response) | Running |
-| MySQL whitelist / Secure Compute | Admin data pages | Phase 3.2 |
+| MySQL whitelist / Secure Compute | Admin data pages | Pending |
 
 ---
 
@@ -488,7 +486,7 @@ python -X utf8 tests/selenium/test_vercel_production.py
 | Developer | TuanBew | ✅ Approved |
 
 **Test cycle status: CLOSED**
-**Phase 3.1: COMPLETE — production deployment verified**
+**Production deployment: COMPLETE — all 17 tests pass**
 
 ---
 

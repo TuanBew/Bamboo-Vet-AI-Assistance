@@ -1,16 +1,18 @@
 # RAGflow MCP Server
 
-Standalone MCP (Model Context Protocol) server that proxies the local RAGflow Docker instance, exposed publicly via Cloudflare Tunnel with JWT authentication.
+Standalone [Model Context Protocol](https://modelcontextprotocol.io/) HTTP server that proxies a local RAGflow Docker instance, exposed publicly via an ngrok tunnel with JWT authentication.
 
 ## Architecture
 
 ```
-Internet (HTTPS via Cloudflare Quick Tunnel)
+Internet (HTTPS via ngrok tunnel)
     │
-cloudflared --url http://localhost:3100
+ngrok http 3100
     │
 MCP Server (Node.js, port 3100)
   JWT Bearer auth + in-memory rate limiting (60 req/min)
+    │         │
+    │    /relay — OpenAI-compatible SSE stream (Next.js app integration)
     │
 RAGflow (Docker, http://127.0.0.1)
 ```
@@ -18,8 +20,8 @@ RAGflow (Docker, http://127.0.0.1)
 ## Prerequisites
 
 - Node.js 20+
-- RAGflow running in Docker on `http://127.0.0.1`
-- `cloudflared` CLI (for tunnel — see Setup step 5)
+- RAGflow running locally in Docker
+- [ngrok](https://ngrok.com) installed and authenticated (`ngrok config add-authtoken <token>`)
 
 ## Setup
 
@@ -44,7 +46,6 @@ Edit `.env`:
 | `RAGFLOW_API_KEY` | Your RAGflow API key |
 | `MCP_PORT` | Port for this server (default: `3100`) |
 | `MCP_JWT_SECRET` | JWT signing secret — generate with the command below |
-| `CLOUDFLARE_TUNNEL_URL` | Set after running the tunnel (step 5) |
 
 Generate a strong JWT secret:
 
@@ -66,36 +67,48 @@ To generate a token for a specific client with custom expiry:
 npm run generate-token my-client-name 7d
 ```
 
-### 4. Start the MCP server
+### 4. Start MCP server + tunnel
+
+**Windows (recommended) — one command:**
+
+```powershell
+.\start-tunnel.ps1
+```
+
+This script:
+1. Kills any existing process on port 3100
+2. Starts the MCP server in a new window (`npm start`)
+3. Launches the ngrok tunnel
+4. Prints the public HTTPS URL and the `.env.local` line to copy
+
+**Manual start (any OS):**
 
 ```bash
+# Terminal 1 — MCP server
 npm start
+
+# Terminal 2 — ngrok tunnel
+ngrok http 3100
 ```
 
-Expected log: `{"level":"info","msg":"MCP server listening","port":3100,...}`
+After the tunnel is running, update `MCP_SERVER_URL` in the Next.js `.env.local`:
 
-### 5. Start Cloudflare Quick Tunnel
-
-Install `cloudflared` (Windows):
-
-```bash
-winget install Cloudflare.cloudflared
+```
+MCP_SERVER_URL=https://<random>.ngrok-free.app
 ```
 
-Start a free temporary tunnel (no account required):
-
-```bash
-cloudflared tunnel --url http://localhost:3100
-```
-
-Copy the `https://<random>.trycloudflare.com` URL from the output. Update `CLOUDFLARE_TUNNEL_URL` in `.env`.
+Then restart the Next.js dev server.
 
 ## Available MCP Tools
 
+These tools are exposed to MCP clients (Claude Desktop, Claude Code, etc.):
+
 | Tool | Description | Required params |
 |---|---|---|
-| `ragflow_chat` | Send a message to RAGflow and get a response | `message`, `chat_id` |
+| `ragflow_chat` | Send a message to RAGflow and stream a response | `message`, `chat_id` |
 | `ragflow_list_chats` | List available RAGflow chat assistants | none |
+
+The server also exposes a `/relay` HTTP endpoint for the Next.js app integration — it accepts `{ messages, chat_id }` and returns an OpenAI-compatible SSE stream.
 
 ## Running Tests
 
@@ -110,17 +123,17 @@ All 21 tests must pass (auth, rate limiter, RAGflow client, integration).
 - All requests require a valid JWT Bearer token — unauthenticated requests return 401
 - Rate limited to 60 requests/minute per token
 - `MCP_JWT_SECRET` and `RAGFLOW_API_KEY` are never logged or returned in responses
-- `X-Accel-Buffering: no` set on all responses to prevent Cloudflare stream buffering
+- `X-Accel-Buffering: no` set on all responses to prevent proxy stream buffering
 
-## Connecting from Claude Code
+## Connecting from Claude Code / Claude Desktop
 
-After the tunnel is running, add to Claude Code's MCP config:
+After the tunnel is running, add to your MCP client config:
 
 ```json
 {
   "mcpServers": {
     "ragflow": {
-      "url": "https://<your-tunnel>.trycloudflare.com",
+      "url": "https://<your-ngrok-url>",
       "headers": {
         "Authorization": "Bearer <your-token>"
       }
@@ -129,10 +142,4 @@ After the tunnel is running, add to Claude Code's MCP config:
 }
 ```
 
-## Phase Roadmap
-
-| Phase | Status |
-|---|---|
-| 2.1 — Local machine test (this) | ✅ |
-| 2.2 — App integration | Pending |
-| 2.3 — Company server deployment | Pending |
+Replace `<your-ngrok-url>` with the URL printed by `start-tunnel.ps1` or from the ngrok dashboard at `http://localhost:4040`.
