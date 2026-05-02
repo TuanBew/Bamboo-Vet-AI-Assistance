@@ -248,13 +248,33 @@ Key ERP tables:
 
 ```bash
 npm test              # Unit tests (Vitest) — all API route + service unit tests
-npm run test:e2e      # E2E tests (Playwright, requires dev server on :3001)
+npm run test:e2e      # E2E tests (Playwright, requires dev server on :3000)
 npm run test:all      # Both suites in sequence
 ```
 
 The Playwright E2E suite covers auth guards, admin shell, and all six admin pages. Authenticated tests require `TEST_ADMIN_EMAIL` and `TEST_ADMIN_PASSWORD` env vars (see `tests/performance/global-setup.ts`). Unauthenticated auth-guard tests run without credentials.
 
 Full test execution results are documented in [`TESTING.md`](TESTING.md) (Report QA-2026-001 — 134 tests executed, 134 passed, 0 failed).
+
+### Production Deployment Tests — Phase 3.1
+
+Tests targeting the live Vercel deployment at `https://bamboo-vet-ai.vercel.app`. Full test plan: [`docs/test-plan-v1.0.md`](docs/test-plan-v1.0.md).
+
+**Playwright — 9 tests (VRC-01 to VRC-09):**
+```bash
+VERCEL_TEST_EMAIL="admin@bamboovet.com" VERCEL_TEST_PASSWORD="123456789" \
+  npx playwright test --config=playwright.vercel.config.ts tests/vercel/vercel-verify.spec.ts
+```
+
+**Selenium — 8 tests (SEL-01 to SEL-08):**
+```bash
+python -X utf8 tests/selenium/test_vercel_production.py
+```
+Requires: Python 3, `pip install selenium requests`, ChromeDriver on PATH.
+
+**Chat tests (VRC-09, SEL-08) require local stack:** ngrok tunnel + `cd mcp-server && npm start` + RAGflow Docker running. If the ngrok URL changes, update `MCP_SERVER_URL` in Vercel env and redeploy.
+
+**Phase 3.1 status: COMPLETE** — 17 / 17 tests pass (9 Playwright + 8 Selenium).
 
 ### MCP Server Tests
 

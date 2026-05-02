@@ -368,4 +368,128 @@ npm run test:all
 
 ---
 
-*Bamboo Vet QA Report · QA-2026-001 · Confidential*
+---
+
+# PRODUCTION DEPLOYMENT TEST REPORT
+## Phase 3.1 — Vercel Deployment Proof of Concept
+
+---
+
+| | |
+|---|---|
+| **Report ID** | QA-2026-002 |
+| **Project** | Bamboo Vet AI — Vercel Production |
+| **Live URL** | `https://bamboo-vet-ai.vercel.app` |
+| **Version** | Phase 3.1 |
+| **Report Date** | 2026-05-02 |
+| **Prepared by** | TuanBew |
+| **Report Status** | FINAL |
+
+---
+
+## EXECUTIVE SUMMARY
+
+| Metric | Result |
+|---|---|
+| **Overall Test Status** | ✅ PASS |
+| **Total Tests** | 17 |
+| **Passed** | 17 |
+| **Failed** | 0 |
+| **Playwright (VRC)** | 9 / 9 |
+| **Selenium (SEL)** | 8 / 8 |
+| **Critical Defects** | 0 |
+
+**Verdict:** All 17 production tests pass. The Vercel deployment is live and verified end-to-end — auth, API security, admin shell, and AI chat streaming all confirmed working against the public production URL.
+
+Full test plan: [`docs/test-plan-v1.0.md`](docs/test-plan-v1.0.md)
+
+---
+
+## WHAT IS PROVEN (Phase 3.1)
+
+| Goal | Evidence |
+|---|---|
+| App builds and deploys to Vercel | `vercel --prod` succeeds, 28 routes built |
+| Supabase auth works on public domain | Login redirects correctly, session maintained (VRC-06) |
+| Chat streams end-to-end via MCP + ngrok | AI responds in browser, VRC-09 passes |
+| API security — 401/403 on admin routes | All `/api/admin/*` return 4xx without auth (VRC-04, SEL-03) |
+| Admin shell renders (sidebar + topbar) | VRC-07 passes; screenshot confirms shell with graceful DB error |
+| Live `*.vercel.app` URL obtained | `https://bamboo-vet-ai.vercel.app` is live |
+
+## WHAT IS NOT YET PROVEN (Phase 3.2)
+
+| Goal | Reason |
+|---|---|
+| Admin dashboard data (KPIs, charts) | Corporate MySQL IP blocked from Vercel serverless IPs |
+| Nhập hàng / Tồn kho / Khách hàng with data | Same MySQL blocker |
+
+The dashboard currently shows a graceful error state — sidebar + topbar render correctly, content area shows "Không thể tải dữ liệu" via `app/admin/dashboard/error.tsx`. This is the expected behaviour until Phase 3.2 (MySQL whitelist or Vercel Secure Compute).
+
+---
+
+## PLAYWRIGHT RESULTS (VRC-01 to VRC-09)
+
+**Command:**
+```bash
+VERCEL_TEST_EMAIL="admin@bamboovet.com" VERCEL_TEST_PASSWORD="123456789" \
+  npx playwright test --config=playwright.vercel.config.ts tests/vercel/vercel-verify.spec.ts
+```
+
+| ID | Test | Result |
+|----|------|--------|
+| VRC-01 | Login page renders email + password inputs | ✅ PASS |
+| VRC-02 | `/admin/*` redirects to `/login` (unauthenticated) | ✅ PASS |
+| VRC-03 | `/app` redirects to `/login` (unauthenticated) | ✅ PASS |
+| VRC-04 | `/api/admin/*` returns 401/403 without session | ✅ PASS |
+| VRC-05 | `/api/chat` POST without auth returns 4xx (not 500) | ✅ PASS |
+| VRC-06 | Email/password login completes | ✅ PASS |
+| VRC-07 | Admin dashboard shell renders after login | ✅ PASS |
+| VRC-08 | Chat page loads with textarea input | ✅ PASS |
+| VRC-09 | Chat streams AI response via MCP + ngrok | ✅ PASS |
+
+---
+
+## SELENIUM RESULTS (SEL-01 to SEL-08)
+
+**Command:**
+```bash
+python -X utf8 tests/selenium/test_vercel_production.py
+```
+
+| ID | Test | Result |
+|----|------|--------|
+| SEL-01 | Login page loads with correct form fields | ✅ PASS |
+| SEL-02 | `/admin/dashboard` redirects to `/login` | ✅ PASS |
+| SEL-03 | `/api/admin/*` returns 401/403 | ✅ PASS |
+| SEL-04 | `/api/chat` POST without auth returns non-500 | ✅ PASS |
+| SEL-05 | Login with valid credentials succeeds | ✅ PASS |
+| SEL-06 | Admin sidebar renders after login | ✅ PASS |
+| SEL-07 | Dashboard graceful error state shown | ✅ PASS |
+| SEL-08 | Chat page input is interactable | ✅ PASS |
+
+---
+
+## INFRASTRUCTURE DEPENDENCIES
+
+| Dependency | Required For | Status |
+|------------|-------------|--------|
+| ngrok tunnel | VRC-09, SEL-08 (chat streaming) | Running |
+| MCP server (`cd mcp-server && npm start`) | VRC-09, SEL-08 | Running |
+| RAGflow Docker | VRC-09, SEL-08 (AI response) | Running |
+| MySQL whitelist / Secure Compute | Admin data pages | Phase 3.2 |
+
+---
+
+## SIGN-OFF
+
+| Role | Name | Status |
+|---|---|---|
+| QA Lead | TuanBew | ✅ Approved |
+| Developer | TuanBew | ✅ Approved |
+
+**Test cycle status: CLOSED**
+**Phase 3.1: COMPLETE — production deployment verified**
+
+---
+
+*Bamboo Vet QA Report · QA-2026-002 · Confidential*

@@ -114,3 +114,7 @@ tsconfig.tsbuildinfo
 
 # MySQL audit log (runtime-generated, may contain query data)
 .mysql-audit.log
+.vercel
+
+# Playwright test artefacts (screenshots, traces, videos)
+test-results/
