@@ -52,6 +52,13 @@ async function handleRequest(
   res: http.ServerResponse,
   body: Buffer
 ): Promise<void> {
+  // Health check — no auth (Docker HEALTHCHECK + deploy.ps1 probe)
+  if (req.method === 'GET' && req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ ok: true }))
+    return
+  }
+
   // 1. Auth
   const auth = verifyToken(req.headers.authorization)
   if (!auth.ok) {

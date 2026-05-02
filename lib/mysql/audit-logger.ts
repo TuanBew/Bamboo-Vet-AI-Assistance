@@ -9,8 +9,8 @@ export function logQuery(sql: string, durationMs: number): void {
     sql,
     duration_ms: durationMs,
   })
-  // Vercel's filesystem is read-only — use console.log instead (captured in function logs)
-  if (process.env.VERCEL) {
+  // Read-only filesystem environments: use console.log (captured in platform logs)
+  if (process.env.VERCEL || process.env.RUNNING_IN_DOCKER) {
     console.log('[mysql-audit]', entry)
     return
   }
