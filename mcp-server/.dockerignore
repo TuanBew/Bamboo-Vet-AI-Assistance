@@ -1,0 +1,25 @@
+# Node modules (rebuilt inside container)
+node_modules/
+
+# Test files
+tests/
+
+# Dev scripts (token generator, port killer — not needed at runtime)
+scripts/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dev and tunnel scripts
+start-tunnel.ps1
+
+# Docs
+README.md
+
+# Vitest config (tests not in production image)
+vitest.config.ts
+
+# Logs
+*.log
