@@ -4,12 +4,11 @@
 }
 
 {$DOMAIN} {
-	# Disable response buffering — required for SSE streaming (chat tokens)
-	flush_interval -1
-
 	encode gzip
 
 	reverse_proxy next-app:3000 {
+		# Disable response buffering — required for SSE streaming (chat tokens)
+		flush_interval -1
 		header_up X-Real-IP        {remote_host}
 		header_up X-Forwarded-For  {remote_host}
 		header_up X-Forwarded-Proto {scheme}

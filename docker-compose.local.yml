@@ -1,0 +1,25 @@
+# Local HTTP testing override — no TLS, no domain required
+# Usage: docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#
+# This overrides:
+#   - Caddyfile → Caddyfile.local (HTTP-only on :8080)
+#   - Uses LOCAL_HTTP_PORT (default 8080) as the only exposed port
+#   - HTTP_PORT/HTTPS_PORT in .env must be set to unused ports (e.g. 18080/18443)
+#     so the base file's port bindings don't conflict with host services on 80/443
+#   - Docker Compose merges port lists (cannot remove base ports); using non-conflicting
+#     port numbers in .env is the correct way to avoid conflicts on dev machines
+#   - Stubs duckdns-updater (no real API calls during local testing)
+
+services:
+  caddy:
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
+    ports:
+      - "${LOCAL_HTTP_PORT:-8080}:8080"
+
+  duckdns-updater:
+    # Stub in local mode — no real DuckDNS calls, no internet needed
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - echo "[duckdns] Disabled in local mode" && sleep infinity
