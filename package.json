@@ -12,7 +12,8 @@
     "test:e2e": "playwright test",
     "test:all": "vitest run && playwright test",
     "test:watch": "vitest",
-    "test:docker": "DOCKER_TEST_EMAIL=admin@bamboovet.com DOCKER_TEST_PASSWORD=123456789 npx playwright test --config=playwright.docker.config.ts"
+    "test:docker": "DOCKER_TEST_EMAIL=admin@bamboovet.com DOCKER_TEST_PASSWORD=123456789 npx playwright test --config=playwright.docker.config.ts",
+    "test:vercel": "VERCEL_TEST_EMAIL=admin@bamboovet.com VERCEL_TEST_PASSWORD=123456789 npx playwright test --config=playwright.vercel.config.ts tests/vercel/vercel-verify.spec.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

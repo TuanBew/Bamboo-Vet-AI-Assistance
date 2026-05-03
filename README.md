@@ -16,7 +16,7 @@ Bamboo Vet is a full-stack web application built for **Công ty Cổ phần thư
 
 ## Deployment
 
-### Production — Company Server (Docker)
+### Primary — Company Server (Docker)
 
 Full-stack deployment on the company Windows 11 server via Docker Compose + Caddy + Let's Encrypt.
 The company server's IP is whitelisted on the corporate MySQL database, so all admin analytics work.
@@ -36,6 +36,18 @@ See **[`docs/COMPANY-SERVER-SETUP.md`](docs/COMPANY-SERVER-SETUP.md)** for the c
 | Admin analytics data (MySQL ERP) | ✅ Live — company server IP is whitelisted |
 | API security (401/403 on all admin routes) | ✅ Live |
 | HTTPS — Caddy + Let's Encrypt + DuckDNS | ✅ Auto-provisioned on first run |
+
+### Public — Vercel (`bamboo-vet-ai.vercel.app`)
+
+The Vercel deployment at **[https://bamboo-vet-ai.vercel.app](https://bamboo-vet-ai.vercel.app)** serves as the public-facing / staging environment.
+
+| Feature | Status |
+|---|---|
+| Public AI chat — streaming via MCP + ngrok | ✅ Live |
+| Supabase authentication (login, session, admin JWT) | ✅ Live |
+| Admin shell (sidebar + topbar) | ✅ Live |
+| Admin analytics data (MySQL ERP) | ⛔ Not available — Vercel serverless IPs not whitelisted on corporate MySQL |
+| API security (401/403 on all admin routes) | ✅ Live |
 
 ---
 
@@ -299,6 +311,19 @@ DOCKER_TEST_EMAIL="admin@bamboovet.com" DOCKER_TEST_PASSWORD="123456789" \
 ```
 
 Requires the full Docker Compose stack running via `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d`.
+
+**Vercel — 9 tests (VRC-01 to VRC-09), targets `bamboo-vet-ai.vercel.app`:**
+```bash
+VERCEL_TEST_EMAIL="admin@bamboovet.com" VERCEL_TEST_PASSWORD="123456789" \
+  npx playwright test --config=playwright.vercel.config.ts tests/vercel/vercel-verify.spec.ts
+# or: npm run test:vercel
+```
+
+**Selenium — 8 tests (SEL-01 to SEL-08), targets Vercel URL:**
+```bash
+python -X utf8 tests/selenium/test_vercel_production.py
+```
+Requires: Python 3, `pip install selenium requests`, ChromeDriver on PATH.
 
 ### MCP Server Tests
 
