@@ -37,11 +37,6 @@ See **[`docs/COMPANY-SERVER-SETUP.md`](docs/COMPANY-SERVER-SETUP.md)** for the c
 | API security (401/403 on all admin routes) | ✅ Live |
 | HTTPS — Caddy + Let's Encrypt + DuckDNS | ✅ Auto-provisioned on first run |
 
-### Staging — Vercel
-
-The Vercel deployment at **[https://bamboo-vet-ai.vercel.app](https://bamboo-vet-ai.vercel.app)** remains live as a backup/staging environment.
-Admin dashboard data is not available (MySQL not reachable from Vercel serverless IPs).
-
 ---
 
 ## Features
@@ -148,9 +143,16 @@ See [`mcp-server/README.md`](mcp-server/README.md) for setup, token generation, 
 │   └── tests/                 # Vitest unit tests for all modules
 ├── tests/
 │   ├── e2e/                   # Playwright E2E specs (auth, all admin pages)
+│   ├── production/            # Docker stack smoke tests (playwright.docker.config.ts)
 │   └── performance/
 │       └── global-setup.ts    # Admin login + storageState for E2E
 ├── TESTING.md                 # Formal QA Test Execution Report (QA-2026-001)
+├── Dockerfile                 # Next.js app container (standalone build)
+├── docker-compose.yml         # Full stack: next-app + mcp-server + caddy + duckdns-updater
+├── docker-compose.local.yml   # HTTP-only override for local/LAN deployment (port 8080)
+├── Caddyfile                  # Caddy reverse proxy — HTTPS with Let's Encrypt + DuckDNS
+├── Caddyfile.local            # Caddy config — HTTP-only (port 8080)
+├── deploy.ps1                 # One-command deployment script (Windows PowerShell)
 └── supabase/migrations/       # Supabase schema migration files (reference)
 ```
 
@@ -289,30 +291,14 @@ Full test execution results are documented in [`TESTING.md`](TESTING.md) (Report
 
 ### Production Deployment Tests
 
-**Docker stack — 12 tests (DOK-01 to DOK-12), requires local Docker stack running:**
+**Docker stack — 12 tests (DOK-01 to DOK-12), requires Docker stack running:**
 ```bash
 DOCKER_TEST_EMAIL="admin@bamboovet.com" DOCKER_TEST_PASSWORD="123456789" \
   npx playwright test --config=playwright.docker.config.ts
 # or: npm run test:docker
 ```
 
-**Vercel staging — 9 tests (VRC-01 to VRC-09):**
-```bash
-VERCEL_TEST_EMAIL="admin@bamboovet.com" VERCEL_TEST_PASSWORD="123456789" \
-  npx playwright test --config=playwright.vercel.config.ts tests/vercel/vercel-verify.spec.ts
-# or: npm run test:vercel
-```
-Config files use `--config` flag explicitly (default config targets localhost).
-
-**Selenium — 8 tests (SEL-01 to SEL-08):**
-```bash
-python -X utf8 tests/selenium/test_vercel_production.py
-```
-Requires: Python 3, `pip install selenium requests`, ChromeDriver on PATH.
-
-**Chat tests (VRC-09, SEL-08) require local stack:** ngrok tunnel running + `cd mcp-server && .\start-tunnel.ps1` + RAGflow Docker running. If the ngrok URL changes, update `MCP_SERVER_URL` in Vercel env and redeploy.
-
-**Production deployment status: COMPLETE** — 17 / 17 tests pass (9 Playwright + 8 Selenium).
+Requires the full Docker Compose stack running via `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d`.
 
 ### MCP Server Tests
 
