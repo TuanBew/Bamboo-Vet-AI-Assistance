@@ -14,19 +14,33 @@ Bamboo Vet is a full-stack web application built for **Công ty Cổ phần thư
 
 ---
 
-## Live Deployment
+## Deployment
 
-The application is live at **[https://bamboo-vet-ai.vercel.app](https://bamboo-vet-ai.vercel.app)**.
+### Production — Company Server (Docker)
+
+Full-stack deployment on the company Windows 11 server via Docker Compose + Caddy + Let's Encrypt.
+The company server's IP is whitelisted on the corporate MySQL database, so all admin analytics work.
+
+```powershell
+# On the company server — one command after copying the project folder
+.\deploy.ps1
+```
+
+See **[`docs/COMPANY-SERVER-SETUP.md`](docs/COMPANY-SERVER-SETUP.md)** for the complete first-time setup walkthrough.
 
 | Feature | Status |
 |---|---|
-| Public AI chat — streaming responses via MCP + ngrok | ✅ Live |
+| Public AI chat — streaming via Docker-internal MCP | ✅ Live |
 | Supabase authentication (login, session, admin JWT) | ✅ Live |
 | Admin shell (sidebar + topbar) | ✅ Live |
-| Admin analytics data (MySQL ERP) | ⏳ Pending — corporate database not yet reachable from Vercel serverless IPs |
+| Admin analytics data (MySQL ERP) | ✅ Live — company server IP is whitelisted |
 | API security (401/403 on all admin routes) | ✅ Live |
+| HTTPS — Caddy + Let's Encrypt + DuckDNS | ✅ Auto-provisioned on first run |
 
-Admin dashboard pages display a graceful "Không thể tải dữ liệu" error state until MySQL connectivity is resolved. All other features are fully operational on the live URL.
+### Staging — Vercel
+
+The Vercel deployment at **[https://bamboo-vet-ai.vercel.app](https://bamboo-vet-ai.vercel.app)** remains live as a backup/staging environment.
+Admin dashboard data is not available (MySQL not reachable from Vercel serverless IPs).
 
 ---
 
@@ -275,14 +289,20 @@ Full test execution results are documented in [`TESTING.md`](TESTING.md) (Report
 
 ### Production Deployment Tests
 
-Tests targeting the live Vercel deployment at `https://bamboo-vet-ai.vercel.app`.
+**Docker stack — 12 tests (DOK-01 to DOK-12), requires local Docker stack running:**
+```bash
+DOCKER_TEST_EMAIL="admin@bamboovet.com" DOCKER_TEST_PASSWORD="123456789" \
+  npx playwright test --config=playwright.docker.config.ts
+# or: npm run test:docker
+```
 
-**Playwright — 9 tests (VRC-01 to VRC-09):**
+**Vercel staging — 9 tests (VRC-01 to VRC-09):**
 ```bash
 VERCEL_TEST_EMAIL="admin@bamboovet.com" VERCEL_TEST_PASSWORD="123456789" \
   npx playwright test --config=playwright.vercel.config.ts tests/vercel/vercel-verify.spec.ts
+# or: npm run test:vercel
 ```
-Config: `playwright.vercel.config.ts` — must use `--config` flag explicitly (default config targets localhost).
+Config files use `--config` flag explicitly (default config targets localhost).
 
 **Selenium — 8 tests (SEL-01 to SEL-08):**
 ```bash

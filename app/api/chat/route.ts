@@ -1,4 +1,4 @@
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'

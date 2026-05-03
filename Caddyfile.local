@@ -1,0 +1,8 @@
+# Local HTTP-only Caddyfile for dev stack testing (no TLS, no domain required)
+# Used via: docker compose -f docker-compose.yml -f docker-compose.local.yml up
+:8080 {
+	reverse_proxy next-app:3000 {
+		flush_interval -1
+		header_up X-Forwarded-Proto http
+	}
+}

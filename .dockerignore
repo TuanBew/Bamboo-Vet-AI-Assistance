@@ -1,0 +1,54 @@
+# Node modules and build output (rebuilt inside container)
+node_modules/
+.next/
+
+# Test files
+tests/
+test-results/
+coverage/
+
+# Documentation and planning (local only)
+docs/
+.planning/
+.superpowers/
+
+# Git
+.git/
+.github/
+.gitignore
+
+# Environment files — NEVER copy secrets into the image
+.env
+.env.*
+!.env.example
+
+# MCP server has its own Dockerfile and build context
+mcp-server/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs and debug artifacts
+*.log
+.mysql-audit.log
+screenshots/
+test-results/
+page-snapshot.md
+
+# Sample data (may contain real company data)
+samples/
+*.xlsx
+*.xls
+*.png
+*.jpg
+*.jpeg
+
+# TypeScript build artifacts
+tsconfig.tsbuildinfo
+
+# Vercel
+.vercel/
+
+# Worktrees
+.worktrees/
