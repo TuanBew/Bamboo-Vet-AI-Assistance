@@ -118,3 +118,6 @@ tsconfig.tsbuildinfo
 
 # Playwright test artefacts (screenshots, traces, videos)
 test-results/
+
+# Local Caddy config — reveals internal Docker service layout, not for public repo
+Caddyfile.local

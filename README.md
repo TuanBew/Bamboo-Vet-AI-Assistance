@@ -295,13 +295,15 @@ Key ERP tables:
 
 ```bash
 npm test              # Unit tests (Vitest) — all API route + service unit tests
-npm run test:e2e      # E2E tests (Playwright, requires dev server on :3000)
+npm run test:e2e      # E2E tests (Playwright, requires dev server on :3001)
 npm run test:all      # Both suites in sequence
 ```
 
-The Playwright E2E suite covers auth guards, admin shell, and all six admin pages. Authenticated tests require `TEST_ADMIN_EMAIL` and `TEST_ADMIN_PASSWORD` env vars (see `tests/performance/global-setup.ts`). Unauthenticated auth-guard tests run without credentials.
+The Playwright E2E suite covers auth guards, admin shell, and all six admin pages. Authenticated tests require `TEST_ADMIN_EMAIL` and `TEST_ADMIN_PASSWORD` in `.env.local` (see `tests/performance/global-setup.ts`). Unauthenticated auth-guard tests run without credentials.
 
-Full test execution results are documented in [`TESTING.md`](TESTING.md) (Report QA-2026-001 — 134 tests executed, 134 passed, 0 failed).
+Full test execution results are documented in [`TESTING.md`](TESTING.md) (Report QA-2026-001 — 187 tests executed, 187 passed, 0 failed).
+
+> **CI Note:** The GitHub Actions workflow runs Vercel smoke tests (VRC-01–VRC-09) on every push. These require `VERCEL_TEST_EMAIL` and `VERCEL_TEST_PASSWORD` to be configured as repository secrets (Settings → Secrets and variables → Actions).
 
 ### Production Deployment Tests
 
