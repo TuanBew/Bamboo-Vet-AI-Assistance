@@ -19,8 +19,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 BASE_URL = "https://bamboo-vet-ai.vercel.app"
-EMAIL    = os.environ.get("VERCEL_TEST_EMAIL",    "admin@bamboovet.com")
-PASSWORD = os.environ.get("VERCEL_TEST_PASSWORD", "123456789")
+EMAIL    = os.environ.get("VERCEL_TEST_EMAIL",    "")
+PASSWORD = os.environ.get("VERCEL_TEST_PASSWORD", "")
 
 PASSED = []
 FAILED = []

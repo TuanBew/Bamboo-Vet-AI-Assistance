@@ -1,5 +1,7 @@
 # Bamboo Vet — AI Assistant & Admin Dashboard
 
+[![CI](https://github.com/TuanBew/Bamboo-Vet-AI-Assistance/actions/workflows/ci.yml/badge.svg)](https://github.com/TuanBew/Bamboo-Vet-AI-Assistance/actions/workflows/ci.yml)
+
 > Trợ lý AI cho ngành thú y — AI-powered chatbot and business intelligence dashboard for Vietnamese veterinary distributors.
 
 ---
@@ -305,23 +307,24 @@ Full test execution results are documented in [`TESTING.md`](TESTING.md) (Report
 
 **Docker stack — 12 tests (DOK-01 to DOK-12), requires Docker stack running:**
 ```bash
-DOCKER_TEST_EMAIL="admin@bamboovet.com" DOCKER_TEST_PASSWORD="123456789" \
+DOCKER_TEST_EMAIL="<admin-email>" DOCKER_TEST_PASSWORD="<admin-password>" \
   npx playwright test --config=playwright.docker.config.ts
-# or: npm run test:docker
+# or: npm run test:docker   (reads DOCKER_TEST_EMAIL / DOCKER_TEST_PASSWORD from env)
 ```
 
 Requires the full Docker Compose stack running via `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d`.
 
 **Vercel — 9 tests (VRC-01 to VRC-09), targets `bamboo-vet-ai.vercel.app`:**
 ```bash
-VERCEL_TEST_EMAIL="admin@bamboovet.com" VERCEL_TEST_PASSWORD="123456789" \
+VERCEL_TEST_EMAIL="<admin-email>" VERCEL_TEST_PASSWORD="<admin-password>" \
   npx playwright test --config=playwright.vercel.config.ts tests/vercel/vercel-verify.spec.ts
-# or: npm run test:vercel
+# or: npm run test:vercel   (reads VERCEL_TEST_EMAIL / VERCEL_TEST_PASSWORD from env)
 ```
 
 **Selenium — 8 tests (SEL-01 to SEL-08), targets Vercel URL:**
 ```bash
-python -X utf8 tests/selenium/test_vercel_production.py
+VERCEL_TEST_EMAIL="<admin-email>" VERCEL_TEST_PASSWORD="<admin-password>" \
+  python -X utf8 tests/selenium/test_vercel_production.py
 ```
 Requires: Python 3, `pip install selenium requests`, ChromeDriver on PATH.
 

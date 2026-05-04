@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 // Target: local Docker Compose stack (http://localhost:8080 by default)
-// Run: DOCKER_TEST_EMAIL=admin@bamboovet.com DOCKER_TEST_PASSWORD=123456789 \
+// Run: DOCKER_TEST_EMAIL=<admin-email> DOCKER_TEST_PASSWORD=<admin-password> \
 //        npx playwright test --config=playwright.docker.config.ts
 //
 // Authenticated tests (DOK-09 to DOK-12) are skipped if credentials are not provided.

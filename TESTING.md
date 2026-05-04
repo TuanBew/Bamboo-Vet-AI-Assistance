@@ -429,7 +429,7 @@ The dashboard currently shows a graceful error state — sidebar + topbar render
 
 **Command:**
 ```bash
-VERCEL_TEST_EMAIL="admin@bamboovet.com" VERCEL_TEST_PASSWORD="123456789" \
+VERCEL_TEST_EMAIL="<admin-email>" VERCEL_TEST_PASSWORD="<admin-password>" \
   npx playwright test --config=playwright.vercel.config.ts tests/vercel/vercel-verify.spec.ts
 ```
 
