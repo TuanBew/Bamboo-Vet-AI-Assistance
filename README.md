@@ -20,8 +20,9 @@ Bamboo Vet is a full-stack web application built for **Công ty Cổ phần thư
 
 ### Primary — Company Server (Docker)
 
-Full-stack deployment on the company Windows 11 server via Docker Compose + Caddy + Let's Encrypt.
+Full-stack deployment on the company Windows 11 server via Docker Compose + Cloudflare Tunnel.
 The company server's IP is whitelisted on the corporate MySQL database, so all admin analytics work.
+HTTPS is handled by Cloudflare — no inbound ports required on the server or router.
 
 ```powershell
 # On the company server — one command after copying the project folder
@@ -37,7 +38,7 @@ See **[`docs/COMPANY-SERVER-SETUP.md`](docs/COMPANY-SERVER-SETUP.md)** for the c
 | Admin shell (sidebar + topbar) | ✅ Live |
 | Admin analytics data (MySQL ERP) | ✅ Live — company server IP is whitelisted |
 | API security (401/403 on all admin routes) | ✅ Live |
-| HTTPS — Caddy + Let's Encrypt + DuckDNS | ✅ Auto-provisioned on first run |
+| HTTPS — Cloudflare Tunnel | ✅ Cloudflare-managed cert, no inbound ports needed |
 
 ### Public — Vercel (`bamboo-vet-ai.vercel.app`)
 
@@ -162,10 +163,7 @@ See [`mcp-server/README.md`](mcp-server/README.md) for setup, token generation, 
 │       └── global-setup.ts    # Admin login + storageState for E2E
 ├── TESTING.md                 # Formal QA Test Execution Report (QA-2026-001)
 ├── Dockerfile                 # Next.js app container (standalone build)
-├── docker-compose.yml         # Full stack: next-app + mcp-server + caddy + duckdns-updater
-├── docker-compose.local.yml   # HTTP-only override for local/LAN deployment (port 8080)
-├── Caddyfile                  # Caddy reverse proxy — HTTPS with Let's Encrypt + DuckDNS
-├── Caddyfile.local            # Caddy config — HTTP-only (port 8080)
+├── docker-compose.yml         # Full stack: next-app + mcp-server + cloudflared (Cloudflare Tunnel)
 ├── deploy.ps1                 # One-command deployment script (Windows PowerShell)
 └── supabase/migrations/       # Supabase schema migration files (reference)
 ```

@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test'
 // Authenticated tests (DOK-09 to DOK-12) are skipped if credentials are not provided.
 // DOK-12 (chat stream) additionally requires RAGflow to be running on host:9380.
 
-const BASE_URL = process.env.DOCKER_TEST_URL ?? 'http://localhost:8080'
+const BASE_URL = process.env.DOCKER_TEST_URL ?? 'http://localhost:3000'
 const email    = process.env.DOCKER_TEST_EMAIL    ?? ''
 const password = process.env.DOCKER_TEST_PASSWORD ?? ''
 
@@ -66,7 +66,7 @@ test('DOK-06: /api/chat POST without auth is not a 500 (guest mode with rate lim
 
 // ─── Docker-specific infrastructure ──────────────────────────────────────────
 
-test('DOK-07: Next.js standalone serves static assets via Caddy proxy', async ({ page, request }) => {
+test('DOK-07: Next.js standalone serves static assets via Cloudflare Tunnel', async ({ page, request }) => {
   const response = await page.goto('/login')
   expect(response?.status()).toBe(200)
 

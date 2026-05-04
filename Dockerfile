@@ -27,7 +27,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Tells audit-logger.ts to use console.log instead of appendFileSync
 ENV RUNNING_IN_DOCKER=true
 # Required: standalone server must bind to 0.0.0.0, not just 127.0.0.1,
-# otherwise Caddy cannot reach it via Docker internal network
+# otherwise cloudflared cannot reach it via Docker internal network
 ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs

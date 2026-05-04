@@ -119,5 +119,7 @@ tsconfig.tsbuildinfo
 # Playwright test artefacts (screenshots, traces, videos)
 test-results/
 
-# Local Caddy config — reveals internal Docker service layout, not for public repo
+# Caddy config files — Caddy replaced by Cloudflare Tunnel in Phase 3.2
+Caddyfile
 Caddyfile.local
+docker-compose.local.yml

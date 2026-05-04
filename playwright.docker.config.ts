@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 // Playwright config for verifying the local Docker Compose stack.
 // Run with: npx playwright test --config=playwright.docker.config.ts
-// Requires: Docker stack running via docker-compose.yml + docker-compose.local.yml
+// Requires: Docker stack running via docker-compose.yml (Cloudflare Tunnel architecture)
 // Optional: DOCKER_TEST_EMAIL and DOCKER_TEST_PASSWORD for authenticated tests
 export default defineConfig({
   testDir: './tests/production',
@@ -12,7 +12,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: process.env.DOCKER_TEST_URL ?? 'http://localhost:8080',
+    baseURL: process.env.DOCKER_TEST_URL ?? 'http://localhost:3000',
     headless: true,
     screenshot: 'only-on-failure',
   },

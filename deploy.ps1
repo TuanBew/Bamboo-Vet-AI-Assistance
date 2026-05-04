@@ -4,8 +4,11 @@
     Bamboo Vet AI — pre-flight checks + Docker deployment
 
 .DESCRIPTION
-    Runs 7 pre-flight checks then deploys with docker compose.
+    Runs 4 pre-flight checks then deploys with docker compose.
     Safe to run repeatedly (idempotent). Fails fast with copy-paste fixes.
+
+    HTTPS is handled by Cloudflare Tunnel — no inbound ports required.
+    The cloudflared container initiates an outbound connection to Cloudflare's edge.
 
 .EXAMPLE
     .\deploy.ps1
@@ -57,13 +60,11 @@ Write-Hr
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Docker Compose v2
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Section "1/7  Docker Compose v2"
+Write-Section "1/4  Docker Compose v2"
 
 try {
     $verOutput = docker compose version 2>&1
     if ($LASTEXITCODE -ne 0) { throw "exit $LASTEXITCODE" }
-    $verString = ($verOutput -join '') -replace '[^0-9.]', '' | Select-Object -First 1
-    # verString may be like "2.35.1" — grab first token
     $verString = (($verOutput -join '') | Select-String '\d+\.\d+\.\d+').Matches[0].Value
     $major = [int]($verString -split '\.')[0]
     if ($major -ge 2) {
@@ -81,7 +82,7 @@ if ($script:Failed.Count -gt 0) { Stop-OnFailures }
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Parse .env
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Section "2/7  .env validation"
+Write-Section "2/4  .env validation"
 
 $envFile = Join-Path $PSScriptRoot '.env'
 if (-not (Test-Path $envFile)) {
@@ -120,10 +121,8 @@ $requiredVars = @(
     'MYSQL_DATABASE',
     'MYSQL_USER',
     'MYSQL_PASSWORD',
-    'DOMAIN',
-    'LETSENCRYPT_EMAIL',
-    'DUCKDNS_SUBDOMAIN',
-    'DUCKDNS_TOKEN'
+    'CLOUDFLARE_TUNNEL_TOKEN',
+    'PRODUCTION_DOMAIN'
 )
 
 foreach ($v in $requiredVars) {
@@ -140,7 +139,7 @@ foreach ($v in $requiredVars) {
     }
 }
 
-# Docker-specific value checks — common mistakes from copy-pasting local dev .env
+# Docker-specific value checks
 if ($env.ContainsKey('MCP_SERVER_URL') -and $env['MCP_SERVER_URL'] -notmatch '^http://mcp-server:') {
     Write-Fail "MCP_SERVER_URL must be 'http://mcp-server:3100' for Docker deploy" `
         "In .env, set: MCP_SERVER_URL=http://mcp-server:3100"
@@ -149,13 +148,10 @@ if ($env.ContainsKey('RAGFLOW_BASE_URL') -and $env['RAGFLOW_BASE_URL'] -match '1
     Write-Fail "RAGFLOW_BASE_URL must use 'host.docker.internal' for Docker deploy" `
         "In .env, set: RAGFLOW_BASE_URL=http://host.docker.internal:9380"
 }
-if ($env.ContainsKey('DOMAIN') -and $env['DOMAIN'] -eq 'localhost') {
-    Write-Fail "DOMAIN is set to 'localhost' — this must be your real DuckDNS domain" `
-        "In .env, set: DOMAIN=<your-subdomain>.duckdns.org"
-}
-if ($env.ContainsKey('LETSENCRYPT_EMAIL') -and $env['LETSENCRYPT_EMAIL'] -notmatch '@') {
-    Write-Fail "LETSENCRYPT_EMAIL does not look like a valid email address" `
-        "In .env, set: LETSENCRYPT_EMAIL=you@example.com"
+# Cloudflare tunnel tokens are JWTs — must start with eyJ
+if ($env.ContainsKey('CLOUDFLARE_TUNNEL_TOKEN') -and $env['CLOUDFLARE_TUNNEL_TOKEN'] -notmatch '^eyJ') {
+    Write-Fail "CLOUDFLARE_TUNNEL_TOKEN does not look like a valid Cloudflare tunnel token" `
+        "Obtain the token from: Cloudflare Zero Trust dashboard → Networks → Tunnels → your tunnel → copy token"
 }
 
 if ($script:Failed.Count -gt 0) { Stop-OnFailures }
@@ -191,88 +187,9 @@ const c=require('crypto'),h=Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'}))
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3. Port availability
+# 3. Docker internal networking
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Section "3/7  Port availability"
-
-$httpPort  = if ($env.ContainsKey('HTTP_PORT')  -and $env['HTTP_PORT']  -match '^\d+$') { [int]$env['HTTP_PORT']  } else { 80  }
-$httpsPort = if ($env.ContainsKey('HTTPS_PORT') -and $env['HTTPS_PORT'] -match '^\d+$') { [int]$env['HTTPS_PORT'] } else { 443 }
-
-function Test-PortFree([int]$port) {
-    $l = $null
-    try {
-        $l = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Any, $port)
-        $l.Start(); $l.Stop(); return $true
-    } catch { return $false } finally { if ($l) { try { $l.Stop() } catch {} } }
-}
-
-function Get-PortOwner([int]$port) {
-    try {
-        $conn = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($conn) { return (Get-Process -Id $conn.OwningProcess -ErrorAction SilentlyContinue).Name }
-    } catch {}
-    return $null
-}
-
-foreach ($p in @($httpPort, $httpsPort)) {
-    $label = if ($p -eq $httpPort) { "HTTP" } else { "HTTPS" }
-    if (Test-PortFree $p) {
-        Write-Pass "Port $p ($label) is free"
-    } else {
-        $owner = Get-PortOwner $p
-        $ownerMsg = if ($owner) { " (used by: $owner)" } else { "" }
-        Write-Fail "Port $p ($label) is already in use$ownerMsg" `
-            "Stop the service using port $p, OR add $($label)_PORT=<other-port> to .env"
-    }
-}
-
-if ($script:Failed.Count -gt 0) { Stop-OnFailures }
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 4. Windows Firewall
-# ─────────────────────────────────────────────────────────────────────────────
-Write-Section "4/7  Windows Firewall"
-
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
-    [Security.Principal.WindowsBuiltInRole]::Administrator)
-
-function Test-FirewallAllowsPort([int]$port) {
-    # Returns true if any enabled inbound Allow rule covers this TCP port
-    $rules = Get-NetFirewallRule -Direction Inbound -Action Allow -Enabled True -ErrorAction SilentlyContinue
-    foreach ($r in $rules) {
-        $pf = $r | Get-NetFirewallPortFilter -ErrorAction SilentlyContinue
-        if ($pf -and $pf.Protocol -in @('TCP', 'Any') -and ($pf.LocalPort -eq $port -or $pf.LocalPort -eq 'Any')) {
-            return $true
-        }
-    }
-    return $false
-}
-
-foreach ($p in @($httpPort, $httpsPort)) {
-    $label = if ($p -eq $httpPort) { "HTTP" } else { "HTTPS" }
-    if (Test-FirewallAllowsPort $p) {
-        Write-Pass "Firewall: inbound TCP $p ($label) is allowed"
-    } elseif ($isAdmin) {
-        try {
-            New-NetFirewallRule -DisplayName "Bamboo Vet $label ($p)" `
-                -Direction Inbound -Protocol TCP -LocalPort $p -Action Allow | Out-Null
-            Write-Pass "Firewall: created inbound Allow rule for TCP $p ($label)"
-        } catch {
-            Write-Fail "Could not create firewall rule for port $p" `
-                "Run as Admin: New-NetFirewallRule -DisplayName 'Bamboo Vet $label' -Direction Inbound -Protocol TCP -LocalPort $p -Action Allow"
-        }
-    } else {
-        Write-Fail "No firewall Allow rule for port $p and script is not running as Administrator" `
-            "Right-click deploy.ps1 → 'Run as Administrator', OR run manually:`n         New-NetFirewallRule -DisplayName 'Bamboo Vet $label' -Direction Inbound -Protocol TCP -LocalPort $p -Action Allow"
-    }
-}
-
-if ($script:Failed.Count -gt 0) { Stop-OnFailures }
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 5. Docker internal networking
-# ─────────────────────────────────────────────────────────────────────────────
-Write-Section "5/7  Docker networking"
+Write-Section "3/4  Docker networking"
 
 # host.docker.internal
 Write-Host "  Probing host.docker.internal (this starts a temporary container)..." -ForegroundColor DarkGray
@@ -280,7 +197,6 @@ $hostCheck = docker run --rm --pull never alpine:3.19 sh -c "getent hosts host.d
 if ($LASTEXITCODE -eq 0 -and $hostCheck -match '\d+\.\d+\.\d+\.\d+') {
     Write-Pass "host.docker.internal resolves to: $($hostCheck.Trim() -split '\s+' | Select-Object -First 1)"
 } else {
-    # Fallback: try nslookup
     $hostCheck2 = docker run --rm --pull never alpine:3.19 sh -c "nslookup host.docker.internal 2>&1" 2>&1
     if ($hostCheck2 -match 'Address: (\d+\.\d+\.\d+\.\d+)') {
         Write-Pass "host.docker.internal resolves ($($Matches[1]))"
@@ -300,43 +216,9 @@ if ($ragCheck -match 'exit:0') {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. DuckDNS domain → public IP
+# 4. MySQL TCP reachability
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Section "6/7  DuckDNS domain → public IP"
-
-$domain = $env['DOMAIN']
-$publicIp = $null
-try {
-    $r = Invoke-WebRequest -Uri 'https://ifconfig.me/ip' -UseBasicParsing -TimeoutSec 6
-    $publicIp = $r.Content.Trim()
-} catch {
-    try {
-        $r = Invoke-WebRequest -Uri 'https://api.ipify.org' -UseBasicParsing -TimeoutSec 6
-        $publicIp = $r.Content.Trim()
-    } catch { $publicIp = $null }
-}
-
-$resolvedIp = $null
-try {
-    $resolvedIp = ([Net.Dns]::GetHostAddresses($domain) | Where-Object { $_.AddressFamily -eq 'InterNetwork' } | Select-Object -First 1).IPAddressToString
-} catch {}
-
-if ($publicIp -and $resolvedIp) {
-    if ($resolvedIp -eq $publicIp) {
-        Write-Pass "$domain → $publicIp (matches this server's public IP)"
-    } else {
-        Write-Warn "$domain resolves to $resolvedIp but server public IP is $publicIp`n         Update DuckDNS at https://www.duckdns.org, then wait 2 minutes and re-run`n         (Let's Encrypt cert provisioning will fail if DNS points elsewhere)"
-    }
-} elseif ($publicIp) {
-    Write-Warn "Could not resolve $domain — go to https://www.duckdns.org and set IP to $publicIp"
-} else {
-    Write-Warn "Could not determine public IP or resolve $domain — verify DuckDNS manually"
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 7. MySQL TCP reachability
-# ─────────────────────────────────────────────────────────────────────────────
-Write-Section "7/7  MySQL connectivity"
+Write-Section "4/4  MySQL connectivity"
 
 $mysqlHost = $env['MYSQL_HOST']
 $mysqlPort = [int]$env['MYSQL_PORT']
@@ -356,7 +238,6 @@ Write-Host ""
 Write-Hr
 $wCount = $script:Warnings.Count
 $fCount = $script:Failed.Count
-$wColor = if ($wCount -gt 0) { 'Yellow' } else { 'Green' }
 Write-Host ("  Pre-flight: {0} failed  •  {1} warnings" -f $fCount, $wCount) -ForegroundColor $(if ($fCount -gt 0) { 'Red' } elseif ($wCount -gt 0) { 'Yellow' } else { 'Green' })
 Write-Hr
 
@@ -396,7 +277,6 @@ $allHealthy = $false
 Start-Sleep 10
 
 while ((Get-Date) -lt $deadline) {
-    # docker compose ps NDJSON — one object per line
     $psLines = docker compose --project-directory $PSScriptRoot ps --format json 2>&1 |
                Where-Object { $_ -match '^\s*\{' }
     $containers = $psLines | ForEach-Object {
@@ -433,7 +313,7 @@ foreach ($c in $containers) {
     Write-Host ("  $icon  {0,-45} {1,-10} {2}" -f $c.Name, $c.State, $health) -ForegroundColor $color
 }
 
-# Internal health probe through Docker network (avoids DNS/Caddy)
+# Internal health probe through Docker network
 Write-Host ""
 $healthProbe = docker run --rm --pull never `
     --network "bamboo-vet-prod_bamboo-net" `
@@ -445,9 +325,25 @@ if ($healthProbe -match '"ok":true') {
     Write-Host "  Internal /api/health: $healthProbe" -ForegroundColor Yellow
 }
 
+# Cloudflare tunnel registration check
+Write-Host ""
+Write-Host "  Checking Cloudflare tunnel status..." -ForegroundColor DarkGray
+$cfLogs = docker compose --project-directory $PSScriptRoot logs cloudflared --tail 30 2>&1
+if ($cfLogs -match 'Registered tunnel connection') {
+    Write-Host "  Cloudflare tunnel: registered and connected" -ForegroundColor Green
+} elseif ($cfLogs -match 'failed|error|invalid') {
+    Write-Host "  Cloudflare tunnel: connection issue detected — check logs:" -ForegroundColor Red
+    Write-Host "    docker compose logs cloudflared --tail 50" -ForegroundColor Cyan
+} else {
+    Write-Host "  Cloudflare tunnel: still connecting (may take 30s on first start)" -ForegroundColor Yellow
+    Write-Host "    Monitor: docker compose logs cloudflared -f" -ForegroundColor DarkGray
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Final instructions
 # ─────────────────────────────────────────────────────────────────────────────
+$domain = $env['PRODUCTION_DOMAIN']
+
 Write-Host ""
 Write-Hr
 
@@ -456,26 +352,26 @@ if ($allHealthy) {
     Write-Host ""
     Write-Host "  Your app: https://$domain" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  IMPORTANT — First-run HTTPS setup (one-time):" -ForegroundColor White
-    Write-Host "    • Caddy is requesting a Let's Encrypt certificate for $domain" -ForegroundColor White
-    Write-Host "    • This requires port $httpPort to be reachable from the internet" -ForegroundColor White
-    Write-Host "    • The certificate is usually ready within 30-60 seconds" -ForegroundColor White
-    Write-Host "    • If https://$domain shows a cert error, wait 60s then refresh" -ForegroundColor White
+    Write-Host "  IMPORTANT — First-run certificate note:" -ForegroundColor White
+    Write-Host "    • Cloudflare provisions the HTTPS certificate automatically" -ForegroundColor White
+    Write-Host "    • No port forwarding or router changes needed" -ForegroundColor White
+    Write-Host "    • If the tunnel token is new, allow 30-60s for Cloudflare to go Active" -ForegroundColor White
+    Write-Host "    • Verify tunnel health at: https://one.dash.cloudflare.com → Networks → Tunnels" -ForegroundColor White
     Write-Host ""
     Write-Host "  Useful commands:" -ForegroundColor White
-    Write-Host "    docker compose logs caddy --tail 50   # watch cert provisioning" -ForegroundColor DarkGray
-    Write-Host "    docker compose logs --tail 20         # all services" -ForegroundColor DarkGray
-    Write-Host "    docker compose ps                     # container health" -ForegroundColor DarkGray
-    Write-Host "    docker compose down                   # stop everything" -ForegroundColor DarkGray
-    Write-Host "    .\deploy.ps1                          # update + restart (safe to re-run)" -ForegroundColor DarkGray
+    Write-Host "    docker compose logs cloudflared --tail 50   # watch tunnel connection" -ForegroundColor DarkGray
+    Write-Host "    docker compose logs --tail 20               # all services" -ForegroundColor DarkGray
+    Write-Host "    docker compose ps                           # container health" -ForegroundColor DarkGray
+    Write-Host "    docker compose down                         # stop everything" -ForegroundColor DarkGray
+    Write-Host "    .\deploy.ps1                                # update + restart (safe to re-run)" -ForegroundColor DarkGray
 } else {
     Write-Host "  Deployment launched but some containers are not yet healthy." -ForegroundColor Yellow
     Write-Host "  Run: docker compose ps" -ForegroundColor White
     Write-Host "  Diagnose: docker compose logs <service>" -ForegroundColor White
     Write-Host ""
     Write-Host "  Common issues:" -ForegroundColor White
-    Write-Host "    caddy unhealthy  → check DOMAIN, LETSENCRYPT_EMAIL in .env; ensure port $httpPort is open to internet" -ForegroundColor DarkGray
-    Write-Host "    next-app unhealthy  → check SUPABASE_* and MCP_SERVER_URL in .env" -ForegroundColor DarkGray
+    Write-Host "    cloudflared unhealthy → check CLOUDFLARE_TUNNEL_TOKEN in .env; verify tunnel exists in dashboard" -ForegroundColor DarkGray
+    Write-Host "    next-app unhealthy    → check SUPABASE_* and MCP_SERVER_URL in .env" -ForegroundColor DarkGray
     Write-Host "    mcp-server unhealthy  → check RAGFLOW_BASE_URL and RAGflow is running" -ForegroundColor DarkGray
 }
 
