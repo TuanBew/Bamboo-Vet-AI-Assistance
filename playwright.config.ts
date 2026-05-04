@@ -1,7 +1,11 @@
 import { defineConfig, devices } from '@playwright/test'
+import { config as loadEnv } from 'dotenv'
+
+// Load .env.local so TEST_ADMIN_EMAIL / TEST_ADMIN_PASSWORD are available to globalSetup
+loadEnv({ path: '.env.local' })
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: './tests/e2e',
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
@@ -22,7 +26,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev -- -p 3001',
-    port: 3001,
+    url: 'http://localhost:3001',
     reuseExistingServer: true,
     timeout: 120_000,
   },
