@@ -193,11 +193,11 @@ Write-Section "3/4  Docker networking"
 
 # host.docker.internal
 Write-Host "  Probing host.docker.internal (this starts a temporary container)..." -ForegroundColor DarkGray
-$hostCheck = docker run --rm --pull never alpine:3.19 sh -c "getent hosts host.docker.internal 2>/dev/null | head -1" 2>&1
+$hostCheck = docker run --rm --pull missing alpine:3.19 sh -c "getent hosts host.docker.internal 2>/dev/null | head -1" 2>&1
 if ($LASTEXITCODE -eq 0 -and $hostCheck -match '\d+\.\d+\.\d+\.\d+') {
     Write-Pass "host.docker.internal resolves to: $($hostCheck.Trim() -split '\s+' | Select-Object -First 1)"
 } else {
-    $hostCheck2 = docker run --rm --pull never alpine:3.19 sh -c "nslookup host.docker.internal 2>&1" 2>&1
+    $hostCheck2 = docker run --rm --pull missing alpine:3.19 sh -c "nslookup host.docker.internal 2>&1" 2>&1
     if ($hostCheck2 -match 'Address: (\d+\.\d+\.\d+\.\d+)') {
         Write-Pass "host.docker.internal resolves ($($Matches[1]))"
     } else {
@@ -208,7 +208,7 @@ if ($LASTEXITCODE -eq 0 -and $hostCheck -match '\d+\.\d+\.\d+\.\d+') {
 # RAGflow reachability from inside Docker
 $ragflowUrl = if ($env.ContainsKey('RAGFLOW_BASE_URL')) { $env['RAGFLOW_BASE_URL'] } else { 'http://host.docker.internal:9380' }
 Write-Host "  Probing RAGflow at $ragflowUrl ..." -ForegroundColor DarkGray
-$ragCheck = docker run --rm --pull never alpine:3.19 sh -c "wget -qO- --timeout=5 '$ragflowUrl' > /dev/null 2>&1; echo exit:`$?" 2>&1
+$ragCheck = docker run --rm --pull missing alpine:3.19 sh -c "wget -qO- --timeout=5 '$ragflowUrl' > /dev/null 2>&1; echo exit:`$?" 2>&1
 if ($ragCheck -match 'exit:0') {
     Write-Pass "RAGflow reachable at $ragflowUrl"
 } else {
@@ -315,7 +315,7 @@ foreach ($c in $containers) {
 
 # Internal health probe through Docker network
 Write-Host ""
-$healthProbe = docker run --rm --pull never `
+$healthProbe = docker run --rm --pull missing `
     --network "bamboo-vet-prod_bamboo-net" `
     alpine:3.19 `
     sh -c "wget -qO- --timeout=5 http://next-app:3000/api/health 2>&1" 2>&1
