@@ -123,3 +123,6 @@ test-results/
 Caddyfile
 Caddyfile.local
 docker-compose.local.yml
+
+# Deployment kit — local-only reference material, never commit filled-in secrets
+deployment-kit/

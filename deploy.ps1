@@ -1,13 +1,13 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Bamboo Vet AI — pre-flight checks + Docker deployment
+    Bamboo Vet AI - pre-flight checks + Docker deployment
 
 .DESCRIPTION
     Runs 4 pre-flight checks then deploys with docker compose.
     Safe to run repeatedly (idempotent). Fails fast with copy-paste fixes.
 
-    HTTPS is handled by Cloudflare Tunnel — no inbound ports required.
+    HTTPS is handled by Cloudflare Tunnel - no inbound ports required.
     The cloudflared container initiates an outbound connection to Cloudflare's edge.
 
 .EXAMPLE
@@ -20,9 +20,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $script:ExitCode = 0
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Output helpers
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 $script:Warnings = [System.Collections.Generic.List[string]]::new()
 $script:Failed   = [System.Collections.Generic.List[string]]::new()
 
@@ -38,28 +38,28 @@ function Write-Fail {
     Write-Host "`n  [FAIL] $msg" -ForegroundColor Red
     if ($Fix) { Write-Host "         FIX : $Fix" -ForegroundColor Cyan }
 }
-function Write-Section { param([string]$title) Write-Host "`n━━━ $title ━━━" -ForegroundColor White }
-function Write-Hr      { Write-Host ("━" * 60) -ForegroundColor DarkGray }
+function Write-Section { param([string]$title) Write-Host "`n--- $title ---" -ForegroundColor White }
+function Write-Hr      { Write-Host ("-" * 60) -ForegroundColor DarkGray }
 
 function Stop-OnFailures {
     Write-Host "`n" -NoNewline
     Write-Hr
-    Write-Host "  PRE-FLIGHT FAILED — fix the items above then re-run .\deploy.ps1" -ForegroundColor Red
+    Write-Host "  PRE-FLIGHT FAILED - fix the items above then re-run .\deploy.ps1" -ForegroundColor Red
     Write-Hr
     exit 1
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Header
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Hr
-Write-Host "  Bamboo Vet AI — Deployment Pre-Flight" -ForegroundColor Cyan
-Write-Host "  $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  •  $env:COMPUTERNAME" -ForegroundColor DarkGray
+Write-Host "  Bamboo Vet AI - Deployment Pre-Flight" -ForegroundColor Cyan
+Write-Host "  $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  |  $env:COMPUTERNAME" -ForegroundColor DarkGray
 Write-Hr
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 1. Docker Compose v2
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Section "1/4  Docker Compose v2"
 
 try {
@@ -79,9 +79,9 @@ try {
 }
 if ($script:Failed.Count -gt 0) { Stop-OnFailures }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 2. Parse .env
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Section "2/4  .env validation"
 
 $envFile = Join-Path $PSScriptRoot '.env'
@@ -101,7 +101,7 @@ Get-Content $envFile | ForEach-Object {
     }
 }
 
-# Required vars — placeholder patterns that indicate the user hasn't filled them in
+# Required vars - placeholder patterns that indicate the user hasn't filled them in
 $placeholders = @('your_', 'your-', '<your', 'REPLACE_WITH_', '_here', '_key_here', '_token_here')
 $requiredVars = @(
     'NEXT_PUBLIC_SUPABASE_URL',
@@ -148,18 +148,18 @@ if ($env.ContainsKey('RAGFLOW_BASE_URL') -and $env['RAGFLOW_BASE_URL'] -match '1
     Write-Fail "RAGFLOW_BASE_URL must use 'host.docker.internal' for Docker deploy" `
         "In .env, set: RAGFLOW_BASE_URL=http://host.docker.internal:9380"
 }
-# Cloudflare tunnel tokens are JWTs — must start with eyJ
+# Cloudflare tunnel tokens are JWTs - must start with eyJ
 if ($env.ContainsKey('CLOUDFLARE_TUNNEL_TOKEN') -and $env['CLOUDFLARE_TUNNEL_TOKEN'] -notmatch '^eyJ') {
     Write-Fail "CLOUDFLARE_TUNNEL_TOKEN does not look like a valid Cloudflare tunnel token" `
-        "Obtain the token from: Cloudflare Zero Trust dashboard → Networks → Tunnels → your tunnel → copy token"
+        "Obtain the token from: Cloudflare Zero Trust dashboard -> Networks -> Tunnels -> your tunnel -> copy token"
 }
 
 if ($script:Failed.Count -gt 0) { Stop-OnFailures }
 Write-Pass "All required .env variables present and non-placeholder"
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 2b. Auto-generate MCP JWT token (365-day)
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 $nodeAvailable = $null -ne (Get-Command node -ErrorAction SilentlyContinue)
 if ($nodeAvailable -and $env.ContainsKey('MCP_JWT_SECRET') -and $env['MCP_JWT_SECRET'].Length -ge 32) {
     $secret = $env['MCP_JWT_SECRET']
@@ -178,17 +178,17 @@ const c=require('crypto'),h=Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'}))
         $env['MCP_JWT_TOKEN'] = $newToken
         Write-Pass "MCP_JWT_TOKEN regenerated with 365-day expiry"
     } else {
-        Write-Warn "Could not auto-generate MCP_JWT_TOKEN — using value from .env"
+        Write-Warn "Could not auto-generate MCP_JWT_TOKEN - using value from .env"
     }
 } elseif (-not $nodeAvailable) {
-    Write-Warn "node.js not on PATH — skipping MCP_JWT_TOKEN auto-generation (using .env value)"
+    Write-Warn "node.js not on PATH - skipping MCP_JWT_TOKEN auto-generation (using .env value)"
 } else {
-    Write-Warn "MCP_JWT_SECRET too short or missing — skipping MCP_JWT_TOKEN generation"
+    Write-Warn "MCP_JWT_SECRET too short or missing - skipping MCP_JWT_TOKEN generation"
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 3. Docker internal networking
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Section "3/4  Docker networking"
 
 # host.docker.internal
@@ -201,7 +201,7 @@ if ($LASTEXITCODE -eq 0 -and $hostCheck -match '\d+\.\d+\.\d+\.\d+') {
     if ($hostCheck2 -match 'Address: (\d+\.\d+\.\d+\.\d+)') {
         Write-Pass "host.docker.internal resolves ($($Matches[1]))"
     } else {
-        Write-Warn "host.docker.internal may not resolve inside containers. Docker Desktop should set this automatically — if RAGflow queries fail, restart Docker Desktop."
+        Write-Warn "host.docker.internal may not resolve inside containers. Docker Desktop should set this automatically - if RAGflow queries fail, restart Docker Desktop."
     }
 }
 
@@ -212,12 +212,12 @@ $ragCheck = docker run --rm --pull never alpine:3.19 sh -c "wget -qO- --timeout=
 if ($ragCheck -match 'exit:0') {
     Write-Pass "RAGflow reachable at $ragflowUrl"
 } else {
-    Write-Warn "RAGflow not reachable at $ragflowUrl — MCP server will start but RAGflow queries will fail. Ensure the RAGflow Docker container is running."
+    Write-Warn "RAGflow not reachable at $ragflowUrl - MCP server will start but RAGflow queries will fail. Ensure the RAGflow Docker container is running."
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # 4. MySQL TCP reachability
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Section "4/4  MySQL connectivity"
 
 $mysqlHost = $env['MYSQL_HOST']
@@ -228,32 +228,32 @@ $tcpOk = Test-NetConnection -ComputerName $mysqlHost -Port $mysqlPort `
 if ($tcpOk) {
     Write-Pass "MySQL $mysqlHost`:$mysqlPort is reachable (TCP handshake OK)"
 } else {
-    Write-Warn "MySQL $mysqlHost`:$mysqlPort is NOT reachable from this server — admin dashboard will show 'Không thể tải dữ liệu'. Verify this server's IP is whitelisted on the MySQL firewall."
+    Write-Warn "MySQL $mysqlHost`:$mysqlPort is NOT reachable - admin dashboard will show data unavailable. Verify this server's IP is whitelisted on the MySQL firewall."
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Pre-flight summary
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Host ""
 Write-Hr
 $wCount = $script:Warnings.Count
 $fCount = $script:Failed.Count
-Write-Host ("  Pre-flight: {0} failed  •  {1} warnings" -f $fCount, $wCount) -ForegroundColor $(if ($fCount -gt 0) { 'Red' } elseif ($wCount -gt 0) { 'Yellow' } else { 'Green' })
+Write-Host ("  Pre-flight: {0} failed  |  {1} warnings" -f $fCount, $wCount) -ForegroundColor $(if ($fCount -gt 0) { 'Red' } elseif ($wCount -gt 0) { 'Yellow' } else { 'Green' })
 Write-Hr
 
 if ($fCount -gt 0) { Stop-OnFailures }
 
 if ($wCount -gt 0) {
     Write-Host "`n  Warnings (non-blocking):" -ForegroundColor Yellow
-    foreach ($w in $script:Warnings) { Write-Host "  • $w" -ForegroundColor Yellow }
+    foreach ($w in $script:Warnings) { Write-Host "  * $w" -ForegroundColor Yellow }
 }
 
 Write-Host ""
 Write-Host "  All checks passed. Starting deployment..." -ForegroundColor Green
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Deploy
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Section "Deploying"
 Write-Host "  docker compose up -d --build`n" -ForegroundColor Cyan
 
@@ -261,16 +261,16 @@ Push-Location $PSScriptRoot
 try {
     docker compose up -d --build
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "`n[FAIL] docker compose up failed — check output above" -ForegroundColor Red
+        Write-Host "`n[FAIL] docker compose up failed - check output above" -ForegroundColor Red
         exit 1
     }
 } finally {
     Pop-Location
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Wait for health
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Host "`n  Waiting for containers to become healthy (up to 90s)..." -ForegroundColor Cyan
 $deadline = (Get-Date).AddSeconds(90)
 $allHealthy = $false
@@ -294,9 +294,9 @@ while ((Get-Date) -lt $deadline) {
     Start-Sleep 8
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Status report
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 Write-Section "Status"
 
 $psLines = docker compose --project-directory $PSScriptRoot ps --format json 2>&1 |
@@ -309,7 +309,7 @@ foreach ($c in $containers) {
     $health = if ($c.Health) { $c.Health } else { 'no-healthcheck' }
     $ok     = ($c.State -eq 'running') -and ($health -ne 'unhealthy')
     $color  = if ($ok) { 'Green' } else { 'Red' }
-    $icon   = if ($ok) { '✓' } else { '✗' }
+    $icon   = if ($ok) { '[OK]' } else { '[!!]' }
     Write-Host ("  $icon  {0,-45} {1,-10} {2}" -f $c.Name, $c.State, $health) -ForegroundColor $color
 }
 
@@ -320,7 +320,7 @@ $healthProbe = docker run --rm --pull never `
     alpine:3.19 `
     sh -c "wget -qO- --timeout=5 http://next-app:3000/api/health 2>&1" 2>&1
 if ($healthProbe -match '"ok":true') {
-    Write-Host "  Internal /api/health → $($healthProbe.Trim())" -ForegroundColor Green
+    Write-Host "  Internal /api/health -> $($healthProbe.Trim())" -ForegroundColor Green
 } else {
     Write-Host "  Internal /api/health: $healthProbe" -ForegroundColor Yellow
 }
@@ -332,16 +332,16 @@ $cfLogs = docker compose --project-directory $PSScriptRoot logs cloudflared --ta
 if ($cfLogs -match 'Registered tunnel connection') {
     Write-Host "  Cloudflare tunnel: registered and connected" -ForegroundColor Green
 } elseif ($cfLogs -match 'failed|error|invalid') {
-    Write-Host "  Cloudflare tunnel: connection issue detected — check logs:" -ForegroundColor Red
+    Write-Host "  Cloudflare tunnel: connection issue detected - check logs:" -ForegroundColor Red
     Write-Host "    docker compose logs cloudflared --tail 50" -ForegroundColor Cyan
 } else {
     Write-Host "  Cloudflare tunnel: still connecting (may take 30s on first start)" -ForegroundColor Yellow
     Write-Host "    Monitor: docker compose logs cloudflared -f" -ForegroundColor DarkGray
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Final instructions
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 $domain = $env['PRODUCTION_DOMAIN']
 
 Write-Host ""
@@ -352,11 +352,11 @@ if ($allHealthy) {
     Write-Host ""
     Write-Host "  Your app: https://$domain" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  IMPORTANT — First-run certificate note:" -ForegroundColor White
-    Write-Host "    • Cloudflare provisions the HTTPS certificate automatically" -ForegroundColor White
-    Write-Host "    • No port forwarding or router changes needed" -ForegroundColor White
-    Write-Host "    • If the tunnel token is new, allow 30-60s for Cloudflare to go Active" -ForegroundColor White
-    Write-Host "    • Verify tunnel health at: https://one.dash.cloudflare.com → Networks → Tunnels" -ForegroundColor White
+    Write-Host "  IMPORTANT - First-run certificate note:" -ForegroundColor White
+    Write-Host "    * Cloudflare provisions the HTTPS certificate automatically" -ForegroundColor White
+    Write-Host "    * No port forwarding or router changes needed" -ForegroundColor White
+    Write-Host "    * If the tunnel token is new, allow 30-60s for Cloudflare to go Active" -ForegroundColor White
+    Write-Host "    * Verify tunnel health at: https://one.dash.cloudflare.com -> Networks -> Tunnels" -ForegroundColor White
     Write-Host ""
     Write-Host "  Useful commands:" -ForegroundColor White
     Write-Host "    docker compose logs cloudflared --tail 50   # watch tunnel connection" -ForegroundColor DarkGray
@@ -370,9 +370,9 @@ if ($allHealthy) {
     Write-Host "  Diagnose: docker compose logs <service>" -ForegroundColor White
     Write-Host ""
     Write-Host "  Common issues:" -ForegroundColor White
-    Write-Host "    cloudflared unhealthy → check CLOUDFLARE_TUNNEL_TOKEN in .env; verify tunnel exists in dashboard" -ForegroundColor DarkGray
-    Write-Host "    next-app unhealthy    → check SUPABASE_* and MCP_SERVER_URL in .env" -ForegroundColor DarkGray
-    Write-Host "    mcp-server unhealthy  → check RAGFLOW_BASE_URL and RAGflow is running" -ForegroundColor DarkGray
+    Write-Host "    cloudflared unhealthy -> check CLOUDFLARE_TUNNEL_TOKEN in .env; verify tunnel exists in dashboard" -ForegroundColor DarkGray
+    Write-Host "    next-app unhealthy    -> check SUPABASE_* and MCP_SERVER_URL in .env" -ForegroundColor DarkGray
+    Write-Host "    mcp-server unhealthy  -> check RAGFLOW_BASE_URL and RAGflow is running" -ForegroundColor DarkGray
 }
 
 Write-Hr
