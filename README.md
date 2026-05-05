@@ -29,8 +29,6 @@ HTTPS is handled by Cloudflare — no inbound ports required on the server or ro
 .\deploy.ps1
 ```
 
-See **[`docs/COMPANY-SERVER-SETUP.md`](docs/COMPANY-SERVER-SETUP.md)** for the complete first-time setup walkthrough.
-
 | Feature | Status |
 |---|---|
 | Public AI chat — streaming via Docker-internal MCP | ✅ Live |
