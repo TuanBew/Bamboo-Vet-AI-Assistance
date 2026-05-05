@@ -81,7 +81,7 @@ Access is restricted to users with `is_admin: true` in Supabase `app_metadata`.
 
 ### MCP Server (`/mcp-server`)
 
-A standalone Node.js HTTP server that implements the [Model Context Protocol](https://modelcontextprotocol.io/) over HTTP, enabling any MCP-compatible client (Claude Desktop, Claude Code, etc.) to call the RAGflow veterinary knowledge base as a native tool.
+A standalone Node.js HTTP server that implements the [Model Context Protocol](https://modelcontextprotocol.io/) over HTTP, enabling any MCP-compatible client to call the RAGflow veterinary knowledge base as a native tool.
 
 | Feature | Detail |
 |---|---|
