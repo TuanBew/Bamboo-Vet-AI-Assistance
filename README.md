@@ -31,12 +31,12 @@ HTTPS is handled by Cloudflare — no inbound ports required on the server or ro
 
 | Feature | Status |
 |---|---|
-| Public AI chat — streaming via Docker-internal MCP | ✅ Live |
-| Supabase authentication (login, session, admin JWT) | ✅ Live |
-| Admin shell (sidebar + topbar) | ✅ Live |
-| Admin analytics data (MySQL ERP) | ✅ Live — company server IP is whitelisted |
-| API security (401/403 on all admin routes) | ✅ Live |
-| HTTPS — Cloudflare Tunnel | ✅ Cloudflare-managed cert, no inbound ports needed |
+| Public AI chat — streaming via Docker-internal MCP | Live |
+| Supabase authentication (login, session, admin JWT) | Live |
+| Admin shell (sidebar + topbar) | Live |
+| Admin analytics data (MySQL ERP) | Live — company server IP is whitelisted |
+| API security (401/403 on all admin routes) | Live |
+| HTTPS — Cloudflare Tunnel | Cloudflare-managed cert, no inbound ports needed |
 
 ### Public — Vercel (`bamboo-vet-ai.vercel.app`)
 
@@ -44,11 +44,11 @@ The Vercel deployment at **[https://bamboo-vet-ai.vercel.app](https://bamboo-vet
 
 | Feature | Status |
 |---|---|
-| Public AI chat — streaming via MCP + ngrok | ✅ Live |
-| Supabase authentication (login, session, admin JWT) | ✅ Live |
-| Admin shell (sidebar + topbar) | ✅ Live |
-| Admin analytics data (MySQL ERP) | ⛔ Not available — Vercel serverless IPs not whitelisted on corporate MySQL |
-| API security (401/403 on all admin routes) | ✅ Live |
+| Public AI chat — streaming via MCP + ngrok | Live |
+| Supabase authentication (login, session, admin JWT) | Live |
+| Admin shell (sidebar + topbar) | Live |
+| Admin analytics data (MySQL ERP) | Not available — Vercel serverless IPs not whitelisted on corporate MySQL |
+| API security (401/403 on all admin routes) | Live |
 
 ---
 
