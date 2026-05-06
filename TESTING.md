@@ -276,30 +276,6 @@ No new defects were introduced by this testing phase. Four defects were identifi
 
 ---
 
-## 7. RECOMMENDATIONS
-
-### Priority 1 — Immediate (Before Next Release)
-
-1. **Configure CI credentials in GitHub Actions** — Add `VERCEL_TEST_EMAIL` and `VERCEL_TEST_PASSWORD` to the repository's Actions secrets (Settings → Secrets and variables → Actions). The local E2E suite reads credentials from `.env.local`, but CI needs them as repository secrets.
-
-2. **Create a non-admin test account** in Supabase — Enables AUTH-02 (non-admin redirect) and AUTH-03 (admin redirect from `/login`) tests, closing the two remaining auth security gaps.
-
-### Priority 2 — Next Sprint
-
-3. **Add `tests/.auth/admin.json` to `.gitignore`** — The auth state file contains session cookies. It should never be committed. Add `tests/.auth/` to `.gitignore`.
-
-4. **Excel/PDF content-type assertions** — Extend export tests to assert `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` on Excel downloads, ensuring the server is not returning an error page with HTTP 200.
-
-5. **Drawer/Sheet interaction tests** — The Check Customers page has a "Xem lịch sử" drawer (conversation history). This user flow is defined in CLAUDE.md but has no automated test coverage yet.
-
-### Priority 3 — Future
-
-6. **Lighthouse performance budget** — Integrate `@playwright/test` with Lighthouse to assert LCP < 2.5s on the dashboard page.
-
-7. **API contract tests for chat route** — `/api/chat` (RAGflow streaming relay) has no automated tests. Add unit tests mocking the ReadableStream relay.
-
----
-
 ## 8. TEST ARTEFACTS
 
 | Artefact | Location |
