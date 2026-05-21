@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test'
 
-const VERCEL_URL = 'https://bamboo-vet-ai.vercel.app'
-const email    = process.env.VERCEL_TEST_EMAIL    ?? ''
+const VERCEL_URL = process.env.VERCEL_TEST_URL ?? 'https://bamboo-vet-ai.vercel.app'
+const email = process.env.VERCEL_TEST_EMAIL ?? ''
 const password = process.env.VERCEL_TEST_PASSWORD ?? ''
+const expectedMysqlMode = process.env.VERCEL_EXPECTED_MYSQL_MODE ?? 'backup'
 
 // ─── 1. Page loads ────────────────────────────────────────────────────────────
 test('VRC-01: login page loads on Vercel', async ({ page }) => {
@@ -98,5 +99,27 @@ test.describe('Authenticated tests', () => {
     await expect(assistantText).toBeVisible({ timeout: 60_000 })
     const text = await assistantText.textContent()
     expect(text?.trim().length ?? 0).toBeGreaterThan(0)
+  })
+
+  test('VRC-10: db status and backup banner matches expected MySQL mode', async ({ request }) => {
+    await adminPage.goto('/admin/dashboard')
+
+    const cookies = await adminPage.context().cookies()
+    const cookieHeader = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ')
+    const res = await request.get(`${VERCEL_URL}/api/admin/db-status`, {
+      headers: { cookie: cookieHeader },
+    })
+
+    expect(res.status()).toBe(200)
+    const body = await res.json()
+    expect(body.ok).toBe(true)
+    expect(body.database.activeMode).toBe(expectedMysqlMode)
+
+    const backupBanner = adminPage.getByRole('status', { name: 'Cảnh báo dữ liệu dự phòng' })
+    if (expectedMysqlMode === 'backup') {
+      await expect(backupBanner).toBeVisible()
+    } else {
+      await expect(backupBanner).toBeHidden()
+    }
   })
 })

@@ -1,12 +1,10 @@
 name: bamboo-vet-prod
 
 services:
-
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: bamboo-cloudflared
     restart: unless-stopped
-    # Token encodes tunnel identity and routing config — obtained from Cloudflare Zero Trust dashboard
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
       - bamboo-net
@@ -18,23 +16,27 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # NEXT_PUBLIC_* are baked into the browser bundle at build time — must be ARG
       args:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     restart: unless-stopped
     env_file: .env
+    # FIX: Map port 3000 trên container ra port 3000 trên Windows host
+    ports:
+      - "3000:3000"
     networks:
       - bamboo-net
     depends_on:
       mcp-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health | grep -q ok || exit 1"]
-      interval: 15s
+      test:
+        - "CMD-SHELL"
+        - "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))\""
+      interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 3
+      start_period: 10s
 
   mcp-server:
     build:
@@ -44,10 +46,8 @@ services:
     env_file: .env
     networks:
       - bamboo-net
-    # Maps host.docker.internal → host gateway so mcp-server can reach RAGflow on the host
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    # Port 3100 intentionally NOT published — internal Docker network only
 
 networks:
   bamboo-net:

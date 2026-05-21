@@ -17,7 +17,7 @@ export function getPool(): Pool {
       connectionLimit: 5,
       connectTimeout: 10_000,
       ssl: process.env.MYSQL_SSL === 'true'
-        ? { rejectUnauthorized: true }
+        ? { rejectUnauthorized: false }
         : undefined,
     })
   }

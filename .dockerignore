@@ -1,6 +1,10 @@
-# Node modules and build output (rebuilt inside container)
+# Node modules (re-installed inside container)
 node_modules/
-.next/
+
+# Next.js build output (We need standalone & static for pre-build strategy)
+.next
+!.next/standalone
+!.next/static
 
 # Test files
 tests/

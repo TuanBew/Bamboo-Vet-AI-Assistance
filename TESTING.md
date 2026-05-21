@@ -41,7 +41,7 @@
 |---|---|
 | **Admin Dashboard** | Next.js 15 App Router, TypeScript strict, Tailwind CSS v4 |
 | **Authentication** | Supabase SSR — JWT `is_admin` claim from `app_metadata` |
-| **Data Layer** | Corporate MySQL (read-only) via custom `query()` / `callSp()` client |
+| **Data Layer** | Read-only MySQL via custom `query()` / `callSp()` client — hosted backup MySQL for Vercel, corporate/company MySQL or local backup MySQL for Docker/company-server |
 | **MCP Server** | Standalone Node.js HTTP server (`bamboo-mcp-server`) |
 | **API Routes** | 6 admin API routes + AI analysis + chat + conversations |
 
@@ -333,6 +333,52 @@ npm run test:e2e
 npm run test:all
 ```
 
+### Vercel hosted-backup verification
+
+Use these checks after changing the Vercel public app path or hosted backup MySQL configuration:
+
+```powershell
+$env:VERCEL_TEST_URL = '<preview-or-production-url>'
+$env:VERCEL_TEST_EMAIL = '<admin-email>'
+$env:VERCEL_TEST_PASSWORD = '<admin-password>'
+npm run test:vercel
+```
+
+Expected Vercel setup:
+
+- Vercel production env uses `MYSQL_MODE=backup` and `BACKUP_MYSQL_*` hosted read-only database values.
+- Set these values with `vercel env add` for Vercel Production; keep `deploy.ps1` on the Docker/company-server path.
+- Admin/database checks can pass independently of MCP/RAGflow when hosted backup MySQL is reachable.
+- Chat success depends on `MCP_SERVER_URL` pointing to a stable public HTTPS tunnel/domain that reaches the local MCP server and local RAGflow.
+- Keep legacy Vercel QA references for VRC-01 through VRC-09, but do not treat company-MySQL whitelist failures as the current target architecture.
+
+### Local live backup MySQL verification
+
+Use these checks after implementing or changing the local-live backup deployment path:
+
+```powershell
+npm test
+npm run test:docker
+npm run test:all
+```
+
+For forced backup mode browser verification, set `.env` to `MYSQL_MODE=backup`, start the Docker stack with `./deploy.ps1`, then run:
+
+```powershell
+$env:DOCKER_TEST_URL = 'http://localhost:3000'
+$env:DOCKER_TEST_EMAIL = '<admin-email>'
+$env:DOCKER_TEST_PASSWORD = '<admin-password>'
+npm run test:docker
+```
+
+Expected results:
+
+- `/api/health` returns `{ "ok": true }`.
+- `/api/admin/db-status` returns `activeMode: "backup"` for an authenticated admin.
+- `/admin/dashboard` renders the Vietnamese backup warning banner.
+- Dashboard data renders from `_door`, `_dpur`, and `_product` in the backup MySQL container.
+- Playwright screenshot artifacts are saved under the Docker test output directory.
+
 ---
 
 ## 9. SIGN-OFF
@@ -397,10 +443,10 @@ npm run test:all
 
 | Goal | Reason |
 |---|---|
-| Admin dashboard data (KPIs, charts) | Corporate MySQL IP blocked from Vercel serverless IPs |
-| Nhập hàng / Tồn kho / Khách hàng with data | Same MySQL blocker |
+| Admin dashboard live corporate data | Vercel should not connect directly to company MySQL; it uses hosted read-only backup MySQL instead |
+| Chat tunnel durability | Chat success depends on a stable public HTTPS `MCP_SERVER_URL` that reaches local MCP/RAGflow |
 
-The dashboard currently shows a graceful error state — sidebar + topbar render correctly, content area shows "Không thể tải dữ liệu" via `app/admin/dashboard/error.tsx`. This is the expected behaviour until MySQL connectivity from Vercel serverless is resolved (IP whitelist or Vercel Secure Compute).
+The legacy QA-2026-002 run proved that the Vercel app deployed, authenticated, protected APIs, rendered the admin shell, and streamed chat when the MCP tunnel was running. Current Vercel admin data verification should use `MYSQL_MODE=backup` with hosted backup MySQL; stale graceful-error results from direct company-MySQL access are no longer the target production design.
 
 ---
 
@@ -441,7 +487,7 @@ python -X utf8 tests/selenium/test_vercel_production.py
 | SEL-04 | `/api/chat` POST without auth returns non-500 | ✅ PASS |
 | SEL-05 | Login with valid credentials succeeds | ✅ PASS |
 | SEL-06 | Admin sidebar renders after login | ✅ PASS |
-| SEL-07 | Dashboard graceful error state shown | ✅ PASS |
+| SEL-07 | Dashboard shell handled unavailable direct company MySQL path gracefully during legacy run | ✅ PASS |
 | SEL-08 | Chat page input is interactable | ✅ PASS |
 
 ---
@@ -453,7 +499,8 @@ python -X utf8 tests/selenium/test_vercel_production.py
 | ngrok tunnel | VRC-09, SEL-08 (chat streaming) | Running |
 | MCP server (`cd mcp-server && npm start`) | VRC-09, SEL-08 | Running |
 | RAGflow Docker | VRC-09, SEL-08 (AI response) | Running |
-| MySQL whitelist / Secure Compute | Admin data pages | Pending |
+| Hosted backup MySQL (`MYSQL_MODE=backup`) | Admin data pages on Vercel | Required |
+| Stable public HTTPS MCP tunnel | Chat streaming from Vercel to local MCP/RAGflow | Required for chat only |
 
 ---
 

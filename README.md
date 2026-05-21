@@ -18,10 +18,27 @@ Bamboo Vet is a full-stack web application built for **Công ty Cổ phần thư
 
 ## Deployment
 
-### Primary — Company Server (Docker)
+### Public — Vercel (`bamboo-vet-ai.vercel.app`)
 
-Full-stack deployment on the company Windows 11 server via Docker Compose + Cloudflare Tunnel.
-The company server's IP is whitelisted on the corporate MySQL database, so all admin analytics work.
+The Vercel deployment at **[https://bamboo-vet-ai.vercel.app](https://bamboo-vet-ai.vercel.app)** is the primary internet-facing app path. Vercel should run with `MYSQL_MODE=backup` and a hosted read-only backup MySQL database so admin analytics do not depend on company-server IP whitelisting.
+
+- Main app: Vercel / custom domain
+- Admin data: hosted read-only backup MySQL (`BACKUP_MYSQL_*` env vars)
+- Chat: `MCP_SERVER_URL` must point to a stable public HTTPS tunnel/domain that reaches the local MCP server and local RAGflow
+- Docker/company-server deployment remains available for the non-Vercel path
+
+| Feature | Status |
+|---|---|
+| Public AI chat — streaming via MCP over stable HTTPS tunnel | ✅ Supported when `MCP_SERVER_URL` is reachable |
+| Supabase authentication (login, session, admin JWT) | ✅ Live |
+| Admin shell (sidebar + topbar) | ✅ Live |
+| Admin analytics data | ✅ Via hosted read-only backup MySQL |
+| API security (401/403 on all admin routes) | ✅ Live |
+
+### Company Server (Docker)
+
+Full-stack deployment on the company Windows 11 server via Docker Compose + Cloudflare Tunnel remains the non-Vercel path.
+The company server's IP is whitelisted on the corporate MySQL database, so it can use company MySQL directly, or use a local Docker backup MySQL service when `MYSQL_MODE=backup`.
 HTTPS is handled by Cloudflare — no inbound ports required on the server or router.
 
 ```powershell
@@ -36,21 +53,45 @@ See **[`docs/COMPANY-SERVER-SETUP.md`](docs/COMPANY-SERVER-SETUP.md)** for the c
 | Public AI chat — streaming via Docker-internal MCP | ✅ Live |
 | Supabase authentication (login, session, admin JWT) | ✅ Live |
 | Admin shell (sidebar + topbar) | ✅ Live |
-| Admin analytics data (MySQL ERP) | ✅ Live — company server IP is whitelisted |
+| Admin analytics data (MySQL ERP) | ✅ Live when company MySQL is reachable |
 | API security (401/403 on all admin routes) | ✅ Live |
 | HTTPS — Cloudflare Tunnel | ✅ Cloudflare-managed cert, no inbound ports needed |
 
-### Public — Vercel (`bamboo-vet-ai.vercel.app`)
+### Local live deployment with backup MySQL
 
-The Vercel deployment at **[https://bamboo-vet-ai.vercel.app](https://bamboo-vet-ai.vercel.app)** serves as the public-facing / staging environment.
+Bamboo Vet can run live from Tuan Anh's machine through Docker Compose and Cloudflare Tunnel. The stack contains:
 
-| Feature | Status |
-|---|---|
-| Public AI chat — streaming via MCP + ngrok | ✅ Live |
-| Supabase authentication (login, session, admin JWT) | ✅ Live |
-| Admin shell (sidebar + topbar) | ✅ Live |
-| Admin analytics data (MySQL ERP) | ⛔ Not available — Vercel serverless IPs not whitelisted on corporate MySQL |
-| API security (401/403 on all admin routes) | ✅ Live |
+- `next-app` — Next.js standalone runtime
+- `mcp-server` — Docker-internal MCP relay to local RAGflow
+- `cloudflared` — outbound Cloudflare Tunnel ingress
+- `backup-mysql` — local MySQL 8.0 initialized from `samples/dashboard_bamboovet.sql`
+
+Company MySQL remains the primary analytics source for the company-server path. Set `MYSQL_MODE=auto` to probe company MySQL once when the app initializes. If the probe succeeds, the process locks to primary mode. If it fails, the process locks to local backup mode and does not retry company MySQL on every request.
+
+Supported modes:
+
+| Mode | Behavior |
+| --- | --- |
+| `MYSQL_MODE=auto` | Probe company MySQL once, then lock to primary or backup until container restart. |
+| `MYSQL_MODE=primary` | Use company MySQL only. Deployment fails clearly if it is unreachable. |
+| `MYSQL_MODE=backup` | Use configured backup MySQL only. Company MySQL is not probed. Required for Vercel production. |
+
+The backup SQL dump is deployment input, not source code. Do not commit `.env` or `samples/dashboard_bamboovet.sql` unless explicitly approved.
+
+#### Backup dump refresh
+
+The official MySQL image imports files from `/docker-entrypoint-initdb.d` only when the database volume is empty. Re-running `docker compose up` does not re-import a changed dump.
+
+To refresh local Docker backup data, intentionally stop the stack and recreate only the backup volume after confirming the old local backup can be discarded:
+
+```powershell
+docker compose down
+# Replace <project> with your Compose project name if it differs from bamboo-vet-prod.
+docker volume rm <project>_backup-mysql-data
+docker compose up -d --build
+```
+
+Never run this against company MySQL or the hosted backup MySQL. This only affects the local Docker backup volume.
 
 ---
 
@@ -185,7 +226,7 @@ app/admin/<feature>/
 - Node.js LTS
 - npm
 - A [Supabase](https://supabase.com) project (for Auth + conversation storage)
-- Access to the corporate MySQL database (read-only credentials)
+- Access to a read-only MySQL source: hosted backup MySQL for Vercel, or corporate/company MySQL for Docker/company-server deployment
 - A [RAGflow](https://ragflow.io) instance (self-hosted or cloud)
 - An [Upstash Redis](https://upstash.com) database (rate limiting)
 
@@ -211,15 +252,33 @@ NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
-# MySQL (Corporate ERP — read-only)
-MYSQL_HOST=<host>
-MYSQL_PORT=3306
-MYSQL_DATABASE=<database>
-MYSQL_USER=<user>
-MYSQL_PASSWORD=<password>
-MYSQL_SSL=true
+# Vercel production: hosted backup MySQL (read-only)
+MYSQL_MODE=backup
+BACKUP_MYSQL_HOST=<hosted-mysql-host>
+BACKUP_MYSQL_PORT=3306
+BACKUP_MYSQL_DATABASE=<hosted-backup-db>
+BACKUP_MYSQL_USER=<readonly-user>
+BACKUP_MYSQL_PASSWORD=<readonly-password>
+BACKUP_MYSQL_SSL=true
 
-# RAGflow
+# Docker/company-server: company MySQL or local backup service
+# MYSQL_MODE=auto
+# MYSQL_HOST=<company-mysql-host>
+# MYSQL_PORT=3306
+# MYSQL_DATABASE=<database>
+# MYSQL_USER=<readonly-user>
+# MYSQL_PASSWORD=<password>
+# MYSQL_SSL=true
+# BACKUP_MYSQL_HOST=backup-mysql
+# BACKUP_MYSQL_PORT=3306
+# BACKUP_MYSQL_SSL=false
+
+# MCP/RAGflow for chat
+# Vercel needs a stable public HTTPS MCP_SERVER_URL tunnel/domain.
+# Docker/company-server can use http://mcp-server:3100.
+MCP_SERVER_URL=https://<stable-mcp-tunnel-or-domain>
+MCP_JWT_TOKEN=<mcp-jwt-token>
+MCP_CHAT_ID=<ragflow-chat-id>
 RAGFLOW_BASE_URL=http://127.0.0.1:9380
 RAGFLOW_API_KEY=<ragflow-api-key>
 RAGFLOW_CHAT_ID=<ragflow-chat-id>
@@ -264,9 +323,14 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Database Architecture
 
-### MySQL (Corporate ERP — read-only)
+### MySQL (read-only ERP analytics)
 
-All admin analytics read from the corporate MySQL database via `lib/mysql/client.ts`, which enforces:
+All admin analytics read through `lib/mysql/client.ts`, which supports separate deployment modes:
+
+- **Vercel production**: `MYSQL_MODE=backup` with hosted read-only backup MySQL (`BACKUP_MYSQL_*`), avoiding direct access from Vercel to the corporate database.
+- **Docker/company-server**: `MYSQL_MODE=auto` or `MYSQL_MODE=primary` can use company MySQL directly when that server/network is whitelisted; `MYSQL_MODE=backup` can use the local Docker `backup-mysql` service.
+
+The MySQL client enforces:
 - **SQL validator** — rejects any non-SELECT/CALL/SHOW/DESCRIBE statement at the application level
 - **Audit logger** — logs every query with execution time to `.mysql-audit.log`
 
@@ -314,12 +378,14 @@ DOCKER_TEST_EMAIL="<admin-email>" DOCKER_TEST_PASSWORD="<admin-password>" \
 
 Requires the full Docker Compose stack running via `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d`.
 
-**Vercel — 9 tests (VRC-01 to VRC-09), targets `bamboo-vet-ai.vercel.app`:**
+**Vercel — 9 tests (VRC-01 to VRC-09), targets `bamboo-vet-ai.vercel.app` unless overridden:**
 ```bash
 VERCEL_TEST_EMAIL="<admin-email>" VERCEL_TEST_PASSWORD="<admin-password>" \
   npx playwright test --config=playwright.vercel.config.ts tests/vercel/vercel-verify.spec.ts
-# or: npm run test:vercel   (reads VERCEL_TEST_EMAIL / VERCEL_TEST_PASSWORD from env)
+# or: npm run test:vercel   (reads VERCEL_TEST_URL / VERCEL_TEST_EMAIL / VERCEL_TEST_PASSWORD from env)
 ```
+
+Use `VERCEL_TEST_URL` for preview or custom-domain smoke tests. Admin/database checks require Vercel `MYSQL_MODE=backup` with hosted backup MySQL. Chat checks additionally require `MCP_SERVER_URL` to point at a stable public HTTPS tunnel/domain that can reach MCP/RAGflow.
 
 **Selenium — 8 tests (SEL-01 to SEL-08), targets Vercel URL:**
 ```bash
@@ -349,7 +415,7 @@ npm run generate-token        # prints a signed Bearer token to use in your MCP 
 # or: npm start               # server only, no tunnel
 ```
 
-`start-tunnel.ps1` prints the live ngrok URL and the exact `MCP_SERVER_URL=...` line to add to `.env.local`. Configure Claude Desktop or Claude Code to point at the ngrok URL with the generated token. See [`mcp-server/README.md`](mcp-server/README.md) for full configuration examples.
+`start-tunnel.ps1` prints the live ngrok URL and the exact `MCP_SERVER_URL=...` line to add to `.env.local`. For Vercel production, use a stable public HTTPS tunnel/domain for `MCP_SERVER_URL`; if that URL changes, update the Vercel environment variable and redeploy before expecting chat streaming to pass. Admin/database pages can still run from hosted backup MySQL independently of the MCP tunnel. Configure Claude Desktop or Claude Code to point at the tunnel URL with the generated token. See [`mcp-server/README.md`](mcp-server/README.md) for full configuration examples.
 
 ---
 

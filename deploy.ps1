@@ -1,17 +1,14 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Bamboo Vet AI - pre-flight checks + Docker deployment
+    Bamboo Vet AI - pre-flight checks + Native Build + Docker deployment
 
 .DESCRIPTION
-    Runs 4 pre-flight checks then deploys with docker compose.
+    Runs 4 pre-flight checks, builds Next.js natively to save RAM,
+    then deploys the pre-built artifacts with docker compose.
     Safe to run repeatedly (idempotent). Fails fast with copy-paste fixes.
 
     HTTPS is handled by Cloudflare Tunnel - no inbound ports required.
-    The cloudflared container initiates an outbound connection to Cloudflare's edge.
-
-.EXAMPLE
-    .\deploy.ps1
 #>
 [CmdletBinding()]
 param()
@@ -58,9 +55,9 @@ Write-Host "  $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  |  $env:COMPUTERNAME" -
 Write-Hr
 
 # -----------------------------------------------------------------------------
-# 1. Docker Compose v2
+# 1. Docker Compose v2 & Node.js
 # -----------------------------------------------------------------------------
-Write-Section "1/4  Docker Compose v2"
+Write-Section "1/4  Dependencies Check"
 
 try {
     $verOutput = docker compose version 2>&1
@@ -71,12 +68,19 @@ try {
         Write-Pass "Docker Compose $verString"
     } else {
         Write-Fail "Docker Compose $verString is too old (need v2+)" `
-            "Update Docker Desktop to 4.x or later: https://www.docker.com/products/docker-desktop"
+            "Update Docker Desktop to 4.x or later"
     }
 } catch {
-    Write-Fail "docker compose not found" `
-        "Install Docker Desktop: https://www.docker.com/products/docker-desktop"
+    Write-Fail "docker compose not found" "Install Docker Desktop"
 }
+
+# Check Node.js for native build
+if (Get-Command npm -ErrorAction SilentlyContinue) {
+    Write-Pass "Node.js (npm) is installed for native build"
+} else {
+    Write-Fail "npm not found on system" "Install Node.js to enable RAM-saving native builds"
+}
+
 if ($script:Failed.Count -gt 0) { Stop-OnFailures }
 
 # -----------------------------------------------------------------------------
@@ -95,13 +99,11 @@ $env = @{}
 Get-Content $envFile | ForEach-Object {
     $line = $_.Trim()
     if ($line -and -not $line.StartsWith('#') -and $line -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
-        # Strip inline comments (everything after unquoted #)
         $val = $Matches[2] -replace '\s+#.*$', ''
         $env[$Matches[1]] = $val.Trim()
     }
 }
 
-# Required vars - placeholder patterns that indicate the user hasn't filled them in
 $placeholders = @('your_', 'your-', '<your', 'REPLACE_WITH_', '_here', '_key_here', '_token_here')
 $requiredVars = @(
     'NEXT_PUBLIC_SUPABASE_URL',
@@ -139,7 +141,6 @@ foreach ($v in $requiredVars) {
     }
 }
 
-# Docker-specific value checks
 if ($env.ContainsKey('MCP_SERVER_URL') -and $env['MCP_SERVER_URL'] -notmatch '^http://mcp-server:') {
     Write-Fail "MCP_SERVER_URL must be 'http://mcp-server:3100' for Docker deploy" `
         "In .env, set: MCP_SERVER_URL=http://mcp-server:3100"
@@ -148,10 +149,9 @@ if ($env.ContainsKey('RAGFLOW_BASE_URL') -and $env['RAGFLOW_BASE_URL'] -match '1
     Write-Fail "RAGFLOW_BASE_URL must use 'host.docker.internal' for Docker deploy" `
         "In .env, set: RAGFLOW_BASE_URL=http://host.docker.internal:9380"
 }
-# Cloudflare tunnel tokens are JWTs - must start with eyJ
 if ($env.ContainsKey('CLOUDFLARE_TUNNEL_TOKEN') -and $env['CLOUDFLARE_TUNNEL_TOKEN'] -notmatch '^eyJ') {
     Write-Fail "CLOUDFLARE_TUNNEL_TOKEN does not look like a valid Cloudflare tunnel token" `
-        "Obtain the token from: Cloudflare Zero Trust dashboard -> Networks -> Tunnels -> your tunnel -> copy token"
+        "Obtain the token from Cloudflare Zero Trust dashboard"
 }
 
 if ($script:Failed.Count -gt 0) { Stop-OnFailures }
@@ -181,7 +181,7 @@ const c=require('crypto'),h=Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'}))
         Write-Warn "Could not auto-generate MCP_JWT_TOKEN - using value from .env"
     }
 } elseif (-not $nodeAvailable) {
-    Write-Warn "node.js not on PATH - skipping MCP_JWT_TOKEN auto-generation (using .env value)"
+    Write-Warn "node.js not on PATH - skipping MCP_JWT_TOKEN auto-generation"
 } else {
     Write-Warn "MCP_JWT_SECRET too short or missing - skipping MCP_JWT_TOKEN generation"
 }
@@ -191,7 +191,6 @@ const c=require('crypto'),h=Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'}))
 # -----------------------------------------------------------------------------
 Write-Section "3/4  Docker networking"
 
-# host.docker.internal
 Write-Host "  Probing host.docker.internal (this starts a temporary container)..." -ForegroundColor DarkGray
 $hostCheck = docker run --rm --pull missing alpine:3.19 sh -c "getent hosts host.docker.internal 2>/dev/null | head -1" 2>&1
 if ($LASTEXITCODE -eq 0 -and $hostCheck -match '\d+\.\d+\.\d+\.\d+') {
@@ -201,18 +200,17 @@ if ($LASTEXITCODE -eq 0 -and $hostCheck -match '\d+\.\d+\.\d+\.\d+') {
     if ($hostCheck2 -match 'Address: (\d+\.\d+\.\d+\.\d+)') {
         Write-Pass "host.docker.internal resolves ($($Matches[1]))"
     } else {
-        Write-Warn "host.docker.internal may not resolve inside containers. Docker Desktop should set this automatically - if RAGflow queries fail, restart Docker Desktop."
+        Write-Warn "host.docker.internal may not resolve inside containers. If RAGflow queries fail, restart Docker Desktop."
     }
 }
 
-# RAGflow reachability from inside Docker
 $ragflowUrl = if ($env.ContainsKey('RAGFLOW_BASE_URL')) { $env['RAGFLOW_BASE_URL'] } else { 'http://host.docker.internal:9380' }
 Write-Host "  Probing RAGflow at $ragflowUrl ..." -ForegroundColor DarkGray
 $ragCheck = docker run --rm --pull missing alpine:3.19 sh -c "wget -qO- --timeout=5 '$ragflowUrl' > /dev/null 2>&1; echo exit:`$?" 2>&1
 if ($ragCheck -match 'exit:0') {
     Write-Pass "RAGflow reachable at $ragflowUrl"
 } else {
-    Write-Warn "RAGflow not reachable at $ragflowUrl - MCP server will start but RAGflow queries will fail. Ensure the RAGflow Docker container is running."
+    Write-Warn "RAGflow not reachable at $ragflowUrl - MCP server will start but RAGflow queries will fail."
 }
 
 # -----------------------------------------------------------------------------
@@ -228,7 +226,7 @@ $tcpOk = Test-NetConnection -ComputerName $mysqlHost -Port $mysqlPort `
 if ($tcpOk) {
     Write-Pass "MySQL $mysqlHost`:$mysqlPort is reachable (TCP handshake OK)"
 } else {
-    Write-Warn "MySQL $mysqlHost`:$mysqlPort is NOT reachable - admin dashboard will show data unavailable. Verify this server's IP is whitelisted on the MySQL firewall."
+    Write-Warn "MySQL $mysqlHost`:$mysqlPort is NOT reachable - admin dashboard will show data unavailable."
 }
 
 # -----------------------------------------------------------------------------
@@ -248,13 +246,40 @@ if ($wCount -gt 0) {
     foreach ($w in $script:Warnings) { Write-Host "  * $w" -ForegroundColor Yellow }
 }
 
-Write-Host ""
-Write-Host "  All checks passed. Starting deployment..." -ForegroundColor Green
+Write-Host "`n  All checks passed." -ForegroundColor Green
 
 # -----------------------------------------------------------------------------
-# Deploy
+# Native Build (Bypasses Docker Memory Limitation)
 # -----------------------------------------------------------------------------
-Write-Section "Deploying"
+Write-Section "Building Next.js Natively"
+
+Push-Location $PSScriptRoot
+try {
+    Write-Host "  Installing Node modules (npm install)..." -ForegroundColor Cyan
+    cmd.exe /c "npm install"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "`n[FAIL] npm ci failed. Please check dependencies." -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "  Running production build (npm run build)..." -ForegroundColor Cyan
+    cmd.exe /c "npm run build"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "`n[FAIL] npm run build failed. Please check your code." -ForegroundColor Red
+        exit 1
+    }
+    Write-Pass "Native build completed successfully."
+} catch {
+    Write-Fail "Native build process threw an error: $_"
+    exit 1
+} finally {
+    Pop-Location
+}
+
+# -----------------------------------------------------------------------------
+# Deploy via Docker
+# -----------------------------------------------------------------------------
+Write-Section "Deploying Docker Stack"
 Write-Host "  docker compose up -d --build`n" -ForegroundColor Cyan
 
 Push-Location $PSScriptRoot
